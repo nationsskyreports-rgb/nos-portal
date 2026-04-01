@@ -2349,6 +2349,12 @@ body { display: flex; flex-direction: column; }
     <i class="fas fa-spinner spinner hidden" id="filter-loader" style="color:var(--primary)"></i>
   </div>
 
+<div id="no-data-banner" style="display:none; background:rgba(245,158,11,0.08); border:1.5px solid rgba(245,158,11,0.3); border-radius:14px; padding:20px 24px; text-align:center; margin-bottom:16px;">
+  <div style="font-size:32px; margin-bottom:8px;">⏳</div>
+  <div style="font-family:'Syne',sans-serif; font-size:16px; font-weight:800; color:var(--text); margin-bottom:4px;">Data Not Yet Available</div>
+  <div style="font-size:13px; color:var(--muted);">This month's data hasn't been synced yet. Please check back later.</div>
+</div>
+
   <div class="kpi-grid">
     <div class="kpi-card" style="border-top-color:var(--primary)">
       <div class="kpi-icon" style="color:var(--primary)">📈</div>
@@ -3051,6 +3057,21 @@ function togglePw(id, btn) {
   ic.className = el.type === 'password' ? 'fas fa-eye' : 'fas fa-eye-slash';
 }
 
+function toggleReset(show) {
+  var loginForm  = document.getElementById('login-form-area');
+  var resetForm  = document.getElementById('reset-form');
+  var agentName  = document.getElementById('empList').value;
+
+  if (show) {
+    loginForm.classList.add('hidden');
+    resetForm.classList.remove('hidden');
+    document.getElementById('reset-agent-name').innerText = agentName || '';
+  } else {
+    resetForm.classList.add('hidden');
+    loginForm.classList.remove('hidden');
+  }
+}
+
 function handleLoginSubmit(event) { event.preventDefault(); login(); }
 
 document.addEventListener('touchmove', function(e) {
@@ -3185,7 +3206,7 @@ function showDashboard(res) {
   document.getElementById('nav-avatar').innerText = initials;
   document.getElementById('user-name').innerText = res.name;
   document.getElementById('f-agent').value = res.name;
-  if (res.data) {
+  if (checkDataAvailability(res.data)) {
     currentAnnualData.left = res.data.annual || 0;
     currentAnnualData.used = res.data.totalUsed || 0;
     ['conformance','missing','aht','calls','annual','exceptions','quality'].forEach(k => { document.getElementById('d-' + k).innerText = res.data[k] || '-'; });
@@ -3245,6 +3266,24 @@ function refreshData() {
   }).catch(() => { avatar.style.animation = ''; });
 }
 
+function checkDataAvailability(data) {
+  var banner = document.getElementById('no-data-banner');
+  var kpiGrid = document.querySelector('.kpi-grid');
+  if (!data || data === null) {
+    banner.style.display = 'block';
+    kpiGrid.style.opacity = '0.15';
+    kpiGrid.style.filter = 'grayscale(1)';
+    kpiGrid.style.pointerEvents = 'none';
+    return false;
+  } else {
+    banner.style.display = 'none';
+    kpiGrid.style.opacity = '1';
+    kpiGrid.style.filter = 'none';
+    kpiGrid.style.pointerEvents = 'auto';
+    return true;
+  }
+}
+
 function changeMonthData() {
   var month = document.getElementById('monthFilter').value;
   var name  = document.getElementById('user-name').innerText.trim();
@@ -3253,7 +3292,7 @@ function changeMonthData() {
   document.getElementById('annual-label').innerText = month === 'CURRENT' ? 'Annual Left' : 'Annual Used';
   gasRun('getFilteredData', name, month).then(data => {
     loader.classList.add('hidden');
-    if (data) {
+    if (checkDataAvailability(data)) {
       if (month === 'CURRENT') currentAnnualData.left = data.annual || 0;
       currentAnnualData.used = data.totalUsed || 0;
       ['conformance','missing','aht','calls','annual','exceptions','quality'].forEach(k => { document.getElementById('d-' + k).innerText = data[k] || '-'; });
