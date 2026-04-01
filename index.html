@@ -2979,44 +2979,49 @@ function submitChangePassword() {
 
 window.onload = function() {
   applyTheme();
-  if ('Notification' in window) {
-  Notification.requestPermission();
-}
-  try {
-    var saved = sessionStorage.getItem('ns-session');
-    if (saved) {
-      var sess = JSON.parse(saved);
-      if (sess && sess.name) {
-        gasRun('processLogin', sess.name, 'REFRESH_MODE').then(res => {
-          if (res.status === 'success') showDashboard(res);
-          else {
-            sessionStorage.removeItem('ns-session');
-            startSwapPolling();
-            document.getElementById('app-preloader').classList.add('hidden');
-          }
-        }).catch(() => { 
-            sessionStorage.removeItem('ns-session');
-            document.getElementById('app-preloader').classList.add('hidden');
-        });
-      } else {
-        sessionStorage.removeItem('ns-session');
-        document.getElementById('app-preloader').classList.add('hidden');
-      }
-    } else {
-      document.getElementById('app-preloader').classList.add('hidden');
-    }
-  } catch(e) {
-     document.getElementById('app-preloader').classList.add('hidden');
-  }
-    
+  if ('Notification' in window) Notification.requestPermission();
+
   gasRun('getAgentList').then(result => {
     var s2 = document.getElementById('f-agent');
     s2.innerHTML = '<option value="">Select agent...</option>';
     if (result && result.length) {
-      result.forEach(item => { agentCodeMap[item.name] = item.code; s2.add(new Option(item.name, item.name)); });
+      result.forEach(item => { 
+        agentCodeMap[item.name] = item.code; 
+        s2.add(new Option(item.name, item.name)); 
+      });
     }
-  }).catch(() => {});
+
+    try {
+      var saved = sessionStorage.getItem('ns-session');
+      if (saved) {
+        var sess = JSON.parse(saved);
+        if (sess && sess.name) {
+          gasRun('processLogin', sess.name, 'REFRESH_MODE').then(res => {
+            if (res.status === 'success') showDashboard(res);
+            else {
+              sessionStorage.removeItem('ns-session');
+              startSwapPolling();
+              document.getElementById('app-preloader').classList.add('hidden');
+            }
+          }).catch(() => { 
+            sessionStorage.removeItem('ns-session');
+            document.getElementById('app-preloader').classList.add('hidden');
+          });
+        } else {
+          document.getElementById('app-preloader').classList.add('hidden');
+        }
+      } else {
+        document.getElementById('app-preloader').classList.add('hidden');
+      }
+    } catch(e) {
+      document.getElementById('app-preloader').classList.add('hidden');
+    }
+
+  }).catch(() => {
+    document.getElementById('app-preloader').classList.add('hidden');
+  });
 };
+
 
 function onAgentSelect() {}
 
