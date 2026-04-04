@@ -1,0 +1,614 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NOS Admin — xCALLY Import</title>
+<link rel="stylesheet" href="../css/main.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+.drop-zone {
+  border: 2px dashed var(--border2);
+  border-radius: 16px;
+  padding: 48px 24px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.3s;
+  background: var(--surface2);
+}
+.drop-zone:hover, .drop-zone.drag-over {
+  border-color: var(--gold);
+  background: rgba(212,175,55,0.05);
+}
+.drop-zone i { font-size: 40px; color: var(--gold); margin-bottom: 12px; display: block; }
+.drop-zone h3 { font-size: 16px; font-weight: 700; color: var(--text); margin-bottom: 6px; }
+.drop-zone p  { font-size: 13px; color: var(--muted); }
+
+.result-row td { padding: 10px 14px; }
+.conf-high  { color: #10B981; font-weight: 800; }
+.conf-mid   { color: #F59E0B; font-weight: 800; }
+.conf-low   { color: #EF4444; font-weight: 800; }
+
+.step-indicator {
+  display: flex; align-items: center; gap: 0;
+  margin-bottom: 28px;
+}
+.step {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 12px; font-weight: 700; color: var(--muted);
+}
+.step-num {
+  width: 28px; height: 28px;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 12px; font-weight: 800;
+  background: var(--surface2); border: 2px solid var(--border);
+  color: var(--muted); flex-shrink: 0;
+}
+.step.active .step-num { background: var(--gold-grad); border-color: var(--gold); color: #000; }
+.step.active { color: var(--text); }
+.step.done .step-num { background: rgba(16,185,129,0.2); border-color: #10B981; color: #10B981; }
+.step.done { color: #10B981; }
+.step-line { flex: 1; height: 2px; background: var(--border); margin: 0 8px; }
+.step-line.done { background: #10B981; }
+</style>
+</head>
+<body>
+
+<div class="admin-layout">
+  <aside class="sidebar">
+    <div class="sidebar-brand">
+      <div class="brand-logo">✦</div>
+      <div class="brand-text"><div class="brand-name">NATIONS OF SKY</div><div class="brand-sub">Admin Panel</div></div>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="nav-section">Main</div>
+      <a class="nav-item" href="../index.html"><div class="nav-icon"><i class="fas fa-tachometer-alt"></i></div><span class="nav-label">Dashboard</span></a>
+      <a class="nav-item" href="agents.html"><div class="nav-icon"><i class="fas fa-users"></i></div><span class="nav-label">Agents</span></a>
+      <a class="nav-item" href="schedule.html"><div class="nav-icon"><i class="fas fa-calendar-alt"></i></div><span class="nav-label">Schedule</span></a>
+      <a class="nav-item" href="breaks.html"><div class="nav-icon"><i class="fas fa-coffee"></i></div><span class="nav-label">Breaks</span></a>
+      <div class="nav-section">Operations</div>
+      <a class="nav-item" href="requests.html"><div class="nav-icon"><i class="fas fa-file-alt"></i></div><span class="nav-label">Requests</span></a>
+      <a class="nav-item" href="kpis.html"><div class="nav-icon"><i class="fas fa-chart-line"></i></div><span class="nav-label">KPIs</span></a>
+      <a class="nav-item active" href="xcally-import.html"><div class="nav-icon"><i class="fas fa-upload"></i></div><span class="nav-label">xCALLY Import</span></a>
+      <a class="nav-item" href="calllog.html"><div class="nav-icon"><i class="fas fa-phone-alt"></i></div><span class="nav-label">Call Log</span></a>
+      <div class="nav-section">Config</div>
+      <a class="nav-item" href="reference.html"><div class="nav-icon"><i class="fas fa-database"></i></div><span class="nav-label">Reference</span></a>
+      <a class="nav-item" href="reports.html"><div class="nav-icon"><i class="fas fa-chart-bar"></i></div><span class="nav-label">Reports</span></a>
+    </nav>
+    <div class="sidebar-footer">
+      <button class="logout-btn" onclick="logout()"><i class="fas fa-sign-out-alt"></i> Sign Out</button>
+    </div>
+  </aside>
+
+  <div class="main-content">
+    <div class="topbar">
+      <div class="topbar-left">
+        <div class="page-title">xCALLY Import</div>
+        <div class="breadcrumb"><i class="fas fa-circle" style="font-size:5px;color:var(--gold)"></i> Process & Calculate KPIs</div>
+      </div>
+      <div class="topbar-right">
+        <div class="admin-chip">
+          <div class="admin-avatar" id="admin-avatar">KR</div>
+          <span class="admin-name" id="admin-name">Admin</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="page-content">
+
+      <!-- STEPS -->
+      <div class="step-indicator fade-up">
+        <div class="step active" id="step-1">
+          <div class="step-num" id="sn-1">1</div>
+          <span>Upload Report</span>
+        </div>
+        <div class="step-line" id="sl-1"></div>
+        <div class="step" id="step-2">
+          <div class="step-num" id="sn-2">2</div>
+          <span>Review Results</span>
+        </div>
+        <div class="step-line" id="sl-2"></div>
+        <div class="step" id="step-3">
+          <div class="step-num" id="sn-3">3</div>
+          <span>Save to Supabase</span>
+        </div>
+      </div>
+
+      <!-- STEP 1: UPLOAD -->
+      <div id="step-upload">
+
+        <!-- Settings -->
+        <div class="section-card fade-up" style="margin-bottom:16px;">
+          <div class="section-header">
+            <div class="section-title"><i class="fas fa-cog" style="color:var(--gold)"></i> Settings</div>
+          </div>
+          <div class="section-body">
+            <div class="form-grid form-grid-3">
+              <div class="form-group">
+                <label class="form-label">Report Month</label>
+                <select id="report-month" class="form-input">
+                  <option value="01">January</option><option value="02">February</option>
+                  <option value="03">March</option><option value="04">April</option>
+                  <option value="05">May</option><option value="06">June</option>
+                  <option value="07">July</option><option value="08">August</option>
+                  <option value="09">September</option><option value="10">October</option>
+                  <option value="11">November</option><option value="12">December</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Year</label>
+                <select id="report-year" class="form-input">
+                  <option value="2026">2026</option>
+                  <option value="2025">2025</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Daily Target Hours</label>
+                <input type="number" id="target-hours" class="form-input" value="8" min="1" max="12">
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Upload Area -->
+        <div class="section-card fade-up">
+          <div class="section-header">
+            <div class="section-title"><i class="fas fa-upload" style="color:var(--gold)"></i> Upload xCALLY Report (CSV)</div>
+          </div>
+          <div class="section-body">
+
+            <!-- Drop Zone -->
+            <div class="drop-zone" id="drop-zone"
+              onclick="document.getElementById('csv-input').click()"
+              ondrop="handleDrop(event)" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)">
+              <i class="fas fa-file-csv"></i>
+              <h3>Drop CSV file here or click to browse</h3>
+              <p>Export the xCALLY Aux Report as CSV and upload it here</p>
+              <input type="file" id="csv-input" accept=".csv" style="display:none;" onchange="handleFile(this.files[0])">
+            </div>
+
+            <div style="text-align:center;margin:16px 0;color:var(--muted);font-size:12px;">— OR —</div>
+
+            <!-- Paste Area -->
+            <div class="form-group">
+              <label class="form-label">Paste CSV Data directly</label>
+              <textarea id="csv-paste" class="form-input" rows="8"
+                placeholder="Paste the CSV content here...&#10;Agent,EnterAt,ExitAt,Event,Duration,EventType,EnterAt,ExitAt,Date&#10;Kareem Rashad,Thursday 01/01/2026 10:00:00,..."></textarea>
+            </div>
+
+            <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:12px;">
+              <button class="btn btn-ghost" onclick="clearAll()">
+                <i class="fas fa-times"></i> Clear
+              </button>
+              <button class="btn btn-primary" onclick="processData()" id="process-btn">
+                <i class="fas fa-magic"></i> Process & Calculate KPIs
+              </button>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- Expected Format -->
+        <div class="section-card fade-up">
+          <div class="section-header">
+            <div class="section-title"><i class="fas fa-info-circle" style="color:var(--gold)"></i> Expected CSV Format</div>
+          </div>
+          <div class="section-body">
+            <div style="background:var(--surface2);border-radius:10px;padding:14px;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);overflow-x:auto;">
+              Agent, EnterAt, ExitAt, Event, Duration, EventType, EnterAt, ExitAt, Date<br>
+              Kareem Rashad, Thursday 01/01/2026 10:00:00, Thursday 01/01/2026 18:00:00, LOGIN, 8:00:00, universalbar, 10:00:00, 18:00:00, 01/01/2026<br>
+              Kareem Rashad, Thursday 01/01/2026 12:00:00, Thursday 01/01/2026 12:15:00, PAUSE, 0:15:00, Break 1, 12:00:00, 12:15:00, 01/01/2026
+            </div>
+            <div style="margin-top:12px;font-size:12px;color:var(--muted);line-height:2;">
+              <span style="color:var(--gold);font-weight:700;">Col A</span> = Agent Name &nbsp;|&nbsp;
+              <span style="color:var(--gold);font-weight:700;">Col E</span> = Duration &nbsp;|&nbsp;
+              <span style="color:var(--gold);font-weight:700;">Col F</span> = Event Type (inbound = call) &nbsp;|&nbsp;
+              <span style="color:var(--gold);font-weight:700;">Col I</span> = Date
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- STEP 2: RESULTS -->
+      <div id="step-results" style="display:none;">
+        <div class="section-card fade-up">
+          <div class="section-header">
+            <div class="section-title"><i class="fas fa-chart-bar" style="color:var(--gold)"></i> Calculated KPIs</div>
+            <div style="display:flex;gap:8px;">
+              <button class="btn btn-ghost btn-sm" onclick="goBack()">
+                <i class="fas fa-arrow-left"></i> Back
+              </button>
+              <button class="btn btn-primary" onclick="saveToSupabase()" id="save-btn">
+                <i class="fas fa-save"></i> Save to Supabase
+              </button>
+            </div>
+          </div>
+
+          <!-- Summary -->
+          <div style="display:flex;gap:12px;padding:14px 18px;border-bottom:1px solid var(--border);flex-wrap:wrap;" id="results-summary"></div>
+
+          <div class="section-body no-pad">
+            <div class="table-wrap">
+              <table class="nos-table">
+                <thead>
+                  <tr>
+                    <th>Agent</th>
+                    <th>Days Active</th>
+                    <th>Target Hours</th>
+                    <th>Active Time</th>
+                    <th>Conformance</th>
+                    <th>Missing Time</th>
+                    <th>Total Calls</th>
+                    <th>Avg AHT</th>
+                  </tr>
+                </thead>
+                <tbody id="results-tbody"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<div id="toast-container"></div>
+
+<script src="../js/supabase.js"></script>
+<script src="../js/auth.js"></script>
+<script src="../js/ui.js"></script>
+<script>
+const session = checkAuth();
+if (session) {
+  document.getElementById('admin-name').innerText = session.username || 'Admin';
+  document.getElementById('admin-avatar').innerText = initials(session.username || 'Admin');
+}
+
+// Set current month
+const now = new Date();
+document.getElementById('report-month').value = String(now.getMonth()+1).padStart(2,'0');
+
+const MONTH_NAMES = ['','January','February','March','April','May','June','July','August','September','October','November','December'];
+
+let calculatedResults = [];
+let allAgents = [];
+
+// Load agents on init
+async function init() {
+  const { data } = await db.from('agents').select('id,formal_name').eq('status','Active');
+  allAgents = data || [];
+}
+
+// ── File Handling ──
+function handleDrop(e) {
+  e.preventDefault();
+  document.getElementById('drop-zone').classList.remove('drag-over');
+  const file = e.dataTransfer.files[0];
+  if (file) handleFile(file);
+}
+function handleDragOver(e) {
+  e.preventDefault();
+  document.getElementById('drop-zone').classList.add('drag-over');
+}
+function handleDragLeave() {
+  document.getElementById('drop-zone').classList.remove('drag-over');
+}
+
+function handleFile(file) {
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    document.getElementById('csv-paste').value = e.target.result;
+    document.getElementById('drop-zone').innerHTML = `
+      <i class="fas fa-check-circle" style="color:#10B981;"></i>
+      <h3 style="color:#10B981;">File loaded: ${file.name}</h3>
+      <p>${(file.size/1024).toFixed(1)} KB · Ready to process</p>
+    `;
+    showToast('File loaded: ' + file.name, 'success');
+  };
+  reader.readAsText(file);
+}
+
+function clearAll() {
+  document.getElementById('csv-paste').value = '';
+  document.getElementById('drop-zone').innerHTML = `
+    <i class="fas fa-file-csv"></i>
+    <h3>Drop CSV file here or click to browse</h3>
+    <p>Export the xCALLY Aux Report as CSV and upload it here</p>
+    <input type="file" id="csv-input" accept=".csv" style="display:none;" onchange="handleFile(this.files[0])">
+  `;
+  document.getElementById('csv-input')?.addEventListener('change', e => handleFile(e.target.files[0]));
+}
+
+// ── Process Data ──
+function processData() {
+  const raw = document.getElementById('csv-paste').value.trim();
+  if (!raw) { showToast('Please upload or paste CSV data first', 'error'); return; }
+
+  const btn = document.getElementById('process-btn');
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
+
+  try {
+    const results = calculateKPIs(raw);
+    if (!results.length) {
+      showToast('No data found. Check CSV format.', 'error');
+      btn.disabled = false;
+      btn.innerHTML = '<i class="fas fa-magic"></i> Process & Calculate KPIs';
+      return;
+    }
+
+    calculatedResults = results;
+    renderResults(results);
+    setStep(2);
+    showToast(`Processed ${results.length} agents!`, 'success');
+  } catch(e) {
+    showToast('Error: ' + e.message, 'error');
+    console.error(e);
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fas fa-magic"></i> Process & Calculate KPIs';
+  }
+}
+
+// ── Core KPI Calculation ──
+function calculateKPIs(csvText) {
+  const targetHours = parseFloat(document.getElementById('target-hours').value) || 8;
+  const TARGET_SEC  = targetHours * 3600;
+
+  // Parse CSV
+  const lines = csvText.split('\n').filter(l => l.trim());
+  const rows  = [];
+
+  // Find header row
+  let headerIdx = 0;
+  for (let i = 0; i < Math.min(lines.length, 10); i++) {
+    const lower = lines[i].toLowerCase();
+    if (lower.includes('agent') || lower.includes('enterat')) {
+      headerIdx = i + 1;
+      break;
+    }
+  }
+
+  for (let i = headerIdx; i < lines.length; i++) {
+    const cols = parseCSVLine(lines[i]);
+    if (cols.length < 5) continue;
+    rows.push(cols);
+  }
+
+  if (!rows.length) return [];
+
+  // Build agent map
+  const agentData = new Map();
+
+  rows.forEach(cols => {
+    const agentName  = cols[0]?.trim();
+    const duration   = cols[4]?.trim();
+    const eventType  = cols[5]?.trim().toLowerCase();
+    const dateStr    = cols[8]?.trim() || cols[1]?.trim();
+
+    if (!agentName || agentName.toLowerCase() === 'agent') return;
+
+    if (!agentData.has(agentName)) {
+      agentData.set(agentName, {
+        totalSec:   0,  // total active time
+        talkSec:    0,  // inbound calls time
+        calls:      0,  // inbound call count
+        activeDates: new Set(),
+      });
+    }
+
+    const a   = agentData.get(agentName);
+    const sec = timeToSeconds(duration);
+
+    // Add to total active time
+    if (sec > 0) {
+      a.totalSec += sec;
+
+      // Extract date
+      const date = extractDate(dateStr || cols[1]);
+      if (date) a.activeDates.add(date);
+
+      // Count inbound calls
+      if (eventType === 'inbound') {
+        a.calls++;
+        a.talkSec += sec;
+      }
+    }
+  });
+
+  // Calculate KPIs
+  const results = [];
+  agentData.forEach((data, name) => {
+    if (data.activeDates.size === 0 && data.calls === 0) return;
+
+    const daysActive   = data.activeDates.size || 1;
+    const totalTarget  = daysActive * TARGET_SEC;
+    const missingSec   = Math.max(0, totalTarget - data.totalSec);
+    const confPercent  = totalTarget > 0 ? Math.min(100, (data.totalSec / totalTarget) * 100) : 0;
+    const avgAHT       = data.calls > 0 ? Math.round(data.talkSec / data.calls) : 0;
+
+    results.push({
+      name,
+      daysActive,
+      targetSec:   totalTarget,
+      activeSec:   data.totalSec,
+      missingSec,
+      confPercent,
+      calls:       data.calls,
+      avgAHT,
+      conformance: confPercent.toFixed(0) + '%',
+      missing:     missingSec <= 300 ? 'Full Time' : formatSeconds(missingSec),
+      aht:         formatSeconds(avgAHT),
+    });
+  });
+
+  return results.sort((a,b) => b.confPercent - a.confPercent);
+}
+
+// ── Render Results ──
+function renderResults(results) {
+  const tbody = document.getElementById('results-tbody');
+  const summary = document.getElementById('results-summary');
+
+  const avgConf = results.reduce((a,b)=>a+b.confPercent,0) / results.length;
+  const totalCalls = results.reduce((a,b)=>a+b.calls,0);
+
+  summary.innerHTML = `
+    <span class="badge badge-gold">👥 ${results.length} Agents</span>
+    <span class="badge badge-success">📈 Avg Conf: ${avgConf.toFixed(0)}%</span>
+    <span class="badge badge-blue">📞 Total Calls: ${totalCalls}</span>
+    <span class="badge badge-info">📅 ${MONTH_NAMES[parseInt(document.getElementById('report-month').value)]} ${document.getElementById('report-year').value}</span>
+  `;
+
+  tbody.innerHTML = results.map(r => {
+    const confClass = r.confPercent >= 98 ? 'conf-high' : r.confPercent >= 90 ? 'conf-mid' : 'conf-low';
+    return `
+      <tr>
+        <td>
+          <div style="display:flex;align-items:center;gap:8px;">
+            <div class="agent-avatar" style="width:28px;height:28px;font-size:10px;">${initials(r.name)}</div>
+            <span style="font-weight:700;">${r.name}</span>
+          </div>
+        </td>
+        <td style="text-align:center;">${r.daysActive}</td>
+        <td style="font-family:'JetBrains Mono',monospace;font-size:12px;">${formatSeconds(r.targetSec)}</td>
+        <td style="font-family:'JetBrains Mono',monospace;font-size:12px;">${formatSeconds(r.activeSec)}</td>
+        <td class="${confClass}">${r.conformance}</td>
+        <td style="font-size:12px;color:${r.missingSec>300?'#EF4444':'#10B981'};">${r.missing}</td>
+        <td style="font-weight:700;">${r.calls}</td>
+        <td style="font-family:'JetBrains Mono',monospace;font-size:12px;">${r.aht}</td>
+      </tr>
+    `;
+  }).join('');
+}
+
+// ── Save to Supabase ──
+async function saveToSupabase() {
+  const month = MONTH_NAMES[parseInt(document.getElementById('report-month').value)];
+  const year  = parseInt(document.getElementById('report-year').value);
+  const btn   = document.getElementById('save-btn');
+
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
+
+  try {
+    const upserts = calculatedResults.map(r => {
+      // Match agent by name
+      const agent = allAgents.find(a =>
+        a.formal_name.toLowerCase() === r.name.toLowerCase()
+      );
+
+      return {
+        agent_id:     agent?.id || null,
+        agent_name:   r.name,
+        month,
+        year,
+        conformance:  r.conformance,
+        missing_time: r.missing,
+        avg_aht:      r.aht,
+        total_calls:  r.calls,
+        updated_at:   new Date().toISOString(),
+      };
+    });
+
+    const { error } = await db.from('kpis')
+      .upsert(upserts, { onConflict: 'agent_id,month,year' });
+
+    if (error) throw error;
+
+    showToast(`${upserts.length} KPIs saved to Supabase!`, 'success');
+    setStep(3);
+    btn.innerHTML = '<i class="fas fa-check"></i> Saved!';
+
+  } catch(e) {
+    showToast('Save failed: ' + e.message, 'error');
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fas fa-save"></i> Save to Supabase';
+  }
+}
+
+// ── Step Navigation ──
+function setStep(n) {
+  if (n === 2) {
+    document.getElementById('step-upload').style.display  = 'none';
+    document.getElementById('step-results').style.display = 'block';
+    document.getElementById('step-1').className = 'step done';
+    document.getElementById('sn-1').innerHTML   = '<i class="fas fa-check"></i>';
+    document.getElementById('sl-1').className   = 'step-line done';
+    document.getElementById('step-2').className = 'step active';
+  }
+  if (n === 3) {
+    document.getElementById('step-2').className = 'step done';
+    document.getElementById('sn-2').innerHTML   = '<i class="fas fa-check"></i>';
+    document.getElementById('sl-2').className   = 'step-line done';
+    document.getElementById('step-3').className = 'step active';
+    document.getElementById('sn-3').innerHTML   = '<i class="fas fa-check"></i>';
+  }
+}
+
+function goBack() {
+  document.getElementById('step-upload').style.display  = 'block';
+  document.getElementById('step-results').style.display = 'none';
+  document.getElementById('step-1').className = 'step active';
+  document.getElementById('sn-1').innerText   = '1';
+  document.getElementById('sl-1').className   = 'step-line';
+  document.getElementById('step-2').className = 'step';
+}
+
+// ── Helpers ──
+function timeToSeconds(val) {
+  if (!val) return 0;
+  const p = val.toString().trim().split(':');
+  if (p.length === 3) return (+p[0])*3600 + (+p[1])*60 + (+p[2]);
+  if (p.length === 2) return (+p[0])*60  + (+p[1]);
+  return 0;
+}
+
+function formatSeconds(s) {
+  if (!s) return '00:00:00';
+  const h   = Math.floor(s/3600).toString().padStart(2,'0');
+  const m   = Math.floor((s%3600)/60).toString().padStart(2,'0');
+  const sec = Math.floor(s%60).toString().padStart(2,'0');
+  return `${h}:${m}:${sec}`;
+}
+
+function extractDate(str) {
+  if (!str) return null;
+  // dd/MM/yyyy
+  let m = str.match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+  if (m) return `${m[3]}-${m[2].padStart(2,'0')}-${m[1].padStart(2,'0')}`;
+  // yyyy-MM-dd
+  m = str.match(/(\d{4})-(\d{2})-(\d{2})/);
+  if (m) return `${m[1]}-${m[2]}-${m[3]}`;
+  return null;
+}
+
+function parseCSVLine(line) {
+  const result = [];
+  let current  = '';
+  let inQuotes = false;
+
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i];
+    if (ch === '"') {
+      inQuotes = !inQuotes;
+    } else if (ch === ',' && !inQuotes) {
+      result.push(current.trim());
+      current = '';
+    } else {
+      current += ch;
+    }
+  }
+  result.push(current.trim());
+  return result;
+}
+
+init();
+</script>
+</body>
+</html>
