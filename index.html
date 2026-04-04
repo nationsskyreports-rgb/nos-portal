@@ -2539,8 +2539,16 @@ body { display: flex; flex-direction: column; }
       </div>
       <div id="search-results"></div>
     </div>
-
-    <div class="call-log-header-card">
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;">
+  <button onclick="setLogType('call')" id="btn-call" class="action-btn c-accent" style="justify-content:center;padding:16px;font-size:15px;border-radius:14px;">
+    <i class="fas fa-phone-alt"></i> Phone Call
+  </button>
+  <button onclick="setLogType('whatsapp')" id="btn-wa" class="action-btn" style="justify-content:center;padding:16px;font-size:15px;border-radius:14px;color:#25d366;">
+    <i class="fab fa-whatsapp"></i> WhatsApp
+  </button>
+</div>
+<div id="call-log-form-body" style="display:none">    
+<div class="call-log-header-card">
       <div class="call-log-icon"><i class="fas fa-phone-volume"></i></div>
       <div><div class="call-log-title">Call Data Entry</div><div class="call-log-sub">Log customer interactions to the database</div></div>
     </div>
@@ -2838,6 +2846,7 @@ body { display: flex; flex-direction: column; }
   </div>
 </div>
 
+
 <script>
 
 let currentAnnualData = { used: 0, left: 0 };
@@ -2881,6 +2890,24 @@ function gasRun(action, ...args) {
   })
   .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.text(); })
   .then(text => { try { return JSON.parse(text); } catch(e) { throw new Error('Invalid JSON response'); } });
+}
+var currentLogType = '';
+function setLogType(type) {
+  if (currentLogType === type) {
+    currentLogType = '';
+    document.getElementById('btn-call').style.background = '';
+    document.getElementById('btn-wa').style.background = '';
+    document.getElementById('btn-call').style.borderColor = '';
+    document.getElementById('btn-wa').style.borderColor = '';
+    document.getElementById('call-log-form-body').style.display = 'none';
+    return;
+  }
+  currentLogType = type;
+  document.getElementById('btn-call').style.background = type === 'call' ? 'rgba(5,150,105,0.15)' : '';
+  document.getElementById('btn-wa').style.background = type === 'whatsapp' ? 'rgba(37,211,102,0.15)' : '';
+  document.getElementById('btn-call').style.borderColor = type === 'call' ? '#059669' : '';
+  document.getElementById('btn-wa').style.borderColor = type === 'whatsapp' ? '#25d366' : '';
+  document.getElementById('call-log-form-body').style.display = 'block';
 }
 var knownSwapStatuses = {};
 var swapPollTimer = null;
@@ -3561,6 +3588,7 @@ function quickLogCall(reason) {
   setTimeout(() => submitCallLogForm(), 200);
 }
 function submitCallLogForm() {
+if (!currentLogType) { showFormErr('Please select Phone Call or WhatsApp first!'); return; }
   var agent  = document.getElementById("f-agent").value;
   var reason = document.getElementById("f-reason").value;
   var mobile = document.getElementById("f-mobile").value.trim();
@@ -3593,7 +3621,8 @@ function submitCallLogForm() {
     media:     isQ ? '' : (radioValues["f-media"]     || ''),
     budget:    isQ ? '' : (radioValues["f-budget"]    || ''),
     unit:      isQ ? '' : (radioValues["f-unit"]      || ''),
-    extra: document.getElementById("f-extra").value.trim()
+    extra: document.getElementById("f-extra").value.trim(),
+logType: currentLogType
   };
 
   gasRun('submitCallLog', data).then(res => {
@@ -3608,6 +3637,11 @@ function submitCallLogForm() {
 }
 
 function resetCallForm() {
+  currentLogType = '';
+  document.getElementById('btn-call').style.background = '';
+  document.getElementById('btn-wa').style.background = '';
+  document.getElementById('btn-call').style.borderColor = '';
+  document.getElementById('btn-wa').style.borderColor = '';
   ['f-reason','f-mobile','f-extra'].forEach(id => document.getElementById(id).value = '');
   document.getElementById("f-cname").value = '';
   radioValues = {};
@@ -4262,7 +4296,9 @@ function silentRefreshRequests() {
     }
   }).catch(function() {});
 }
-
+window.addEventListener('beforeunload', function() {
+  sessionStorage.removeItem('ns-session');
+});
 </script>
 
 <div id="nos-toast-container"></div>
