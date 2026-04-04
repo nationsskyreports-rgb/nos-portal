@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NOS Admin — KPIs</title>
+<link rel="stylesheet" href="../css/main.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+
+<div class="admin-layout">
+  <aside class="sidebar">
+    <div class="sidebar-brand">
+      <div class="brand-logo">✦</div>
+      <div class="brand-text"><div class="brand-name">NATIONS OF SKY</div><div class="brand-sub">Admin Panel</div></div>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="nav-section">Main</div>
+      <a class="nav-item" href="../index.html"><div class="nav-icon"><i class="fas fa-tachometer-alt"></i></div><span class="nav-label">Dashboard</span></a>
+      <a class="nav-item" href="agents.html"><div class="nav-icon"><i class="fas fa-users"></i></div><span class="nav-label">Agents</span></a>
+      <a class="nav-item" href="schedule.html"><div class="nav-icon"><i class="fas fa-calendar-alt"></i></div><span class="nav-label">Schedule</span></a>
+      <a class="nav-item" href="breaks.html"><div class="nav-icon"><i class="fas fa-coffee"></i></div><span class="nav-label">Breaks</span></a>
+      <div class="nav-section">Operations</div>
+      <a class="nav-item" href="requests.html"><div class="nav-icon"><i class="fas fa-file-alt"></i></div><span class="nav-label">Requests</span></a>
+      <a class="nav-item active" href="kpis.html"><div class="nav-icon"><i class="fas fa-chart-line"></i></div><span class="nav-label">KPIs</span></a>
+      <a class="nav-item" href="calllog.html"><div class="nav-icon"><i class="fas fa-phone-alt"></i></div><span class="nav-label">Call Log</span></a>
+      <div class="nav-section">Config</div>
+      <a class="nav-item" href="reference.html"><div class="nav-icon"><i class="fas fa-database"></i></div><span class="nav-label">Reference</span></a>
+      <a class="nav-item" href="reports.html"><div class="nav-icon"><i class="fas fa-chart-bar"></i></div><span class="nav-label">Reports</span></a>
+    </nav>
+    <div class="sidebar-footer">
+      <button class="logout-btn" onclick="logout()"><i class="fas fa-sign-out-alt"></i> Sign Out</button>
+    </div>
+  </aside>
+
+  <div class="main-content">
+    <div class="topbar">
+      <div class="topbar-left">
+        <div class="page-title">KPIs</div>
+        <div class="breadcrumb"><i class="fas fa-circle" style="font-size:5px;color:var(--gold)"></i> Performance Data</div>
+      </div>
+      <div class="topbar-right">
+        <!-- Month/Year Filter -->
+        <select id="month-filter" class="form-input" style="width:auto;padding:8px 12px;" onchange="loadKPIs()">
+          <option value="01">January</option><option value="02">February</option>
+          <option value="03">March</option><option value="04">April</option>
+          <option value="05">May</option><option value="06">June</option>
+          <option value="07">July</option><option value="08">August</option>
+          <option value="09">September</option><option value="10">October</option>
+          <option value="11">November</option><option value="12">December</option>
+        </select>
+        <select id="year-filter" class="form-input" style="width:auto;padding:8px 12px;" onchange="loadKPIs()">
+          <option value="2026">2026</option>
+          <option value="2025">2025</option>
+        </select>
+        <button class="btn btn-primary" onclick="openBulkUpload()">
+          <i class="fas fa-upload"></i> Upload KPIs
+        </button>
+        <div class="admin-chip">
+          <div class="admin-avatar" id="admin-avatar">KR</div>
+          <span class="admin-name" id="admin-name">Admin</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="page-content">
+
+      <!-- TABLE -->
+      <div class="section-card fade-up">
+        <div class="section-header">
+          <div class="section-title">
+            <i class="fas fa-chart-line" style="color:var(--gold)"></i>
+            <span id="kpi-table-title">KPIs</span>
+          </div>
+          <button class="btn btn-ghost btn-sm" onclick="loadKPIs()">
+            <i class="fas fa-sync-alt"></i> Refresh
+          </button>
+        </div>
+        <div class="section-body no-pad">
+          <div class="table-wrap">
+            <table class="nos-table">
+              <thead>
+                <tr>
+                  <th>Agent</th>
+                  <th>Conformance</th>
+                  <th>Missing Time</th>
+                  <th>Avg AHT</th>
+                  <th>Total Calls</th>
+                  <th>Exceptions</th>
+                  <th>Quality</th>
+                  <th>Annual Left</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="kpi-tbody">
+                <tr><td colspan="9"><div class="loading-wrap"><div class="spinner"></div></div></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- PANEL -->
+<div class="panel-overlay" id="panel-overlay" onclick="closePanel()"></div>
+<div class="slide-panel" id="slide-panel">
+  <div class="panel-header">
+    <div class="panel-title" id="panel-title">Edit KPI</div>
+    <button class="panel-close" onclick="closePanel()"><i class="fas fa-times"></i></button>
+  </div>
+  <div class="panel-body" id="panel-body"></div>
+  <div class="panel-footer" id="panel-footer"></div>
+</div>
+
+<div id="toast-container"></div>
+
+<script src="../js/supabase.js"></script>
+<script src="../js/auth.js"></script>
+<script src="../js/ui.js"></script>
+<script>
+const session = checkAuth();
+if (session) {
+  document.getElementById('admin-name').innerText = session.username || 'Admin';
+  document.getElementById('admin-avatar').innerText = initials(session.username || 'Admin');
+}
+
+// Set current month
+const now = new Date();
+document.getElementById('month-filter').value = String(now.getMonth()+1).padStart(2,'0');
+
+let allAgents = [];
+let kpiData   = [];
+
+async function init() {
+  const { data } = await db.from('agents').select('id,formal_name').eq('status','Active').order('formal_name');
+  allAgents = data || [];
+  await loadKPIs();
+}
+
+async function loadKPIs() {
+  const month = document.getElementById('month-filter').value;
+  const year  = parseInt(document.getElementById('year-filter').value);
+  const monthNames = ['','January','February','March','April','May','June','July','August','September','October','November','December'];
+  document.getElementById('kpi-table-title').innerText = `KPIs — ${monthNames[parseInt(month)]} ${year}`;
+
+  const tbody = document.getElementById('kpi-tbody');
+  tbody.innerHTML = `<tr><td colspan="9"><div class="loading-wrap"><div class="spinner"></div></div></td></tr>`;
+
+  try {
+    const { data } = await db.from('kpis')
+      .select('*')
+      .eq('month', monthNames[parseInt(month)])
+      .eq('year', year);
+
+    kpiData = data || [];
+
+    // Merge with agents list
+    const rows = allAgents.map(agent => {
+      const kpi = kpiData.find(k => k.agent_id === agent.id) || {};
+      return { agent, kpi };
+    });
+
+    if (!rows.length) {
+      tbody.innerHTML = `<tr><td colspan="9"><div class="empty-state"><span class="empty-icon">📊</span>No KPI data for this month. Upload data first.</div></td></tr>`;
+      return;
+    }
+
+    tbody.innerHTML = rows.map(({ agent, kpi }) => {
+      const hasData = !!kpi.id;
+      const confVal = parseFloat(kpi.conformance) || 0;
+      const confColor = confVal >= 98 ? 'color:#10B981;' : confVal >= 90 ? 'color:#F59E0B;' : 'color:#EF4444;';
+
+      return `
+        <tr>
+          <td>
+            <div style="display:flex;align-items:center;gap:8px;">
+              <div class="agent-avatar" style="width:28px;height:28px;font-size:10px;">${initials(agent.formal_name)}</div>
+              <span style="font-weight:700;">${agent.formal_name}</span>
+            </div>
+          </td>
+          <td style="font-weight:700;${confColor}">${kpi.conformance || '—'}</td>
+          <td style="font-size:12px;">${kpi.missing_time || '—'}</td>
+          <td style="font-family:'JetBrains Mono',monospace;font-size:12px;">${kpi.avg_aht || '—'}</td>
+          <td style="font-weight:700;">${kpi.total_calls || '—'}</td>
+          <td style="font-size:12px;">${kpi.exceptions || '—'}</td>
+          <td style="font-weight:700;color:${kpi.quality?'var(--gold)':'var(--muted)'};">${kpi.quality || '—'}</td>
+          <td>
+            ${kpi.annual_left !== undefined && kpi.annual_left !== null
+              ? `<span class="badge ${kpi.annual_left <= 3 ? 'badge-danger' : 'badge-success'}">${kpi.annual_left} days</span>`
+              : '<span style="color:var(--muted);">—</span>'
+            }
+          </td>
+          <td>
+            <button class="btn btn-info btn-sm btn-icon" onclick="editKPI('${agent.id}')" title="Edit">
+              <i class="fas fa-edit"></i>
+            </button>
+          </td>
+        </tr>
+      `;
+    }).join('');
+
+  } catch(e) {
+    tbody.innerHTML = `<tr><td colspan="9"><div class="empty-state"><span class="empty-icon">❌</span>Failed to load</div></td></tr>`;
+    showToast('Failed: ' + e.message, 'error');
+  }
+}
+
+// ── Edit KPI ──
+function editKPI(agentId) {
+  const agent = allAgents.find(a => a.id === agentId);
+  const month = document.getElementById('month-filter').value;
+  const year  = parseInt(document.getElementById('year-filter').value);
+  const monthNames = ['','January','February','March','April','May','June','July','August','September','October','November','December'];
+  const kpi   = kpiData.find(k => k.agent_id === agentId) || {};
+
+  document.getElementById('panel-title').innerText = `KPI — ${agent?.formal_name}`;
+  document.getElementById('panel-body').innerHTML = `
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:20px;padding:12px;background:var(--surface2);border-radius:12px;">
+      <div class="agent-avatar" style="width:38px;height:38px;">${initials(agent?.formal_name)}</div>
+      <div>
+        <div style="font-weight:800;">${agent?.formal_name}</div>
+        <div style="font-size:12px;color:var(--muted);">${monthNames[parseInt(month)]} ${year}</div>
+      </div>
+    </div>
+    <div class="form-grid form-grid-2">
+      <div class="form-group">
+        <label class="form-label">Conformance %</label>
+        <input type="text" id="f-conf" class="form-input" value="${kpi.conformance||''}" placeholder="e.g. 98%">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Missing Time</label>
+        <input type="text" id="f-missing" class="form-input" value="${kpi.missing_time||''}" placeholder="e.g. 00:30:00">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Avg AHT</label>
+        <input type="text" id="f-aht" class="form-input" value="${kpi.avg_aht||''}" placeholder="e.g. 0:03:45">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Total Calls</label>
+        <input type="number" id="f-calls" class="form-input" value="${kpi.total_calls||''}">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Exceptions</label>
+        <input type="text" id="f-exceptions" class="form-input" value="${kpi.exceptions||''}" placeholder="e.g. 2 Hours">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Quality Score</label>
+        <input type="text" id="f-quality" class="form-input" value="${kpi.quality||''}" placeholder="e.g. 95%">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Annual Left (Days)</label>
+        <input type="number" id="f-annual" class="form-input" value="${kpi.annual_left??''}">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Annual Used (Days)</label>
+        <input type="number" id="f-annual-used" class="form-input" value="${kpi.annual_used??''}">
+      </div>
+    </div>
+  `;
+
+  document.getElementById('panel-footer').innerHTML = `
+    <button class="btn btn-ghost" onclick="closePanel()">Cancel</button>
+    <button class="btn btn-primary" onclick="saveKPI('${agentId}','${kpi.id||''}','${monthNames[parseInt(month)]}',${year})">
+      <i class="fas fa-save"></i> Save KPI
+    </button>
+  `;
+
+  openPanel();
+}
+
+async function saveKPI(agentId, kpiId, month, year) {
+  const payload = {
+    agent_id:     agentId,
+    agent_name:   allAgents.find(a=>a.id===agentId)?.formal_name || '',
+    month,
+    year,
+    conformance:  document.getElementById('f-conf').value.trim()      || null,
+    missing_time: document.getElementById('f-missing').value.trim()   || null,
+    avg_aht:      document.getElementById('f-aht').value.trim()       || null,
+    total_calls:  parseInt(document.getElementById('f-calls').value)  || 0,
+    exceptions:   document.getElementById('f-exceptions').value.trim()|| null,
+    quality:      document.getElementById('f-quality').value.trim()   || null,
+    annual_left:  parseInt(document.getElementById('f-annual').value) || 0,
+    annual_used:  parseInt(document.getElementById('f-annual-used').value) || 0,
+    updated_at:   new Date().toISOString(),
+  };
+
+  try {
+    if (kpiId) {
+      const { error } = await db.from('kpis').update(payload).eq('id', kpiId);
+      if (error) throw error;
+    } else {
+      payload.created_at = new Date().toISOString();
+      const { error } = await db.from('kpis').insert(payload);
+      if (error) throw error;
+    }
+    showToast('KPI saved!', 'success');
+    closePanel();
+    loadKPIs();
+  } catch(e) {
+    showToast('Failed: ' + e.message, 'error');
+  }
+}
+
+// ── Bulk Upload ──
+function openBulkUpload() {
+  const month = document.getElementById('month-filter').value;
+  const year  = document.getElementById('year-filter').value;
+  const monthNames = ['','January','February','March','April','May','June','July','August','September','October','November','December'];
+
+  document.getElementById('panel-title').innerText = 'Bulk Upload KPIs';
+  document.getElementById('panel-body').innerHTML = `
+    <div style="font-size:13px;color:var(--muted);margin-bottom:16px;">
+      Paste KPI data for <strong style="color:var(--text);">${monthNames[parseInt(month)]} ${year}</strong>.
+      One agent per row.
+    </div>
+    <div style="background:var(--surface2);border-radius:10px;padding:12px;margin-bottom:16px;font-size:11px;font-family:'JetBrains Mono',monospace;color:var(--muted);">
+      Format: Agent Name | Conformance | Missing | AHT | Calls | Exceptions | Quality | Annual Left
+    </div>
+    <div class="form-group">
+      <label class="form-label">KPI Data (paste from MTD sheet)</label>
+      <textarea id="bulk-data" class="form-input" rows="10"
+        placeholder="Kareem Rashad | 98% | Full Time | 0:03:45 | 120 | None | 95% | 18"></textarea>
+    </div>
+    <div style="font-size:11px;color:var(--muted);margin-top:8px;">
+      <i class="fas fa-info-circle" style="color:var(--gold);margin-right:4px;"></i>
+      Separate columns with | (pipe). Missing values = leave empty.
+    </div>
+  `;
+
+  document.getElementById('panel-footer').innerHTML = `
+    <button class="btn btn-ghost" onclick="closePanel()">Cancel</button>
+    <button class="btn btn-primary" onclick="processBulkUpload('${monthNames[parseInt(month)]}',${year})">
+      <i class="fas fa-upload"></i> Upload
+    </button>
+  `;
+  openPanel();
+}
+
+async function processBulkUpload(month, year) {
+  const raw = document.getElementById('bulk-data').value.trim();
+  if (!raw) { showToast('No data to upload', 'error'); return; }
+
+  const lines = raw.split('\n').filter(l => l.trim());
+  const upserts = [];
+  const errors  = [];
+
+  lines.forEach((line, idx) => {
+    const parts = line.split('|').map(p => p.trim());
+    const agentName = parts[0];
+    if (!agentName) return;
+
+    const agent = allAgents.find(a =>
+      a.formal_name.toLowerCase() === agentName.toLowerCase()
+    );
+
+    if (!agent) { errors.push(`Row ${idx+1}: Agent "${agentName}" not found`); return; }
+
+    upserts.push({
+      agent_id:     agent.id,
+      agent_name:   agent.formal_name,
+      month, year,
+      conformance:  parts[1] || null,
+      missing_time: parts[2] || null,
+      avg_aht:      parts[3] || null,
+      total_calls:  parseInt(parts[4]) || 0,
+      exceptions:   parts[5] || null,
+      quality:      parts[6] || null,
+      annual_left:  parseInt(parts[7]) || 0,
+      updated_at:   new Date().toISOString(),
+    });
+  });
+
+  if (errors.length) {
+    showToast(errors.join('\n'), 'warning');
+  }
+
+  if (upserts.length) {
+    try {
+      const { error } = await db.from('kpis')
+        .upsert(upserts, { onConflict: 'agent_id,month,year' });
+      if (error) throw error;
+      showToast(`${upserts.length} KPIs uploaded!`, 'success');
+      closePanel();
+      loadKPIs();
+    } catch(e) {
+      showToast('Upload failed: ' + e.message, 'error');
+    }
+  }
+}
+
+function openPanel()  { document.getElementById('panel-overlay').classList.add('open'); document.getElementById('slide-panel').classList.add('open'); }
+function closePanel() { document.getElementById('panel-overlay').classList.remove('open'); document.getElementById('slide-panel').classList.remove('open'); }
+
+init();
+</script>
+
+</body>
+</html>
