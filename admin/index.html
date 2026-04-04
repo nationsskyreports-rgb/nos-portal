@@ -1,1 +1,531 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NOS Admin — Dashboard</title>
+<link rel="stylesheet" href="css/main.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
 
+<div class="admin-layout">
+
+  <!-- ══ SIDEBAR ══ -->
+  <aside class="sidebar">
+    <div class="sidebar-brand">
+      <div class="brand-logo">✦</div>
+      <div class="brand-text">
+        <div class="brand-name">NATIONS OF SKY</div>
+        <div class="brand-sub">Admin Panel</div>
+      </div>
+    </div>
+
+    <nav class="sidebar-nav">
+      <div class="nav-section">Main</div>
+
+      <a class="nav-item active" href="index.html">
+        <div class="nav-icon"><i class="fas fa-tachometer-alt"></i></div>
+        <span class="nav-label">Dashboard</span>
+      </a>
+
+      <a class="nav-item" href="pages/agents.html">
+        <div class="nav-icon"><i class="fas fa-users"></i></div>
+        <span class="nav-label">Agents</span>
+      </a>
+
+      <a class="nav-item" href="pages/schedule.html">
+        <div class="nav-icon"><i class="fas fa-calendar-alt"></i></div>
+        <span class="nav-label">Schedule</span>
+      </a>
+
+      <a class="nav-item" href="pages/breaks.html">
+        <div class="nav-icon"><i class="fas fa-coffee"></i></div>
+        <span class="nav-label">Breaks</span>
+      </a>
+
+      <div class="nav-section">Operations</div>
+
+      <a class="nav-item" href="pages/requests.html">
+        <div class="nav-icon"><i class="fas fa-file-alt"></i></div>
+        <span class="nav-label">Requests</span>
+        <span class="nav-badge" id="pending-count">0</span>
+      </a>
+
+      <a class="nav-item" href="pages/kpis.html">
+        <div class="nav-icon"><i class="fas fa-chart-line"></i></div>
+        <span class="nav-label">KPIs</span>
+      </a>
+
+      <a class="nav-item" href="pages/calllog.html">
+        <div class="nav-icon"><i class="fas fa-phone-alt"></i></div>
+        <span class="nav-label">Call Log</span>
+      </a>
+
+      <div class="nav-section">Config</div>
+
+      <a class="nav-item" href="pages/reference.html">
+        <div class="nav-icon"><i class="fas fa-database"></i></div>
+        <span class="nav-label">Reference</span>
+      </a>
+
+      <a class="nav-item" href="pages/reports.html">
+        <div class="nav-icon"><i class="fas fa-chart-bar"></i></div>
+        <span class="nav-label">Reports</span>
+      </a>
+    </nav>
+
+    <div class="sidebar-footer">
+      <button class="logout-btn" onclick="logout()">
+        <i class="fas fa-sign-out-alt"></i> Sign Out
+      </button>
+    </div>
+  </aside>
+
+  <!-- ══ MAIN ══ -->
+  <div class="main-content">
+
+    <!-- TOP BAR -->
+    <div class="topbar">
+      <div class="topbar-left">
+        <div class="page-title">Dashboard</div>
+        <div class="breadcrumb">
+          <i class="fas fa-circle" style="font-size:5px;color:var(--gold)"></i>
+          Overview
+        </div>
+      </div>
+      <div class="topbar-right">
+        <button class="topbar-btn" onclick="loadAll()" title="Refresh">
+          <i class="fas fa-sync-alt" id="refresh-icon"></i>
+        </button>
+        <div class="admin-chip">
+          <div class="admin-avatar" id="admin-avatar">KR</div>
+          <span class="admin-name" id="admin-name">Admin</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- PAGE CONTENT -->
+    <div class="page-content">
+
+      <!-- KPI CARDS -->
+      <div class="kpi-grid fade-up">
+        <div class="kpi-card gold">
+          <span class="kpi-icon">👥</span>
+          <div class="kpi-label">Total Agents</div>
+          <div class="kpi-value" id="kpi-agents">—</div>
+          <div class="kpi-sub" id="kpi-agents-sub">Loading...</div>
+        </div>
+        <div class="kpi-card green">
+          <span class="kpi-icon">✅</span>
+          <div class="kpi-label">Active Agents</div>
+          <div class="kpi-value" id="kpi-active">—</div>
+          <div class="kpi-sub">Currently active</div>
+        </div>
+        <div class="kpi-card blue">
+          <span class="kpi-icon">📞</span>
+          <div class="kpi-label">Calls Today</div>
+          <div class="kpi-value" id="kpi-calls">—</div>
+          <div class="kpi-sub" id="kpi-calls-sub">Loading...</div>
+        </div>
+        <div class="kpi-card orange">
+          <span class="kpi-icon">⏳</span>
+          <div class="kpi-label">Pending Requests</div>
+          <div class="kpi-value" id="kpi-requests">—</div>
+          <div class="kpi-sub">Awaiting approval</div>
+        </div>
+        <div class="kpi-card purple">
+          <span class="kpi-icon">📅</span>
+          <div class="kpi-label">This Week Shifts</div>
+          <div class="kpi-value" id="kpi-shifts">—</div>
+          <div class="kpi-sub">Scheduled</div>
+        </div>
+        <div class="kpi-card red">
+          <span class="kpi-icon">🏖️</span>
+          <div class="kpi-label">On Leave Today</div>
+          <div class="kpi-value" id="kpi-leave">—</div>
+          <div class="kpi-sub">Annual / Sick / Casual</div>
+        </div>
+      </div>
+
+      <!-- ROW: Charts + Requests -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:20px;">
+
+        <!-- Calls by Reason Chart -->
+        <div class="section-card fade-up">
+          <div class="section-header">
+            <div class="section-title">
+              <i class="fas fa-chart-pie" style="color:var(--gold)"></i>
+              Calls by Reason — MTD
+            </div>
+            <span id="chart-month" style="font-size:11px;color:var(--muted);"></span>
+          </div>
+          <div class="section-body" style="height:220px;display:flex;align-items:center;justify-content:center;">
+            <canvas id="calls-chart"></canvas>
+          </div>
+        </div>
+
+        <!-- Recent Requests -->
+        <div class="section-card fade-up">
+          <div class="section-header">
+            <div class="section-title">
+              <i class="fas fa-bell" style="color:var(--gold)"></i>
+              Pending Requests
+            </div>
+            <a href="pages/requests.html" class="btn btn-ghost btn-sm">View All</a>
+          </div>
+          <div class="section-body no-pad">
+            <div id="recent-requests-list"></div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- ROW: Agents Today + Call Log -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
+
+        <!-- Agents Today -->
+        <div class="section-card fade-up">
+          <div class="section-header">
+            <div class="section-title">
+              <i class="fas fa-user-clock" style="color:var(--gold)"></i>
+              Today's Schedule
+            </div>
+            <a href="pages/schedule.html" class="btn btn-ghost btn-sm">Full Schedule</a>
+          </div>
+          <div class="section-body no-pad">
+            <div id="today-schedule"></div>
+          </div>
+        </div>
+
+        <!-- Recent Call Logs -->
+        <div class="section-card fade-up">
+          <div class="section-header">
+            <div class="section-title">
+              <i class="fas fa-phone-volume" style="color:var(--gold)"></i>
+              Recent Call Logs
+            </div>
+            <a href="pages/calllog.html" class="btn btn-ghost btn-sm">View All</a>
+          </div>
+          <div class="section-body no-pad">
+            <div id="recent-calls"></div>
+          </div>
+        </div>
+
+      </div>
+
+    </div><!-- end page-content -->
+  </div><!-- end main-content -->
+</div><!-- end admin-layout -->
+
+<!-- CONFIRM MODAL -->
+<div class="modal-overlay" id="modal-overlay">
+  <div class="modal-box">
+    <div class="modal-header">
+      <div class="modal-title" id="modal-title">Confirm</div>
+      <button class="modal-close" onclick="closeModal()"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="modal-msg" id="modal-msg"></div>
+    <div class="modal-btns">
+      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-danger" id="modal-confirm">Confirm</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div id="toast-container"></div>
+
+<script src="js/supabase.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/ui.js"></script>
+<script>
+// ── Init ──
+const session = checkAuth();
+if (session) {
+  const name = session.username || 'Admin';
+  document.getElementById('admin-name').innerText = name;
+  document.getElementById('admin-avatar').innerText = initials(name);
+}
+
+// ── Load All ──
+async function loadAll() {
+  const icon = document.getElementById('refresh-icon');
+  icon.style.animation = 'spin 0.8s linear infinite';
+  await Promise.all([loadKPIs(), loadRecentRequests(), loadTodaySchedule(), loadRecentCalls()]);
+  icon.style.animation = '';
+}
+
+// ── KPIs ──
+async function loadKPIs() {
+  try {
+    const today = new Date().toISOString().split('T')[0];
+    const month = new Date().toISOString().slice(0, 7);
+
+    // Agents
+    const { data: agents } = await db.from('agents').select('id, status');
+    const total  = agents?.length || 0;
+    const active = agents?.filter(a => a.status === 'Active').length || 0;
+    document.getElementById('kpi-agents').innerText = total;
+    document.getElementById('kpi-agents-sub').innerText = `${active} active`;
+    document.getElementById('kpi-active').innerText = active;
+
+    // Calls today
+    const { count: callsToday } = await db.from('call_logs')
+      .select('*', { count: 'exact', head: true })
+      .gte('logged_at', today + 'T00:00:00')
+      .lte('logged_at', today + 'T23:59:59');
+    document.getElementById('kpi-calls').innerText = callsToday || 0;
+
+    // MTD calls
+    const { count: callsMTD } = await db.from('call_logs')
+      .select('*', { count: 'exact', head: true })
+      .gte('logged_at', month + '-01T00:00:00');
+    document.getElementById('kpi-calls-sub').innerText = `${callsMTD || 0} this month`;
+
+    // Pending requests
+    const { count: pending } = await db.from('requests')
+      .select('*', { count: 'exact', head: true })
+      .eq('status', 'Pending');
+    document.getElementById('kpi-requests').innerText = pending || 0;
+    document.getElementById('pending-count').innerText = pending || 0;
+
+    // This week shifts
+    const weekStart = getWeekStart();
+    const weekEnd   = getWeekEnd();
+    const { count: shifts } = await db.from('schedule')
+      .select('*', { count: 'exact', head: true })
+      .eq('day_type', 'Work')
+      .gte('shift_date', weekStart)
+      .lte('shift_date', weekEnd);
+    document.getElementById('kpi-shifts').innerText = shifts || 0;
+
+    // On leave today
+    const { count: onLeave } = await db.from('schedule')
+      .select('*', { count: 'exact', head: true })
+      .eq('shift_date', today)
+      .in('day_type', ['Annual','Sick','Casual','PH']);
+    document.getElementById('kpi-leave').innerText = onLeave || 0;
+
+    // Load chart
+    loadCallsChart(month);
+
+  } catch(e) {
+    console.error('KPI error:', e);
+  }
+}
+
+// ── Calls Chart ──
+let callsChartInstance = null;
+async function loadCallsChart(month) {
+  try {
+    const { data } = await db.from('call_logs')
+      .select('call_reason')
+      .gte('logged_at', month + '-01T00:00:00');
+
+    if (!data || !data.length) return;
+
+    const counts = {};
+    data.forEach(r => {
+      const key = r.call_reason || 'Unknown';
+      counts[key] = (counts[key] || 0) + 1;
+    });
+
+    const sorted = Object.entries(counts).sort((a,b)=>b[1]-a[1]).slice(0,6);
+    const labels = sorted.map(e=>e[0]);
+    const values = sorted.map(e=>e[1]);
+
+    const colors = ['#D4AF37','#10B981','#3B82F6','#8B5CF6','#EF4444','#F59E0B'];
+
+    const ctx = document.getElementById('calls-chart');
+    if (callsChartInstance) callsChartInstance.destroy();
+
+    callsChartInstance = new Chart(ctx, {
+      type: 'doughnut',
+      data: {
+        labels,
+        datasets: [{ data: values, backgroundColor: colors, borderWidth: 0, hoverOffset: 6 }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        cutout: '65%',
+        plugins: {
+          legend: {
+            position: 'right',
+            labels: { color: '#6B7A99', font: { size: 10 }, padding: 10, boxWidth: 10 }
+          }
+        }
+      }
+    });
+
+    const now = new Date();
+    document.getElementById('chart-month').innerText =
+      now.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+
+  } catch(e) { console.error('Chart error:', e); }
+}
+
+// ── Recent Requests ──
+async function loadRecentRequests() {
+  const el = document.getElementById('recent-requests-list');
+  el.innerHTML = '<div class="loading-wrap"><div class="spinner"></div></div>';
+
+  try {
+    const { data } = await db.from('requests')
+      .select('*').eq('status','Pending')
+      .order('created_at', { ascending: false }).limit(5);
+
+    if (!data || !data.length) {
+      el.innerHTML = '<div class="empty-state"><span class="empty-icon">🎉</span>No pending requests</div>';
+      return;
+    }
+
+    const typeIcons = {
+      'Excuse':'fa-exclamation-circle','Time Off':'fa-calendar-check',
+      'Missing Punch':'fa-fingerprint','Shift Swap':'fa-exchange-alt','Break Change':'fa-coffee'
+    };
+
+    el.innerHTML = data.map(r => `
+      <div style="display:flex;align-items:center;gap:12px;padding:12px 18px;border-bottom:1px solid var(--border);">
+        <div style="width:34px;height:34px;background:rgba(212,175,55,0.1);border-radius:9px;display:flex;align-items:center;justify-content:center;color:var(--gold);flex-shrink:0;">
+          <i class="fas ${typeIcons[r.type]||'fa-file-alt'}"></i>
+        </div>
+        <div style="flex:1;min-width:0;">
+          <div style="font-weight:700;font-size:13px;">${r.type}</div>
+          <div style="font-size:11px;color:var(--muted);">${r.agent_name || 'Unknown'} · ${formatDate(r.created_at)}</div>
+        </div>
+        <div style="display:flex;gap:6px;">
+          <button class="btn btn-success btn-sm btn-icon" onclick="approveRequest('${r.id}')" title="Approve">
+            <i class="fas fa-check"></i>
+          </button>
+          <button class="btn btn-danger btn-sm btn-icon" onclick="rejectRequest('${r.id}')" title="Reject">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+      </div>
+    `).join('');
+  } catch(e) {
+    el.innerHTML = '<div class="empty-state">Failed to load</div>';
+  }
+}
+
+// ── Today Schedule ──
+async function loadTodaySchedule() {
+  const el = document.getElementById('today-schedule');
+  el.innerHTML = '<div class="loading-wrap"><div class="spinner"></div></div>';
+
+  try {
+    const today = new Date().toISOString().split('T')[0];
+    const { data } = await db.from('schedule')
+      .select('*, agents(formal_name), shift_types(name, start_time, end_time)')
+      .eq('shift_date', today)
+      .order('day_type');
+
+    if (!data || !data.length) {
+      el.innerHTML = '<div class="empty-state"><span class="empty-icon">📅</span>No schedule for today</div>';
+      return;
+    }
+
+    const dayTypeColor = {
+      'Work':'badge-success','Off':'badge-muted','Annual':'badge-purple',
+      'Sick':'badge-danger','Casual':'badge-warning','PH':'badge-info','Task':'badge-info'
+    };
+
+    el.innerHTML = data.map(s => `
+      <div style="display:flex;align-items:center;gap:12px;padding:10px 18px;border-bottom:1px solid var(--border);">
+        <div class="agent-avatar" style="width:30px;height:30px;font-size:10px;">
+          ${initials(s.agents?.formal_name)}
+        </div>
+        <div style="flex:1;">
+          <div style="font-weight:700;font-size:13px;">${s.agents?.formal_name || '—'}</div>
+          <div style="font-size:11px;color:var(--muted);">
+            ${s.shift_types ? formatTime(s.shift_types.start_time)+' – '+formatTime(s.shift_types.end_time) : s.day_type}
+          </div>
+        </div>
+        <span class="badge ${dayTypeColor[s.day_type]||'badge-muted'}">${s.day_type}</span>
+      </div>
+    `).join('');
+  } catch(e) {
+    el.innerHTML = '<div class="empty-state">Failed to load</div>';
+  }
+}
+
+// ── Recent Call Logs ──
+async function loadRecentCalls() {
+  const el = document.getElementById('recent-calls');
+  el.innerHTML = '<div class="loading-wrap"><div class="spinner"></div></div>';
+
+  try {
+    const { data } = await db.from('call_logs')
+      .select('*')
+      .order('logged_at', { ascending: false })
+      .limit(6);
+
+    if (!data || !data.length) {
+      el.innerHTML = '<div class="empty-state"><span class="empty-icon">📞</span>No calls logged yet</div>';
+      return;
+    }
+
+    el.innerHTML = data.map(c => `
+      <div style="display:flex;align-items:center;gap:12px;padding:10px 18px;border-bottom:1px solid var(--border);">
+        <div style="width:30px;height:30px;background:rgba(59,130,246,0.1);border-radius:8px;display:flex;align-items:center;justify-content:center;color:#3B82F6;flex-shrink:0;">
+          <i class="fas fa-phone" style="font-size:12px;"></i>
+        </div>
+        <div style="flex:1;min-width:0;">
+          <div style="font-weight:700;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+            ${c.customer_name || 'Unknown'} · ${c.customer_mobile || '—'}
+          </div>
+          <div style="font-size:11px;color:var(--muted);">
+            ${c.call_reason || '—'} · ${c.agent_name || '—'}
+          </div>
+        </div>
+        <div style="font-size:10px;color:var(--muted);white-space:nowrap;">
+          ${new Date(c.logged_at).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'})}
+        </div>
+      </div>
+    `).join('');
+  } catch(e) {
+    el.innerHTML = '<div class="empty-state">Failed to load</div>';
+  }
+}
+
+// ── Request Actions ──
+async function approveRequest(id) {
+  try {
+    await db.from('requests').update({ status: 'Approved', updated_at: new Date().toISOString() }).eq('id', id);
+    showToast('Request approved!', 'success');
+    loadAll();
+  } catch(e) { showToast('Failed to approve', 'error'); }
+}
+
+async function rejectRequest(id) {
+  try {
+    await db.from('requests').update({ status: 'Rejected', updated_at: new Date().toISOString() }).eq('id', id);
+    showToast('Request rejected', 'warning');
+    loadAll();
+  } catch(e) { showToast('Failed to reject', 'error'); }
+}
+
+// ── Helpers ──
+function getWeekStart() {
+  const d = new Date();
+  const day = d.getDay();
+  const diff = d.getDate() - day;
+  return new Date(d.setDate(diff)).toISOString().split('T')[0];
+}
+
+function getWeekEnd() {
+  const d = new Date();
+  const day = d.getDay();
+  const diff = d.getDate() + (6 - day);
+  return new Date(d.setDate(diff)).toISOString().split('T')[0];
+}
+
+// ── Start ──
+loadAll();
+</script>
+
+</body>
+</html>
