@@ -614,7 +614,10 @@ async function loadHistory() {
     } else if (viewModeVal==='month') {
       const m = document.getElementById('filter-month').value;
       const y = document.getElementById('filter-year').value;
-      fromDate = y+'-'+m+'-01'; toDate = y+'-'+m+'-31';
+      fromDate = y+'-'+m+'-01';
+      // Get last day of month correctly
+      const lastDay = new Date(parseInt(y), parseInt(m), 0).getDate();
+      toDate = y+'-'+m+'-'+String(lastDay).padStart(2,'0');
     } else {
       fromDate = document.getElementById('filter-from').value;
       toDate   = document.getElementById('filter-to').value;
