@@ -128,9 +128,15 @@
       </div>
       <div class="topbar-right">
         <button class="btn btn-ghost" onclick="openShiftTypesPanel()">
+          <button class="btn btn-ghost" onclick="exportToExcel()">
+  <i class="fas fa-file-excel"></i> Export
+</button>
           <i class="fas fa-sliders-h"></i> Shift Types
         </button>
         <button class="btn btn-primary" onclick="openNewWeekPanel()">
+          <button class="btn btn-ghost" onclick="openTemplatePanel()">
+  <i class="fas fa-clone"></i> Templates
+</button>
           <i class="fas fa-plus"></i> New Week
         </button>
         <div class="admin-chip">
@@ -980,7 +986,71 @@ function closePanel() {
   document.getElementById('panel-overlay').classList.remove('open');
   document.getElementById('slide-panel').classList.remove('open');
 }
+function exportToExcel() {
+  if (!currentWeek) { showToast('Select a week first', 'error'); return; }
+  const dates = getWeekDates(currentWeek.week_start, currentWeek.week_end);
+  let csv = 'Agent,' + dates.map(d => d.dayName + ' ' + d.display).join(',') + '\n';
+  allAgents.forEach(agent => {
+    let row = agent.formal_name;
+    dates.forEach(d => {
+      const key   = agent.id + '_' + d.iso;
+      const entry = scheduleData[key] || { day_type: 'Off' };
+      if (entry.day_type === 'Work') {
+        const st = allShiftTypes.find(s => s.id === entry.shift_type_id);
+        row += ',' + (st ? st.start_time.substring(0,5)+'-'+st.end_time.substring(0,5) : 'Work');
+      } else {
+        row += ',' + entry.day_type;
+      }
+    });
+    csv += row + '\n';
+  });
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href     = url;
+  a.download = 'Schedule_' + currentWeek.week_start + '.csv';
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast('Schedule exported!', 'success');
+}
+  function openTemplatePanel() {
+  document.getElementById('panel-title').innerText = 'Shift Templates';
+  document.getElementById('panel-body').innerHTML = `
+    <div style="font-size:13px;color:var(--muted);margin-bottom:16px;">
+      Click any template to apply it to the selected week.
+    </div>
+    ${allShiftTypes.map(st => `
+      <div style="padding:12px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;margin-bottom:8px;cursor:pointer;transition:all 0.2s;"
+        onclick="applyTemplate('${st.id}')"
+        onmouseenter="this.style.borderColor='var(--gold)'"
+        onmouseleave="this.style.borderColor='var(--border)'">
+        <div style="font-weight:700;color:var(--text);">${st.name}</div>
+        <div style="font-size:12px;color:var(--muted);">${st.start_time.substring(0,5)} → ${st.end_time.substring(0,5)}</div>
+      </div>
+    `).join('')}
+  `;
+  document.getElementById('panel-footer').innerHTML = `
+    <button class="btn btn-ghost" onclick="closePanel()">Close</button>
+  `;
+  openPanel();
+}
 
+function applyTemplate(shiftTypeId) {
+  if (!currentWeek) { showToast('Select a week first', 'error'); return; }
+  const dates = getWeekDates(currentWeek.week_start, currentWeek.week_end);
+  allAgents.forEach(agent => {
+    dates.forEach(d => {
+      const key = agent.id + '_' + d.iso;
+      const sel = document.querySelector(`select[data-agent="${agent.id}"][data-date="${d.iso}"]`);
+      if (sel) {
+        sel.value = 'Work__' + shiftTypeId;
+        onShiftChange(sel);
+      }
+    });
+  });
+  closePanel();
+  showToast('Template applied! Press Save to confirm.', 'success');
+}
 // ── Start ──
 loadAll();
 </script>
