@@ -508,7 +508,7 @@ async function saveSchedule() {
 // ── Publish Week ──
 async function publishWeek() {
   openModal('Publish Week',
-    'Publishing will make this schedule visible to all agents. Continue?',
+    'Publishing will make this schedule visible to all agents and auto-generate breaks. Continue?',
     async () => {
       try {
         await saveSchedule();
@@ -517,7 +517,12 @@ async function publishWeek() {
           .eq('id', currentWeek.id);
         if (error) throw error;
         currentWeek.status = 'Published';
-        showToast('Week published! Agents can now see it.', 'success');
+
+        // Auto-generate breaks
+        showToast('Generating breaks...', 'info');
+        await autoGenerateBreaks();
+
+        showToast('Week published & breaks generated!', 'success');
         await loadWeeks();
         renderWeekTabs();
         document.getElementById('sched-status-badge').innerHTML =
@@ -527,6 +532,120 @@ async function publishWeek() {
       }
     }
   );
+}
+
+// ── AUTO GENERATE BREAKS ──
+async function autoGenerateBreaks() {
+  const dates = getWeekDates(currentWeek.week_start, currentWeek.week_end);
+
+  for (const d of dates) {
+    // Get all agents working this day
+    const workingAgents = [];
+
+    allAgents.forEach(agent => {
+      const key   = agent.id + '_' + d.iso;
+      const entry = scheduleData[key];
+      if (!entry || entry.day_type !== 'Work') return;
+
+      // Get shift times
+      const shiftType = allShiftTypes.find(st => st.id === entry.shift_type_id);
+      if (!shiftType) return;
+
+      workingAgents.push({
+        agent_id:   agent.id,
+        agent_name: agent.formal_name,
+        start_time: shiftType.start_time, // HH:MM:SS
+        end_time:   shiftType.end_time,
+      });
+    });
+
+    if (!workingAgents.length) continue;
+
+    // Sort by start time
+    workingAgents.sort((a, b) => a.start_time.localeCompare(b.start_time));
+
+    // Group by shift
+    const shiftGroups = {};
+    workingAgents.forEach(a => {
+      const key = a.start_time + '_' + a.end_time;
+      if (!shiftGroups[key]) shiftGroups[key] = [];
+      shiftGroups[key].push(a);
+    });
+
+    const upserts = [];
+
+    // For each shift group, distribute breaks
+    Object.values(shiftGroups).forEach(group => {
+      const shiftStartMins = timeToMins(group[0].start_time);
+      const shiftEndMins   = timeToMins(group[0].end_time);
+
+      // No break zones: first hour and last hour
+      const noBreakStart = shiftStartMins + 60;
+      const noBreakEnd   = shiftEndMins   - 60;
+      const window       = noBreakEnd - noBreakStart; // available minutes
+
+      // 3 break windows
+      // Break1: first 1/3 of window
+      // Lunch:  middle 1/3
+      // Break2: last 1/3
+      const windowThird = Math.floor(window / 3);
+
+      const break1BaseMin = noBreakStart + Math.floor(windowThird * 0.3);
+      const lunchBaseMin  = noBreakStart + windowThird + Math.floor(windowThird * 0.3);
+      const break2BaseMin = noBreakStart + windowThird * 2 + Math.floor(windowThird * 0.3);
+
+      // Max agents out at same time = total - 1 (keep at least 1 on queue)
+      const maxOut = Math.max(1, group.length - 1);
+
+      // Distribute with 15 min gap between agents
+      const gapMins = 15;
+
+      group.forEach((agent, idx) => {
+        // Slot index (cycle through maxOut slots)
+        const slotIdx  = idx % maxOut;
+        const offset   = slotIdx * gapMins;
+
+        const b1 = break1BaseMin + offset;
+        const ln = lunchBaseMin  + offset;
+        const b2 = break2BaseMin + offset;
+
+        // Validate: don't go into last hour
+        const b1Valid = b1 + 15 <= noBreakEnd;
+        const lnValid = ln + 30 <= noBreakEnd;
+        const b2Valid = b2 + 15 <= noBreakEnd;
+
+        upserts.push({
+          agent_id:   agent.agent_id,
+          break_date: d.iso,
+          shift_time: group[0].start_time.substring(0,5) + ' - ' + group[0].end_time.substring(0,5),
+          break1:     b1Valid ? minsToTime(b1) : minsToTime(break1BaseMin),
+          lunch:      lnValid ? minsToTime(ln) : minsToTime(lunchBaseMin),
+          break2:     b2Valid ? minsToTime(b2) : minsToTime(break2BaseMin),
+          updated_at: new Date().toISOString(),
+        });
+      });
+    });
+
+    // Save breaks for this day
+    if (upserts.length) {
+      const { error } = await db.from('breaks')
+        .upsert(upserts, { onConflict: 'agent_id,break_date' });
+      if (error) console.error('Break save error:', error);
+    }
+  }
+}
+
+// ── Time Helpers ──
+function timeToMins(t) {
+  if (!t) return 0;
+  const p = t.substring(0,5).split(':');
+  return (+p[0]) * 60 + (+p[1]);
+}
+
+function minsToTime(mins) {
+  const h = Math.floor(mins / 60).toString().padStart(2,'0');
+  const m = (mins % 60).toString().padStart(2,'0');
+  return h + ':' + m + ':00';
 }
 
 // ── Delete Week ──
