@@ -355,6 +355,7 @@ function processData() {
       }
     }
 
+    // byDay: { date: { agentName: { sessions:[[enterSec,exitSec]], talkSec, calls } } }
     const byDay = {};
 
     for (let i = startIdx; i < lines.length; i++) {
@@ -362,9 +363,10 @@ function processData() {
       if (cols.length < 5) continue;
 
       const agentName = cols[0]?.trim();
-      const duration  = cols[4]?.trim();
+      const enterAt   = cols[1]?.trim();  // EnterAt full datetime
+      const exitAt    = cols[2]?.trim();  // ExitAt full datetime
       const eventType = cols[5]?.trim().toLowerCase();
-      // Date is in col 8 (index 8) or extract from col 1
+      const duration  = cols[4]?.trim();
       const dateRaw   = cols[8]?.trim() || cols[1]?.trim() || '';
 
       if (!agentName || agentName.toLowerCase() === 'agent') continue;
@@ -372,19 +374,58 @@ function processData() {
       const date = extractDate(dateRaw);
       if (!date) continue;
 
-      const sec = timeToSec(duration);
-      if (sec <= 0) continue;
+      // Extract time in seconds from datetime string
+      const enterSec = extractTimeSec(enterAt);
+      const exitSec  = extractTimeSec(exitAt);
+
+      if (enterSec < 0 || exitSec < 0) continue;
 
       if (!byDay[date]) byDay[date] = {};
-      if (!byDay[date][agentName]) byDay[date][agentName] = { activeSec:0, talkSec:0, calls:0 };
+      if (!byDay[date][agentName]) byDay[date][agentName] = {
+        sessions: [], // [[enterSec, exitSec], ...]
+        talkSec: 0,
+        calls: 0
+      };
 
-      byDay[date][agentName].activeSec += sec;
+      // Store session interval
+      if (exitSec > enterSec) {
+        byDay[date][agentName].sessions.push([enterSec, exitSec]);
+      }
 
+      // Count inbound calls
       if (eventType === 'inbound') {
+        const sec = timeToSec(duration);
         byDay[date][agentName].calls++;
         byDay[date][agentName].talkSec += sec;
       }
     }
+
+    // Calculate activeSec using MERGE INTERVALS (أول دخول → آخر خروج)
+    // بيحسب الفترة الزمنية الفعلية بدون تكرار
+    Object.keys(byDay).forEach(date => {
+      Object.keys(byDay[date]).forEach(agent => {
+        const d = byDay[date][agent];
+        if (!d.sessions.length) { d.activeSec = 0; return; }
+
+        // Sort sessions by start time
+        d.sessions.sort((a,b) => a[0]-b[0]);
+
+        // Merge overlapping intervals
+        const merged = [d.sessions[0].slice()];
+        for (let j = 1; j < d.sessions.length; j++) {
+          const last = merged[merged.length-1];
+          const curr = d.sessions[j];
+          if (curr[0] <= last[1]) {
+            last[1] = Math.max(last[1], curr[1]); // extend
+          } else {
+            merged.push(curr.slice()); // new interval
+          }
+        }
+
+        // Sum merged intervals
+        d.activeSec = merged.reduce((sum, interval) => sum + (interval[1]-interval[0]), 0);
+      });
+    });
 
     if (!Object.keys(byDay).length) {
       showToast('No data found — check format', 'error');
@@ -639,6 +680,14 @@ function goBackToUpload() {
   document.getElementById('sn-1').innerText='1';
   document.getElementById('sl-1').className='step-line';
   document.getElementById('step-2').className='step';
+}
+
+// Extract time as seconds from datetime string like "Thursday, 01/01/2026 10:37:56"
+function extractTimeSec(str) {
+  if (!str) return -1;
+  const m = str.match(/(\d{1,2}):(\d{2}):(\d{2})\s*$/);
+  if (!m) return -1;
+  return (+m[1])*3600 + (+m[2])*60 + (+m[3]);
 }
 
 function splitLine(line, isTab) {
