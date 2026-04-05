@@ -392,10 +392,23 @@ async function loadScheduleGrid() {
     html += `</tr>`;
   });
 
-  html += `</tbody></table>`;
-
   // Day count rows
-  html += buildCountRow(dates);
+  // Add count row inside the table before closing
+  html += `<tr style="background:var(--surface2);">
+    <td class="agent-col" style="font-size:11px;color:var(--muted);font-weight:700;padding:8px 12px;">Daily Count</td>`;
+  
+  dates.forEach(d => {
+    const dayEntries = Object.entries(scheduleData)
+      .filter(([k]) => k.endsWith('_' + d.iso));
+    const working = dayEntries.filter(([,v]) => v.day_type === 'Work').length;
+    html += `<td style="text-align:center;padding:8px 4px;">
+      <span style="color:#10B981;font-weight:800;font-size:13px;">${working}</span>
+      <span style="color:var(--muted);font-size:10px;"> working</span>
+    </td>`;
+  });
+  
+  html += `</tr>`;
+  html += `</tbody></table>`;
 
   gridEl.innerHTML = html;
   updateSummary(dates);
@@ -472,7 +485,6 @@ async function saveSchedule() {
         day_type:      entry.day_type,
         shift_type_id: entry.shift_type_id || null,
         status:        'Approved',
-        updated_at:    new Date().toISOString(),
       });
     });
 
@@ -767,22 +779,7 @@ function updateSummary(dates) {
   `;
 }
 
-function buildCountRow(dates) {
-  let html = `<div style="display:flex;padding:8px 16px;border-top:1px solid var(--border);gap:8px;flex-wrap:wrap;">
-    <span style="font-size:11px;color:var(--muted);font-weight:700;min-width:140px;">Daily Count:</span>`;
-
-  dates.forEach(d => {
-    const dayEntries = Object.entries(scheduleData)
-      .filter(([k]) => k.endsWith('_' + d.iso));
-    const working = dayEntries.filter(([,v]) => v.day_type === 'Work').length;
-    html += `<span style="font-size:11px;min-width:80px;text-align:center;">
-      <span style="color:#10B981;font-weight:700;">${working}</span>
-      <span style="color:var(--muted);"> working</span>
-    </span>`;
-  });
-  html += `</div>`;
-  return html;
-}
+// buildCountRow removed - count row now inline in table
 
 // ── Helpers ──
 function getWeekDates(start, end) {
