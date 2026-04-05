@@ -254,9 +254,17 @@
         <div class="section-card fade-up">
           <div class="section-header">
             <div class="section-title"><i class="fas fa-table" style="color:var(--gold)"></i> Performance Data</div>
-            <span id="history-label" style="font-size:11px;color:var(--muted);"></span>
+            <div style="display:flex;align-items:center;gap:10px;">
+              <span id="history-label" style="font-size:11px;color:var(--muted);"></span>
+              <div style="display:flex;background:var(--surface2);border-radius:10px;padding:3px;">
+                <button class="view-tab active" id="ht-detailed" onclick="setHistoryTab('detailed',this)">Detailed</button>
+                <button class="view-tab" id="ht-summary" onclick="setHistoryTab('summary',this)">Summary</button>
+              </div>
+            </div>
           </div>
-          <div class="section-body no-pad">
+
+          <!-- Detailed Table -->
+          <div id="table-detailed" class="section-body no-pad">
             <div class="table-wrap">
               <table class="nos-table">
                 <thead>
@@ -266,6 +274,29 @@
                   </tr>
                 </thead>
                 <tbody id="history-tbody">
+                  <tr><td colspan="8"><div class="loading-wrap"><div class="spinner"></div></div></td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Summary Table -->
+          <div id="table-summary" class="section-body no-pad" style="display:none;">
+            <div class="table-wrap">
+              <table class="nos-table">
+                <thead>
+                  <tr>
+                    <th>Agent</th>
+                    <th>Days Active</th>
+                    <th>Total Active</th>
+                    <th>Avg Conformance</th>
+                    <th>Total Missing</th>
+                    <th>Total Calls</th>
+                    <th>Avg AHT</th>
+                    <th>Below 98%</th>
+                  </tr>
+                </thead>
+                <tbody id="summary-tbody">
                   <tr><td colspan="8"><div class="loading-wrap"><div class="spinner"></div></div></td></tr>
                 </tbody>
               </table>
@@ -600,13 +631,72 @@ async function loadHistory() {
     const { data, error } = await query;
     if (error) throw error;
 
-    updateHistoryKPIs(data||[]);
-    renderHistoryTable(data||[]);
+    currentHistoryData = data||[];
+    updateHistoryKPIs(currentHistoryData);
+    renderHistoryTable(currentHistoryData);
+    if (historyTabMode==='summary') renderSummaryTable(currentHistoryData);
 
   } catch(e) {
     tbody.innerHTML = '<tr><td colspan="8"><div class="empty-state"><span class="empty-icon">❌</span>Failed</div></td></tr>';
     showToast('Failed: '+e.message, 'error');
   }
+}
+
+// ── History Tab Switch ──
+let currentHistoryData = [];
+let historyTabMode = 'detailed';
+
+function setHistoryTab(mode, btn) {
+  historyTabMode = mode;
+  document.querySelectorAll('#ht-detailed,#ht-summary').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('table-detailed').style.display = mode==='detailed' ? 'block' : 'none';
+  document.getElementById('table-summary').style.display  = mode==='summary'  ? 'block' : 'none';
+  if (mode==='summary') renderSummaryTable(currentHistoryData);
+}
+
+function renderSummaryTable(data) {
+  const tbody = document.getElementById('summary-tbody');
+  if (!data.length) {
+    tbody.innerHTML = '<tr><td colspan="8"><div class="empty-state"><span class="empty-icon">📭</span>No data</div></td></tr>';
+    return;
+  }
+
+  // Group by agent
+  const agentMap = {};
+  data.forEach(r => {
+    const name = r.agent_name;
+    if (!agentMap[name]) agentMap[name] = {
+      name, days:0, totalActive:0, totalMissing:0,
+      totalCalls:0, totalTalk:0, confSum:0, below98:0
+    };
+    const a = agentMap[name];
+    a.days++;
+    a.totalActive  += r.active_sec  || 0;
+    a.totalMissing += r.missing_sec || 0;
+    a.totalCalls   += r.calls       || 0;
+    a.totalTalk    += r.talk_sec    || 0;
+    a.confSum      += parseFloat(r.conformance||0);
+    if (parseFloat(r.conformance||0) < 98) a.below98++;
+  });
+
+  const rows = Object.values(agentMap).sort((a,b) => b.confSum/b.days - a.confSum/a.days);
+
+  tbody.innerHTML = rows.map(a => {
+    const avgConf = a.days > 0 ? a.confSum/a.days : 0;
+    const avgAHT  = a.totalCalls > 0 ? Math.round(a.totalTalk/a.totalCalls) : 0;
+    const confCls = avgConf>=98?'conf-high':avgConf>=90?'conf-mid':'conf-low';
+    return '<tr>' +
+      '<td><div style="display:flex;align-items:center;gap:8px;"><div class="agent-avatar" style="width:26px;height:26px;font-size:9px;">' + initials(a.name) + '</div><span style="font-weight:700;">' + a.name + '</span></div></td>' +
+      '<td style="text-align:center;font-weight:700;">' + a.days + '</td>' +
+      '<td style="font-family:monospace;font-size:12px;">' + secToTime(a.totalActive) + '</td>' +
+      '<td class="' + confCls + '">' + avgConf.toFixed(0) + '%</td>' +
+      '<td style="color:' + (a.totalMissing>300?'#EF4444':'#10B981') + ';font-size:12px;">' + (a.totalMissing<=300?'✅ Full':secToTime(a.totalMissing)) + '</td>' +
+      '<td style="font-weight:700;">' + a.totalCalls + '</td>' +
+      '<td style="font-family:monospace;font-size:12px;">' + (avgAHT?secToTime(avgAHT):'—') + '</td>' +
+      '<td><span class="badge ' + (a.below98>0?'badge-danger':'badge-success') + '">' + a.below98 + ' day(s)</span></td>' +
+      '</tr>';
+  }).join('');
 }
 
 function updateHistoryKPIs(data) {
