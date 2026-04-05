@@ -991,8 +991,7 @@ function closePanel() {
 function exportToExcel() {
   if (!currentWeek) { showToast('Select a week first', 'error'); return; }
   const dates = getWeekDates(currentWeek.week_start, currentWeek.week_end);
-  let csv = 'Agent,' + dates.map(d => d.dayName + ' ' + d.display).join(',') + '
-';
+  let csv = 'Agent,' + dates.map(d => d.dayName + ' ' + d.display).join(',') + '\n';
   allAgents.forEach(agent => {
     let row = agent.formal_name;
     dates.forEach(d => {
@@ -1005,10 +1004,9 @@ function exportToExcel() {
         row += ',' + entry.day_type;
       }
     });
-    csv += row + '
-';
+    csv += row + '\n';
   });
-  const blob = new Blob(['﻿'+csv], { type: 'text/csv;charset=utf-8;' });
+  const blob = new Blob(['\uFEFF'+csv], { type: 'text/csv;charset=utf-8;' });
   const url  = URL.createObjectURL(blob);
   const a    = document.createElement('a');
   a.href     = url;
@@ -1017,7 +1015,6 @@ function exportToExcel() {
   URL.revokeObjectURL(url);
   showToast('Schedule exported!', 'success');
 }
-
 // ── Templates Panel ──
 function openTemplatePanel() {
   if (!currentWeek) { showToast('Select a week first', 'error'); return; }
