@@ -501,7 +501,7 @@ async function publishWeek() {
       try {
         await saveSchedule();
         const { error } = await db.from('schedule_weeks')
-          .update({ status: 'Published', updated_at: new Date().toISOString() })
+          .update({ status: 'Published' })
           .eq('id', currentWeek.id);
         if (error) throw error;
         currentWeek.status = 'Published';
