@@ -127,16 +127,16 @@
         </div>
       </div>
       <div class="topbar-right">
+        <button class="btn btn-ghost" onclick="exportToExcel()">
+          <i class="fas fa-file-excel"></i> Export
+        </button>
         <button class="btn btn-ghost" onclick="openShiftTypesPanel()">
-          <button class="btn btn-ghost" onclick="exportToExcel()">
-  <i class="fas fa-file-excel"></i> Export
-</button>
           <i class="fas fa-sliders-h"></i> Shift Types
         </button>
+        <button class="btn btn-ghost" onclick="openTemplatePanel()">
+          <i class="fas fa-clone"></i> Templates
+        </button>
         <button class="btn btn-primary" onclick="openNewWeekPanel()">
-          <button class="btn btn-ghost" onclick="openTemplatePanel()">
-  <i class="fas fa-clone"></i> Templates
-</button>
           <i class="fas fa-plus"></i> New Week
         </button>
         <div class="admin-chip">
@@ -986,10 +986,13 @@ function closePanel() {
   document.getElementById('panel-overlay').classList.remove('open');
   document.getElementById('slide-panel').classList.remove('open');
 }
+
+// ── Export to Excel ──
 function exportToExcel() {
   if (!currentWeek) { showToast('Select a week first', 'error'); return; }
   const dates = getWeekDates(currentWeek.week_start, currentWeek.week_end);
-  let csv = 'Agent,' + dates.map(d => d.dayName + ' ' + d.display).join(',') + '\n';
+  let csv = 'Agent,' + dates.map(d => d.dayName + ' ' + d.display).join(',') + '
+';
   allAgents.forEach(agent => {
     let row = agent.formal_name;
     dates.forEach(d => {
@@ -1002,9 +1005,10 @@ function exportToExcel() {
         row += ',' + entry.day_type;
       }
     });
-    csv += row + '\n';
+    csv += row + '
+';
   });
-  const blob = new Blob([csv], { type: 'text/csv' });
+  const blob = new Blob(['﻿'+csv], { type: 'text/csv;charset=utf-8;' });
   const url  = URL.createObjectURL(blob);
   const a    = document.createElement('a');
   a.href     = url;
@@ -1013,44 +1017,83 @@ function exportToExcel() {
   URL.revokeObjectURL(url);
   showToast('Schedule exported!', 'success');
 }
-  function openTemplatePanel() {
-  document.getElementById('panel-title').innerText = 'Shift Templates';
+
+// ── Templates Panel ──
+function openTemplatePanel() {
+  if (!currentWeek) { showToast('Select a week first', 'error'); return; }
+  const dates = getWeekDates(currentWeek.week_start, currentWeek.week_end);
+
+  document.getElementById('panel-title').innerText = 'Apply Shift Template';
   document.getElementById('panel-body').innerHTML = `
     <div style="font-size:13px;color:var(--muted);margin-bottom:16px;">
-      Click any template to apply it to the selected week.
+      اختار موظف ويوم وشيفت — وهيتطبق على الجدول.
     </div>
-    ${allShiftTypes.map(st => `
-      <div style="padding:12px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;margin-bottom:8px;cursor:pointer;transition:all 0.2s;"
-        onclick="applyTemplate('${st.id}')"
-        onmouseenter="this.style.borderColor='var(--gold)'"
-        onmouseleave="this.style.borderColor='var(--border)'">
-        <div style="font-weight:700;color:var(--text);">${st.name}</div>
-        <div style="font-size:12px;color:var(--muted);">${st.start_time.substring(0,5)} → ${st.end_time.substring(0,5)}</div>
+    <div class="form-grid form-grid-3" style="margin-bottom:16px;">
+      <div class="form-group">
+        <label class="form-label">Agent</label>
+        <select id="tmpl-agent" class="form-input">
+          <option value="all">All Agents</option>
+          ${allAgents.map(a=>`<option value="${a.id}">${a.formal_name}</option>`).join('')}
+        </select>
       </div>
-    `).join('')}
+      <div class="form-group">
+        <label class="form-label">Day</label>
+        <select id="tmpl-day" class="form-input">
+          <option value="all">All Days</option>
+          ${dates.map(d=>`<option value="${d.iso}">${d.dayName} ${d.display}</option>`).join('')}
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Shift</label>
+        <select id="tmpl-shift" class="form-input">
+          <option value="Off">— Off —</option>
+          ${allShiftTypes.map(st=>`<option value="Work__${st.id}">${st.start_time.substring(0,5)}-${st.end_time.substring(0,5)} (${st.name})</option>`).join('')}
+          <option value="Annual">Annual</option>
+          <option value="Sick">Sick</option>
+          <option value="Casual">Casual</option>
+          <option value="PH">PH</option>
+        </select>
+      </div>
+    </div>
+    <div style="background:rgba(212,175,55,0.06);border:1px solid rgba(212,175,55,0.15);border-radius:10px;padding:12px;font-size:12px;color:var(--muted);">
+      <i class="fas fa-info-circle" style="color:var(--gold);margin-right:6px;"></i>
+      اختار "All Agents" و"All Days" لتطبيق على الكل دفعة واحدة.
+    </div>
   `;
   document.getElementById('panel-footer').innerHTML = `
-    <button class="btn btn-ghost" onclick="closePanel()">Close</button>
+    <button class="btn btn-ghost" onclick="closePanel()">Cancel</button>
+    <button class="btn btn-primary" onclick="applyTemplate()">
+      <i class="fas fa-magic"></i> Apply
+    </button>
   `;
   openPanel();
 }
 
-function applyTemplate(shiftTypeId) {
-  if (!currentWeek) { showToast('Select a week first', 'error'); return; }
-  const dates = getWeekDates(currentWeek.week_start, currentWeek.week_end);
-  allAgents.forEach(agent => {
-    dates.forEach(d => {
-      const key = agent.id + '_' + d.iso;
+function applyTemplate() {
+  const agentFilter = document.getElementById('tmpl-agent').value;
+  const dayFilter   = document.getElementById('tmpl-day').value;
+  const shiftVal    = document.getElementById('tmpl-shift').value;
+
+  const agents = agentFilter === 'all' ? allAgents : allAgents.filter(a => a.id === agentFilter);
+  const dates  = getWeekDates(currentWeek.week_start, currentWeek.week_end);
+  const days   = dayFilter === 'all' ? dates : dates.filter(d => d.iso === dayFilter);
+
+  let count = 0;
+  agents.forEach(agent => {
+    days.forEach(d => {
       const sel = document.querySelector(`select[data-agent="${agent.id}"][data-date="${d.iso}"]`);
       if (sel) {
-        sel.value = 'Work__' + shiftTypeId;
+        sel.value = shiftVal;
         onShiftChange(sel);
+        count++;
       }
     });
   });
+
   closePanel();
-  showToast('Template applied! Press Save to confirm.', 'success');
+  showToast(`Template applied to ${count} cell(s)! Press Save.`, 'success');
 }
+
 // ── Start ──
 loadAll();
 </script>
