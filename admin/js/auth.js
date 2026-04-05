@@ -8,7 +8,9 @@ function checkAuth() {
 }
 function logout() {
   sessionStorage.removeItem('nos-admin');
-  window.location.href = 'login.html';
+  const isInPages = window.location.pathname.includes('/pages/');
+window.location.href = isInPages ? '../login.html' : 'login.html';
+
 }
 function getAdminName() {
   const session = sessionStorage.getItem('nos-admin');
