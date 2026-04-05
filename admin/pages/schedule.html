@@ -507,8 +507,19 @@ async function saveSchedule() {
 
 // ── Publish Week ──
 async function publishWeek() {
-  openModal('Publish Week',
-    'Publishing will make this schedule visible to all agents and auto-generate breaks. Continue?',
+  // Check if there are older unpublished weeks
+  const unpublished = allWeeks.filter(w =>
+    w.id !== currentWeek.id &&
+    w.status !== 'Published' &&
+    w.status !== 'Closed' &&
+    new Date(w.week_start) < new Date(currentWeek.week_start)
+  );
+
+  const warningMsg = unpublished.length > 0
+    ? `⚠️ Warning: ${unpublished.length} older week(s) are not published yet.\n\nPublishing will make this schedule visible to all agents and auto-generate breaks. Continue?`
+    : 'Publishing will make this schedule visible to all agents and auto-generate breaks. Continue?';
+
+  openModal('Publish Week', warningMsg,
     async () => {
       try {
         await saveSchedule();
@@ -609,18 +620,18 @@ async function autoGenerateBreaks() {
         const ln = lunchBaseMin  + offset;
         const b2 = break2BaseMin + offset;
 
-        // Validate: don't go into last hour
-        const b1Valid = b1 + 15 <= noBreakEnd;
-        const lnValid = ln + 30 <= noBreakEnd;
-        const b2Valid = b2 + 15 <= noBreakEnd;
+        // Cap to window - never go outside no-break zones
+        const b1Final = Math.min(b1, noBreakEnd - 15);
+        const lnFinal = Math.min(ln, noBreakEnd - 30);
+        const b2Final = Math.min(b2, noBreakEnd - 15);
 
         upserts.push({
           agent_id:   agent.agent_id,
           break_date: d.iso,
           shift_time: group[0].start_time.substring(0,5) + ' - ' + group[0].end_time.substring(0,5),
-          break1:     b1Valid ? minsToTime(b1) : minsToTime(break1BaseMin),
-          lunch:      lnValid ? minsToTime(ln) : minsToTime(lunchBaseMin),
-          break2:     b2Valid ? minsToTime(b2) : minsToTime(break2BaseMin),
+          break1:     minsToTime(b1Final),
+          lunch:      minsToTime(lnFinal),
+          break2:     minsToTime(b2Final),
           updated_at: new Date().toISOString(),
         });
       });
@@ -654,8 +665,18 @@ async function deleteWeek() {
     `Delete week "${formatDateShort(currentWeek.week_start)} → ${formatDateShort(currentWeek.week_end)}"? All schedule data will be lost.`,
     async () => {
       try {
+        // Get dates in this week to delete breaks
+        const dates = getWeekDates(currentWeek.week_start, currentWeek.week_end);
+        const dateList = dates.map(d => d.iso);
+
+        // Delete schedule and breaks
         await db.from('schedule').delete().eq('week_id', currentWeek.id);
         await db.from('schedule_weeks').delete().eq('id', currentWeek.id);
+
+        // Delete breaks for all days in this week
+        for (const date of dateList) {
+          await db.from('breaks').delete().eq('break_date', date);
+        }
         currentWeek = null;
         scheduleData = {};
         document.getElementById('schedule-card').style.display = 'none';
