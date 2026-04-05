@@ -285,19 +285,19 @@ async function loadBreaks() {
             <span class="badge ${isOff?'badge-muted':'badge-success'}" style="font-size:11px;">${shiftStr}</span>
           </td>
           <td>
-            <input type="time" class="form-input" style="width:110px;padding:6px 10px;font-size:13px;"
+            <input type="text" class="form-input" style="width:90px;padding:6px 10px;font-size:13px;font-family:monospace;text-align:center;" placeholder="HH:MM"
               value="${editRows[agent.id].break1}"
-              onchange="editRows['${agent.id}'].break1=this.value">
+              onchange="editRows['${agent.id}'].break1=formatTimeInput(this.value);this.value=formatTimeInput(this.value)">
           </td>
           <td>
-            <input type="time" class="form-input" style="width:110px;padding:6px 10px;font-size:13px;"
+            <input type="text" class="form-input" style="width:90px;padding:6px 10px;font-size:13px;font-family:monospace;text-align:center;" placeholder="HH:MM"
               value="${editRows[agent.id].lunch}"
-              onchange="editRows['${agent.id}'].lunch=this.value">
+              onchange="editRows['${agent.id}'].lunch=formatTimeInput(this.value);this.value=formatTimeInput(this.value)">
           </td>
           <td>
-            <input type="time" class="form-input" style="width:110px;padding:6px 10px;font-size:13px;"
+            <input type="text" class="form-input" style="width:90px;padding:6px 10px;font-size:13px;font-family:monospace;text-align:center;" placeholder="HH:MM"
               value="${editRows[agent.id].break2}"
-              onchange="editRows['${agent.id}'].break2=this.value">
+              onchange="editRows['${agent.id}'].break2=formatTimeInput(this.value);this.value=formatTimeInput(this.value)">
           </td>
           <td>
             <button class="btn btn-danger btn-sm btn-icon" onclick="clearAgentBreaks('${agent.id}')" title="Clear">
@@ -373,7 +373,7 @@ async function copyFromYesterday() {
 
     // Update inputs
     allAgents.forEach((agent, idx) => {
-      const inputs = document.querySelectorAll(`#breaks-tbody tr:nth-child(${idx+1}) input[type="time"]`);
+      const inputs = document.querySelectorAll(`#breaks-tbody tr:nth-child(${idx+1}) input[type="text"]`);
       if (inputs.length >= 3 && editRows[agent.id]) {
         inputs[0].value = editRows[agent.id].break1;
         inputs[1].value = editRows[agent.id].lunch;
@@ -460,6 +460,16 @@ async function applyBulkBreaks() {
 }
 
 // ── Helpers ──
+function formatTimeInput(val) {
+  if (!val) return '';
+  // Accept HH:MM or HH:MM:SS
+  const m = val.match(/^(\d{1,2}):(\d{2})/);
+  if (!m) return val;
+  const h = String(parseInt(m[1])).padStart(2,'0');
+  const min = m[2];
+  return h + ':' + min + ':00';
+}
+
 function formatDate(d) {
   if (!d) return '—';
   return new Date(d+'T00:00:00').toLocaleDateString('en-GB',{weekday:'long',day:'2-digit',month:'long',year:'numeric'});
