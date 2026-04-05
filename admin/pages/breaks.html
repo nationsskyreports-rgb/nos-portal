@@ -8,6 +8,10 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
+/* Force 24-hour time display */
+input[type="time"]::-webkit-datetime-edit-ampm-field { display: none; }
+input[type="time"] { -webkit-appearance: none; }
+
 .week-grid { width:100%; border-collapse:collapse; font-size:11px; }
 .week-grid th {
   padding:8px 6px; background:var(--surface2);
@@ -84,6 +88,12 @@
     </div>
 
     <div class="page-content">
+
+      <!-- TABS -->
+      <div class="tabs fade-up">
+        <button class="tab-btn active" onclick="switchBreakTab('daily',this)">📅 Daily View</button>
+        <button class="tab-btn" onclick="switchBreakTab('weekly',this)">📆 Weekly View</button>
+      </div>
 
       <!-- INFO BANNER -->
       <div style="background:rgba(212,175,55,0.06);border:1px solid rgba(212,175,55,0.2);border-radius:14px;padding:14px 18px;margin-bottom:20px;display:flex;align-items:center;gap:12px;" class="fade-up">
