@@ -7,6 +7,34 @@
 <link rel="stylesheet" href="../css/main.css">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+.week-grid { width:100%; border-collapse:collapse; font-size:11px; }
+.week-grid th {
+  padding:8px 6px; background:var(--surface2);
+  color:var(--muted); font-size:9px; font-weight:700;
+  text-transform:uppercase; letter-spacing:1px;
+  border-bottom:1px solid var(--border);
+  border-right:1px solid var(--border);
+  text-align:center; white-space:nowrap;
+}
+.week-grid th.agent-col { text-align:left; min-width:130px; }
+.week-grid td {
+  padding:4px 4px; border-bottom:1px solid var(--border);
+  border-right:1px solid var(--border);
+  text-align:center; vertical-align:middle;
+}
+.week-grid td.agent-col { text-align:left; padding:6px 10px; background:var(--surface2); font-weight:700; font-size:12px; }
+.week-grid tr:last-child td { border-bottom:none; }
+.break-cell { display:flex; flex-direction:column; gap:2px; padding:3px; }
+.break-time {
+  font-size:10px; font-family:monospace;
+  padding:2px 4px; border-radius:4px;
+  background:var(--surface3); color:var(--muted);
+}
+.break-time.b1 { background:rgba(212,175,55,0.1); color:var(--gold); }
+.break-time.ln { background:rgba(16,185,129,0.1); color:#10B981; }
+.break-time.b2 { background:rgba(59,130,246,0.1); color:#3B82F6; }
+</style>
 </head>
 <body>
 
@@ -66,6 +94,8 @@
         </div>
       </div>
 
+      <!-- DAILY VIEW -->
+      <div id="tab-daily">
       <!-- BREAKS TABLE -->
       <div class="section-card fade-up">
         <div class="section-header">
@@ -102,6 +132,34 @@
           </div>
         </div>
       </div>
+
+      </div><!-- end tab-daily -->
+
+      <!-- WEEKLY VIEW -->
+      <div id="tab-weekly" style="display:none;">
+        <div class="section-card fade-up">
+          <div class="section-header">
+            <div class="section-title">
+              <i class="fas fa-calendar-week" style="color:var(--gold)"></i>
+              Weekly Breaks
+            </div>
+            <div style="display:flex;align-items:center;gap:10px;">
+              <select id="week-select" class="form-input" style="width:auto;padding:8px 12px;" onchange="loadWeeklyBreaks()">
+                <option value="">Select Week...</option>
+              </select>
+              <span id="week-dates-label" style="font-size:12px;color:var(--muted);"></span>
+            </div>
+          </div>
+          <div class="section-body no-pad">
+            <div class="table-wrap" id="weekly-grid">
+              <div class="empty-state" style="padding:40px;">
+                <span class="empty-icon">📆</span>
+                <div>Select a week to view breaks</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div><!-- end tab-weekly -->
 
     </div>
   </div>
@@ -174,10 +232,11 @@ async function loadBreaks() {
     breaksData = {};
     (breaks || []).forEach(b => { breaksData[b.agent_id] = b; });
 
-    // Load schedule for shift info
+    // Load schedule for shift info - only Work days
     const { data: schedules } = await db.from('schedule')
       .select('agent_id, shift_types(name,start_time,end_time), day_type')
-      .eq('shift_date', date);
+      .eq('shift_date', date)
+      .eq('day_type', 'Work');
 
     const shiftMap = {};
     (schedules || []).forEach(s => { shiftMap[s.agent_id] = s; });
@@ -406,6 +465,177 @@ function openModal(title, msg, onConfirm) {
 function closeModal() { document.getElementById('modal-overlay').classList.remove('open'); }
 function openPanel()  { document.getElementById('panel-overlay').classList.add('open'); document.getElementById('slide-panel').classList.add('open'); }
 function closePanel() { document.getElementById('panel-overlay').classList.remove('open'); document.getElementById('slide-panel').classList.remove('open'); }
+
+// ── Tab Switch ──
+function switchBreakTab(tab, btn) {
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('tab-daily').style.display  = tab==='daily'  ? 'block' : 'none';
+  document.getElementById('tab-weekly').style.display = tab==='weekly' ? 'block' : 'none';
+  if (tab==='weekly') loadWeekSelectOptions();
+}
+
+// ── Load Week Options ──
+async function loadWeekSelectOptions() {
+  const sel = document.getElementById('week-select');
+  if (sel.options.length > 1) return; // already loaded
+
+  try {
+    const { data } = await db.from('schedule_weeks')
+      .select('*')
+      .order('week_start', { ascending: false });
+
+    (data||[]).forEach((w, idx) => {
+      const weekNum = (data.length - idx);
+      const from = formatDateShort(w.week_start);
+      const to   = formatDateShort(w.week_end);
+      const opt  = new Option(`Week ${weekNum}  (${from} → ${to})`, w.id);
+      opt.dataset.start = w.week_start;
+      opt.dataset.end   = w.week_end;
+      sel.add(opt);
+    });
+  } catch(e) {
+    showToast('Failed to load weeks: ' + e.message, 'error');
+  }
+}
+
+// ── Load Weekly Breaks ──
+async function loadWeeklyBreaks() {
+  const sel     = document.getElementById('week-select');
+  const weekId  = sel.value;
+  const gridEl  = document.getElementById('weekly-grid');
+
+  if (!weekId) return;
+
+  const opt   = sel.selectedOptions[0];
+  const start = opt.dataset.start;
+  const end   = opt.dataset.end;
+
+  // Update label
+  document.getElementById('week-dates-label').innerText =
+    formatDateShort(start) + ' → ' + formatDateShort(end);
+
+  gridEl.innerHTML = '<div class="loading-wrap"><div class="spinner"></div></div>';
+
+  try {
+    // Get working agents for each day of the week
+    const dates = getWeekDates(start, end);
+
+    // Load schedule for this week (only Work days)
+    const { data: schedules } = await db.from('schedule')
+      .select('agent_id, shift_date, day_type, shift_types(name,start_time,end_time)')
+      .eq('week_id', weekId)
+      .eq('day_type', 'Work');
+
+    // Load breaks for this week
+    const { data: breaks } = await db.from('breaks')
+      .select('*')
+      .gte('break_date', start)
+      .lte('break_date', end);
+
+    // Build set of agents who work at least one day this week
+    const workingAgentIds = new Set((schedules||[]).map(s => s.agent_id));
+    const workingAgents   = allAgents.filter(a => workingAgentIds.has(a.id));
+
+    if (!workingAgents.length) {
+      gridEl.innerHTML = '<div class="empty-state" style="padding:40px;"><span class="empty-icon">📭</span>No working agents this week</div>';
+      return;
+    }
+
+    // Build breaks map: agentId_date -> {break1, lunch, break2}
+    const breaksMap = {};
+    (breaks||[]).forEach(b => {
+      breaksMap[b.agent_id + '_' + b.break_date] = b;
+    });
+
+    // Build schedule map: agentId_date -> shift
+    const schedMap = {};
+    (schedules||[]).forEach(s => {
+      schedMap[s.agent_id + '_' + s.shift_date] = s;
+    });
+
+    // Build HTML table
+    let html = '<table class="week-grid"><thead><tr>';
+    html += '<th class="agent-col">Agent</th>';
+    dates.forEach(d => {
+      html += `<th>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:2px;">
+          <span style="font-size:10px;font-weight:700;">${d.dayName}</span>
+          <span style="font-size:9px;color:var(--muted);">${d.display}</span>
+        </div>
+      </th>`;
+    });
+    html += '</tr></thead><tbody>';
+
+    workingAgents.forEach(agent => {
+      html += `<tr>
+        <td class="agent-col">
+          <div style="display:flex;align-items:center;gap:6px;">
+            <div class="agent-avatar" style="width:24px;height:24px;font-size:9px;flex-shrink:0;">${initials(agent.formal_name)}</div>
+            <span style="font-size:12px;">${agent.formal_name}</span>
+          </div>
+        </td>`;
+
+      dates.forEach(d => {
+        const schedKey  = agent.id + '_' + d.iso;
+        const breakKey  = agent.id + '_' + d.iso;
+        const isWorking = !!schedMap[schedKey];
+        const b         = breaksMap[breakKey];
+
+        if (!isWorking) {
+          html += `<td style="background:var(--surface2);text-align:center;">
+            <span style="font-size:10px;color:var(--border2);">—</span>
+          </td>`;
+        } else if (b) {
+          html += `<td>
+            <div class="break-cell">
+              <span class="break-time b1">☕ ${b.break1 ? b.break1.substring(0,5) : '—'}</span>
+              <span class="break-time ln">🍽 ${b.lunch  ? b.lunch.substring(0,5)  : '—'}</span>
+              <span class="break-time b2">🫖 ${b.break2 ? b.break2.substring(0,5) : '—'}</span>
+            </div>
+          </td>`;
+        } else {
+          html += `<td style="text-align:center;">
+            <span style="font-size:10px;color:var(--muted);">Not set</span>
+          </td>`;
+        }
+      });
+
+      html += '</tr>';
+    });
+
+    html += '</tbody></table>';
+    gridEl.innerHTML = html;
+
+  } catch(e) {
+    gridEl.innerHTML = '<div class="empty-state"><span class="empty-icon">❌</span>Failed: ' + e.message + '</div>';
+    showToast('Failed: ' + e.message, 'error');
+  }
+}
+
+// ── Get Week Dates ──
+function getWeekDates(start, end) {
+  const dates = [];
+  const days  = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  let cur = new Date(start + 'T00:00:00');
+  const endDate = new Date(end + 'T00:00:00');
+  while (cur <= endDate) {
+    const iso = cur.toISOString().split('T')[0];
+    dates.push({
+      iso,
+      dayName: days[cur.getDay()],
+      display: String(cur.getDate()).padStart(2,'0') + '/' + String(cur.getMonth()+1).padStart(2,'0')
+    });
+    cur.setDate(cur.getDate() + 1);
+  }
+  return dates;
+}
+
+function formatDateShort(d) {
+  if (!d) return '—';
+  const dt = new Date(d + 'T00:00:00');
+  return String(dt.getDate()).padStart(2,'0') + '/' + String(dt.getMonth()+1).padStart(2,'0');
+}
 
 init();
 </script>
