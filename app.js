@@ -1668,8 +1668,9 @@ dates.forEach(d => {
 });
 html += `</tr></tbody></table></div>`;
 gridEl.innerHTML = html;
-function onSchDraftChange(sel) {
-  const date = sel.dataset.date;
+}
+
+function onSchDraftChange(sel) {  const date = sel.dataset.date;
   const val  = sel.value;
   let dayType = val, shiftTypeId = null;
   if (val.startsWith('Work__')) { dayType = 'Work'; shiftTypeId = val.split('__')[1]; }
