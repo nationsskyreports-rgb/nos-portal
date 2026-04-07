@@ -1618,46 +1618,47 @@ function selectChannel(ch) {
 const SB_URL_SCH = 'https://xzxdaupwwwdcwfnqweub.supabase.co';
 const SB_KEY_SCH = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh6eGRhdXB3d3dkY3dmbnF3ZXViIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUzMTM5NTAsImV4cCI6MjA5MDg4OTk1MH0.KjNZpFvLxh8XfDDoWdpVsIQZAh1PjzGXOrfDmApZ4K8';
 
-let schWeeks       = [];
-let schAgents      = [];
-let schShiftTypes  = [];
+let schWeeks      = [];
+let schAgents     = [];
+let schShiftTypes = [];
+let schMyDraft    = {};
+let schAllDrafts  = {};
+let schMyAgentId  = null;
 let schCurrentWeek = null;
-let schMyDraft     = {};
-let schAllDrafts   = {};
-let schMyAgentId   = null;
 
 async function sbFetchSch(path) {
   const res = await fetch(`${SB_URL_SCH}/rest/v1/${path}`, {
-    headers: {
-      'apikey': SB_KEY_SCH,
-      'Authorization': `Bearer ${SB_KEY_SCH}`,
-      'Content-Type': 'application/json'
-    }
+    headers: { 'apikey': SB_KEY_SCH, 'Authorization': `Bearer ${SB_KEY_SCH}`, 'Content-Type': 'application/json' }
   });
   return res.json();
 }
 
 async function initSchTab() {
-  if (schWeeks.length) return;
-  const [weeks, agents, shifts] = await Promise.all([
-    sbFetchSch('schedule_weeks?select=id,week_start,week_end,status&status=eq.Draft&order=week_start.desc'),
+  if (schAgents.length) return;
+  const [pubWeeks, agents, shifts] = await Promise.all([
+    sbFetchSch('schedule_weeks?select=id,week_start,week_end,status&status=eq.Published&order=week_start.desc'),
     sbFetchSch('agents?select=id,formal_name&status=eq.Active&order=formal_name'),
     sbFetchSch('shift_types?select=id,name,start_time,end_time&is_active=eq.true&order=start_time')
   ]);
-  schWeeks      = weeks      || [];
-  schAgents     = agents     || [];
-  schShiftTypes = shifts     || [];
+  schWeeks      = pubWeeks || [];
+  schAgents     = agents   || [];
+  schShiftTypes = shifts   || [];
 
-const years = [...new Set(schWeeks.map(w => w.week_start.substring(0,4)))].sort().reverse();
+  const agentName = document.getElementById('user-name').innerText.trim();
+  const me = schAgents.find(a => a.formal_name.toLowerCase() === agentName.toLowerCase());
+  if (me) schMyAgentId = me.id;
+
+  // fill year dropdown
+  const years = [...new Set(schWeeks.map(w => w.week_start.substring(0,4)))].sort().reverse();
   const yearEl = document.getElementById('sch-filter-year');
   if (yearEl) {
     yearEl.innerHTML = '<option value="">All Years</option>' +
       years.map(y => `<option value="${y}">${y}</option>`).join('');
   }
   filterSchWeeks();
-  const agentName = document.getElementById('user-name').innerText.trim();
-  const me = schAgents.find(a => a.formal_name.toLowerCase() === agentName.toLowerCase());
-  if (me) schMyAgentId = me.id;
+
+  // load draft grid independently
+  loadDraftGrid();
 }
 
 function fmtSchDate(d) {
@@ -1681,15 +1682,6 @@ function getSchWeekDates(start, end) {
   return dates;
 }
 
-function schShiftLabel(dayType, shiftTypeId) {
-  if (dayType === 'Work') {
-    const st = schShiftTypes.find(s => s.id === shiftTypeId);
-    return st ? st.start_time.substring(0,5)+' - '+st.end_time.substring(0,5)+' ('+st.name+')' : 'Work';
-  }
-  if (dayType === 'Off') return '— Off —';
-  return dayType;
-}
-
 function schCellStyle(dayType) {
   if (dayType === 'Work')   return 'color:#10b981;border-color:rgba(16,185,129,0.4);background:rgba(16,185,129,0.06)';
   if (dayType === 'Annual') return 'color:#8b5cf6;border-color:rgba(139,92,246,0.4);background:rgba(139,92,246,0.06)';
@@ -1699,155 +1691,138 @@ function schCellStyle(dayType) {
   return 'color:var(--muted);border-color:var(--border);background:var(--surface2)';
 }
 
+function schShiftLabel(dayType, shiftTypeId) {
+  if (dayType === 'Work') {
+    const st = schShiftTypes.find(s => s.id === shiftTypeId);
+    return st ? st.start_time.substring(0,5)+' - '+st.end_time.substring(0,5)+' ('+st.name+')' : 'Work';
+  }
+  return dayType === 'Off' ? '— Off —' : dayType;
+}
+
 function buildShiftSelect(agentId, date, dayType, shiftTypeId, isEditable) {
   const style = schCellStyle(dayType);
   if (!isEditable) {
-    return `<div style="padding:6px 4px;border:1.5px solid;border-radius:8px;font-size:10px;font-weight:700;text-align:center;${style};white-space:nowrap;">
-      ${schShiftLabel(dayType, shiftTypeId)}
-    </div>`;
+    return `<div style="padding:6px 4px;border:1.5px solid;border-radius:8px;font-size:10px;font-weight:700;text-align:center;${style};white-space:nowrap;">${schShiftLabel(dayType, shiftTypeId)}</div>`;
   }
-
   const opts = [
     `<option value="Off" ${dayType==='Off'?'selected':''}>— Off —</option>`,
-    ...schShiftTypes.map(st =>
-      `<option value="Work__${st.id}" ${dayType==='Work'&&shiftTypeId===st.id?'selected':''}>
-        ${st.start_time.substring(0,5)} - ${st.end_time.substring(0,5)} (${st.name})
-      </option>`
-    ),
+    ...schShiftTypes.map(st => `<option value="Work__${st.id}" ${dayType==='Work'&&shiftTypeId===st.id?'selected':''}>${st.start_time.substring(0,5)} - ${st.end_time.substring(0,5)} (${st.name})</option>`),
     `<option value="Annual" ${dayType==='Annual'?'selected':''}>Annual</option>`,
     `<option value="Sick"   ${dayType==='Sick'?'selected':''}>Sick</option>`,
     `<option value="Casual" ${dayType==='Casual'?'selected':''}>Casual</option>`,
     `<option value="PH"     ${dayType==='PH'?'selected':''}>PH</option>`,
   ].join('');
-
-  return `<select
-    data-date="${date}"
-    onchange="onSchDraftChange(this)"
-    style="width:100%;padding:6px 4px;border:1.5px solid;border-radius:8px;font-size:10px;font-weight:700;text-align:center;outline:none;cursor:pointer;font-family:inherit;${style}">
-    ${opts}
-  </select>`;
+  return `<select data-date="${date}" onchange="onSchDraftChange(this)" style="width:100%;padding:6px 4px;border:1.5px solid;border-radius:8px;font-size:10px;font-weight:700;text-align:center;outline:none;cursor:pointer;font-family:inherit;${style}">${opts}</select>`;
 }
 
-async function loadSchTable() {
-  const weekId = document.getElementById('sch-week-select').value;
-  if (!weekId) return;
-
-  schCurrentWeek = schWeeks.find(w => w.id === weekId);
-  schMyDraft    = {};
-  schAllDrafts  = {};
-
-  const gridEl  = document.getElementById('sch-table-grid');
-  const draftEl = document.getElementById('sch-draft-grid');
-  gridEl.innerHTML  = '<div class="empty-state"><i class="fas fa-spinner spinner"></i></div>';
-  draftEl.innerHTML = '<div class="empty-state"><i class="fas fa-spinner spinner"></i></div>';
-
-  const dates = getSchWeekDates(schCurrentWeek.week_start, schCurrentWeek.week_end);
-  const today = `${new Date().getFullYear()}-${String(new Date().getMonth()+1).padStart(2,'0')}-${String(new Date().getDate()).padStart(2,'0')}`;
-
-  // ── Published Schedule ──
-  const scheduleRecords = await sbFetchSch(`schedule?select=*&week_id=eq.${weekId}`);
-  const schedMap = {};
-  (scheduleRecords || []).forEach(s => { schedMap[`${s.agent_id}_${s.shift_date}`] = s; });
-
-  let html = `<div style="overflow-x:auto;-webkit-overflow-scrolling:touch;">
-  <table style="width:100%;border-collapse:collapse;font-size:11px;min-width:600px;">
-  <thead><tr>
+function buildSchGrid(agents, dates, schedMap, today) {
+  let html = `<div style="overflow-x:auto;-webkit-overflow-scrolling:touch;"><table style="width:100%;border-collapse:collapse;font-size:11px;min-width:600px;"><thead><tr>
     <th style="padding:8px 12px;background:var(--surface2);color:var(--muted);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;border-bottom:1px solid var(--border);text-align:left;min-width:120px;">Agent</th>`;
   dates.forEach(d => {
     const isTd = d.iso === today;
-    html += `<th style="padding:8px;background:var(--surface2);color:${isTd?'#D4AF37':'var(--muted)'};font-size:10px;font-weight:700;text-transform:uppercase;border-bottom:1px solid var(--border);text-align:center;white-space:nowrap;">
-      <div>${d.dayName}</div><div style="font-size:9px;margin-top:2px;">${d.display}</div>
-    </th>`;
+    html += `<th style="padding:8px;background:var(--surface2);color:${isTd?'#D4AF37':'var(--muted)'};font-size:10px;font-weight:700;text-transform:uppercase;border-bottom:1px solid var(--border);text-align:center;white-space:nowrap;"><div>${d.dayName}</div><div style="font-size:9px;margin-top:2px;">${d.display}</div></th>`;
   });
   html += `</tr></thead><tbody>`;
 
-  schAgents.forEach((agent, idx) => {
+  agents.forEach((agent, idx) => {
     html += `<tr style="background:${idx%2===0?'var(--surface)':'var(--surface2)'};">
       <td style="padding:8px 12px;font-size:12px;font-weight:700;border-bottom:1px solid var(--border);white-space:nowrap;">
         <div style="display:flex;align-items:center;gap:8px;">
-          <div style="width:26px;height:26px;border-radius:50%;background:var(--primary-gradient);display:flex;align-items:center;justify-content:center;color:#fff;font-size:9px;font-weight:800;flex-shrink:0;">
-            ${agent.formal_name.split(' ').map(n=>n[0]).join('').toUpperCase().slice(0,2)}
-          </div>
+          <div style="width:26px;height:26px;border-radius:50%;background:var(--primary-gradient);display:flex;align-items:center;justify-content:center;color:#fff;font-size:9px;font-weight:800;flex-shrink:0;">${agent.formal_name.split(' ').map(n=>n[0]).join('').toUpperCase().slice(0,2)}</div>
           <span style="color:var(--text);">${agent.formal_name}</span>
         </div>
       </td>`;
     dates.forEach(d => {
       const e = schedMap[`${agent.id}_${d.iso}`];
       const dt = e ? e.day_type : 'Off';
-      const stId = e ? e.shift_type_id : null;
-      const st = schShiftTypes.find(s => s.id === stId);
+      const st = schShiftTypes.find(s => s.id === (e ? e.shift_type_id : null));
       const isTd = d.iso === today;
-      let cell = '', color = 'var(--muted)', bg = 'transparent', border = 'transparent';
+      let cell='— Off —', color='var(--muted)', bg='transparent', border='transparent';
       if      (dt==='Work'&&st) { cell=st.start_time.substring(0,5)+' - '+st.end_time.substring(0,5); color='#10b981'; bg='rgba(16,185,129,0.05)'; border='rgba(16,185,129,0.3)'; }
       else if (dt==='Annual')   { cell='Annual'; color='#8b5cf6'; bg='rgba(139,92,246,0.05)'; border='rgba(139,92,246,0.3)'; }
       else if (dt==='Sick')     { cell='Sick';   color='#ef4444'; bg='rgba(239,68,68,0.05)';  border='rgba(239,68,68,0.3)'; }
       else if (dt==='Casual')   { cell='Casual'; color='#f59e0b'; bg='rgba(245,158,11,0.05)'; border='rgba(245,158,11,0.3)'; }
       else if (dt==='PH')       { cell='PH';     color='#3b82f6'; bg='rgba(59,130,246,0.05)'; border='rgba(59,130,246,0.3)'; }
       else if (dt==='Task')     { cell='Task';   color='#06b6d4'; bg='rgba(6,182,212,0.05)';  border='rgba(6,182,212,0.3)'; }
-      else                      { cell='— Off —'; }
-      html += `<td style="padding:5px;border-bottom:1px solid var(--border);text-align:center;${isTd?'background:rgba(212,175,55,0.04);':''}">
-        <div style="background:${bg};border:1.5px solid ${border};border-radius:8px;padding:5px 4px;font-size:10px;font-weight:700;color:${color};white-space:nowrap;">${cell}</div>
-      </td>`;
+      html += `<td style="padding:5px;border-bottom:1px solid var(--border);text-align:center;${isTd?'background:rgba(212,175,55,0.04);':''}"><div style="background:${bg};border:1.5px solid ${border};border-radius:8px;padding:5px 4px;font-size:10px;font-weight:700;color:${color};white-space:nowrap;">${cell}</div></td>`;
     });
     html += `</tr>`;
   });
 
-  html += `<tr style="background:var(--surface2);">
-    <td style="padding:8px 12px;font-size:10px;color:var(--muted);font-weight:700;">Daily Count</td>`;
+  html += `<tr style="background:var(--surface2);"><td style="padding:8px 12px;font-size:10px;color:var(--muted);font-weight:700;">Daily Count</td>`;
   dates.forEach(d => {
-    const w = schAgents.filter(a => { const e=schedMap[`${a.id}_${d.iso}`]; return e&&e.day_type==='Work'; }).length;
+    const w = agents.filter(a => { const e=schedMap[`${a.id}_${d.iso}`]; return e&&e.day_type==='Work'; }).length;
     html += `<td style="padding:8px;text-align:center;font-size:12px;font-weight:800;color:#10b981;">${w} <span style="font-size:9px;color:var(--muted);font-weight:400;">working</span></td>`;
   });
   html += `</tr></tbody></table></div>`;
-  gridEl.innerHTML = html;
+  return html;
+}
 
-  // ── Schedule Requests Grid ──
-// جيب الـ Draft weeks
+// ── الجدول العلوي: Published ──
+async function loadSchTable() {
+  const weekId = document.getElementById('sch-week-select').value;
+  if (!weekId) return;
+
+  const week = schWeeks.find(w => w.id === weekId);
+  if (!week) return;
+
+  const gridEl = document.getElementById('sch-table-grid');
+  gridEl.innerHTML = '<div class="empty-state"><i class="fas fa-spinner spinner"></i></div>';
+
+  const today = `${new Date().getFullYear()}-${String(new Date().getMonth()+1).padStart(2,'0')}-${String(new Date().getDate()).padStart(2,'0')}`;
+  const dates = getSchWeekDates(week.week_start, week.week_end);
+
+  const records = await sbFetchSch(`schedule?select=*&week_id=eq.${weekId}`);
+  const schedMap = {};
+  (records || []).forEach(s => { schedMap[`${s.agent_id}_${s.shift_date}`] = s; });
+
+  gridEl.innerHTML = buildSchGrid(schAgents, dates, schedMap, today);
+}
+
+// ── الجدول السفلي: Draft ──
+async function loadDraftGrid() {
+  const draftEl = document.getElementById('sch-draft-grid');
+  draftEl.innerHTML = '<div class="empty-state"><i class="fas fa-spinner spinner"></i></div>';
+
   const draftWeeks = await sbFetchSch('schedule_weeks?select=id,week_start,week_end&status=eq.Draft&order=week_start.desc');
-  
+
   if (!draftWeeks || !draftWeeks.length) {
     draftEl.innerHTML = '<div class="empty-state">No draft weeks available</div>';
     return;
   }
 
-  const draftWeek = draftWeeks[0]; // أحدث Draft أسبوع
+  const draftWeek = draftWeeks[0];
+  schCurrentWeek = draftWeek;
+
+  const today = `${new Date().getFullYear()}-${String(new Date().getMonth()+1).padStart(2,'0')}-${String(new Date().getDate()).padStart(2,'0')}`;
   const draftDates = getSchWeekDates(draftWeek.week_start, draftWeek.week_end);
 
   const allReqs = await sbFetchSch(`requests?select=*&type=eq.Schedule%20Request&status=eq.Pending&order=created_at.desc`);
 
   schAllDrafts = {};
+  schMyDraft   = {};
   (allReqs || []).forEach(req => {
     try {
       const det = JSON.parse(req.details);
-      if (det.week_id === draftWeek.id) {
-        if (!schAllDrafts[req.agent_id]) {
-          schAllDrafts[req.agent_id] = det.draft || {};
-        }
+      if (det.week_id === draftWeek.id && !schAllDrafts[req.agent_id]) {
+        schAllDrafts[req.agent_id] = det.draft || {};
       }
     } catch(e) {}
   });
+  if (schMyAgentId && schAllDrafts[schMyAgentId]) schMyDraft = { ...schAllDrafts[schMyAgentId] };
 
-  if (schMyAgentId && schAllDrafts[schMyAgentId]) {
-    schMyDraft = { ...schAllDrafts[schMyAgentId] };
-  }
-
-  // عنوان الأسبوع
-  const draftTitle = document.createElement('div');
-  draftTitle.style.cssText = 'font-size:12px;font-weight:700;color:var(--muted);margin-bottom:8px;';
-  draftTitle.innerText = `Draft Week: ${fmtSchDate(draftWeek.week_start)} → ${fmtSchDate(draftWeek.week_end)}`;
   draftEl.innerHTML = '';
-draftEl.appendChild(draftTitle);
 
-  let draftHtml = `<div style="overflow-x:auto;-webkit-overflow-scrolling:touch;">
-  <table style="width:100%;border-collapse:collapse;font-size:11px;min-width:600px;">
-  <thead><tr>
+  const title = document.createElement('div');
+  title.style.cssText = 'font-size:12px;font-weight:700;color:var(--muted);margin-bottom:8px;padding:4px 0;';
+  title.innerText = `📝 Draft Week: ${fmtSchDate(draftWeek.week_start)} → ${fmtSchDate(draftWeek.week_end)}`;
+  draftEl.appendChild(title);
+
+  let draftHtml = `<div style="overflow-x:auto;-webkit-overflow-scrolling:touch;"><table style="width:100%;border-collapse:collapse;font-size:11px;min-width:600px;"><thead><tr>
     <th style="padding:8px 12px;background:var(--surface2);color:var(--muted);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;border-bottom:1px solid var(--border);text-align:left;min-width:120px;">Agent</th>`;
-  
   draftDates.forEach(d => {
     const isTd = d.iso === today;
-    draftHtml += `<th style="padding:8px;background:var(--surface2);color:${isTd?'#D4AF37':'var(--muted)'};font-size:10px;font-weight:700;text-transform:uppercase;border-bottom:1px solid var(--border);text-align:center;white-space:nowrap;">
-      <div>${d.dayName}</div><div style="font-size:9px;margin-top:2px;">${d.display}</div>
-    </th>`;
+    draftHtml += `<th style="padding:8px;background:var(--surface2);color:${isTd?'#D4AF37':'var(--muted)'};font-size:10px;font-weight:700;text-transform:uppercase;border-bottom:1px solid var(--border);text-align:center;white-space:nowrap;"><div>${d.dayName}</div><div style="font-size:9px;margin-top:2px;">${d.display}</div></th>`;
   });
   draftHtml += `</tr></thead><tbody>`;
 
@@ -1857,46 +1832,29 @@ draftEl.appendChild(draftTitle);
     draftHtml += `<tr style="background:${idx%2===0?'var(--surface)':'var(--surface2)'};">
       <td style="padding:8px 12px;font-size:12px;font-weight:700;border-bottom:1px solid var(--border);white-space:nowrap;">
         <div style="display:flex;align-items:center;gap:8px;">
-          <div style="width:26px;height:26px;border-radius:50%;background:${isMe?'var(--primary-gradient)':'linear-gradient(135deg,#475569,#334155)'};display:flex;align-items:center;justify-content:center;color:#fff;font-size:9px;font-weight:800;flex-shrink:0;">
-            ${agent.formal_name.split(' ').map(n=>n[0]).join('').toUpperCase().slice(0,2)}
-          </div>
+          <div style="width:26px;height:26px;border-radius:50%;background:${isMe?'var(--primary-gradient)':'linear-gradient(135deg,#475569,#334155)'};display:flex;align-items:center;justify-content:center;color:#fff;font-size:9px;font-weight:800;flex-shrink:0;">${agent.formal_name.split(' ').map(n=>n[0]).join('').toUpperCase().slice(0,2)}</div>
           <span style="color:${isMe?'var(--primary)':'var(--text)'};">${agent.formal_name}${isMe?' (You)':''}</span>
         </div>
       </td>`;
-    
     draftDates.forEach(d => {
       const draft = agentDraft[d.iso] || { day_type: 'Off', shift_type_id: null };
       const isTd  = d.iso === today;
-      draftHtml += `<td style="padding:5px;border-bottom:1px solid var(--border);text-align:center;${isTd?'background:rgba(212,175,55,0.04);':''}">
-        ${buildShiftSelect(agent.id, d.iso, draft.day_type, draft.shift_type_id, isMe)}
-      </td>`;
+      draftHtml += `<td style="padding:5px;border-bottom:1px solid var(--border);text-align:center;${isTd?'background:rgba(212,175,55,0.04);''}">${buildShiftSelect(agent.id, d.iso, draft.day_type, draft.shift_type_id, isMe)}</td>`;
     });
     draftHtml += `</tr>`;
   });
 
   draftHtml += `</tbody></table></div>`;
-  
-  const draftTable = document.createElement('div');
-  draftTable.innerHTML = draftHtml;
-  draftEl.appendChild(draftTable);
+  const table = document.createElement('div');
+  table.innerHTML = draftHtml;
+  draftEl.appendChild(table);
 
   if (!isSchRequestOpen()) {
-    const closedBanner = document.createElement('div');
-    closedBanner.style.cssText = 'margin-top:16px;padding:16px;background:rgba(239,68,68,0.06);border:1.5px solid rgba(239,68,68,0.3);border-radius:12px;text-align:center;font-size:13px;font-weight:700;color:#ef4444;white-space:pre-line;';
-    closedBanner.innerText = schRequestClosedMsg();
-    draftEl.appendChild(closedBanner);
+    const banner = document.createElement('div');
+    banner.style.cssText = 'margin-top:16px;padding:16px;background:rgba(239,68,68,0.06);border:1.5px solid rgba(239,68,68,0.3);border-radius:12px;text-align:center;font-size:13px;font-weight:700;color:#ef4444;white-space:pre-line;';
+    banner.innerText = schRequestClosedMsg();
+    draftEl.appendChild(banner);
     draftEl.querySelectorAll('select').forEach(s => s.disabled = true);
-  }
-
-  // حفظ الـ draft week id عشان submitSchRequest يستخدمه
-  schCurrentWeek = draftWeek;
-  if (!isSchRequestOpen()) {
-    const closedBanner = document.createElement('div');
-    closedBanner.style.cssText = 'margin-top:16px;padding:16px;background:rgba(239,68,68,0.06);border:1.5px solid rgba(239,68,68,0.3);border-radius:12px;text-align:center;font-size:13px;font-weight:700;color:#ef4444;white-space:pre-line;';
-    closedBanner.innerText = schRequestClosedMsg();
-    draftEl.appendChild(closedBanner);
-    draftEl.querySelectorAll('select').forEach(s => s.disabled = true);
-    document.getElementById('sch-request-msg') && (document.getElementById('sch-request-msg').innerText = '');
   }
 }
 
@@ -1910,7 +1868,7 @@ function onSchDraftChange(sel) {
 }
 
 function isSchRequestOpen() {
-  const day = new Date().getDay(); // 0=Sun, 1=Mon, 2=Tue
+  const day = new Date().getDay();
   return day === 0 || day === 1 || day === 2;
 }
 
@@ -1918,18 +1876,13 @@ function schRequestClosedMsg() {
   const next = new Date();
   const daysUntilSun = (7 - next.getDay()) % 7 || 7;
   next.setDate(next.getDate() + daysUntilSun);
-  const dd = String(next.getDate()).padStart(2,'0');
-  const mm = String(next.getMonth()+1).padStart(2,'0');
-  return `🔒 Requests are closed now.\nOpens every Sunday — next opening: ${dd}/${mm}`;
+  return `🔒 Requests are closed now.\nOpens every Sunday — next opening: ${String(next.getDate()).padStart(2,'0')}/${String(next.getMonth()+1).padStart(2,'0')}`;
 }
 
 async function submitSchRequest() {
-  if (!isSchRequestOpen()) {
-    customAlert('Closed', schRequestClosedMsg());
-    return;
-  }
-  if (!schCurrentWeek) { customAlert('Error', 'Select a week first!'); return; }
-  if (!schMyAgentId)   { customAlert('Error', 'Agent not found!'); return; }
+  if (!isSchRequestOpen()) { customAlert('Closed', schRequestClosedMsg()); return; }
+  if (!schCurrentWeek)     { customAlert('Error', 'No draft week available!'); return; }
+  if (!schMyAgentId)       { customAlert('Error', 'Agent not found!'); return; }
 
   const agentName = document.getElementById('user-name').innerText.trim();
   const msg = document.getElementById('sch-request-msg');
@@ -1937,58 +1890,35 @@ async function submitSchRequest() {
 
   const details = { week_id: schCurrentWeek.id, week_start: schCurrentWeek.week_start, draft: schMyDraft };
 
-  // لو عنده request قديم للأسبوع ده، نعمله update بدل insert
-  const existing = await sbFetchSch(`requests?select=id&agent_id=eq.${schMyAgentId}&type=eq.Schedule%20Request&status=eq.Pending&order=created_at.desc&limit=1`);
+  const existing = await sbFetchSch(`requests?select=id,details&agent_id=eq.${schMyAgentId}&type=eq.Schedule%20Request&status=eq.Pending&order=created_at.desc&limit=1`);
   let existingId = null;
   if (existing && existing.length) {
     try {
-      const det = JSON.parse((await sbFetchSch(`requests?select=details&id=eq.${existing[0].id}`))[0].details);
+      const det = JSON.parse(existing[0].details);
       if (det.week_id === schCurrentWeek.id) existingId = existing[0].id;
     } catch(e) {}
   }
 
-  let res;
-  if (existingId) {
-    res = await fetch(`${SB_URL_SCH}/rest/v1/requests?id=eq.${existingId}`, {
-      method: 'PATCH',
-      headers: {
-        'apikey': SB_KEY_SCH,
-        'Authorization': `Bearer ${SB_KEY_SCH}`,
-        'Content-Type': 'application/json',
-        'Prefer': 'return=minimal'
-      },
-      body: JSON.stringify({ details: JSON.stringify(details), updated_at: new Date().toISOString() })
-    });
-  } else {
-    res = await fetch(`${SB_URL_SCH}/rest/v1/requests`, {
-      method: 'POST',
-      headers: {
-        'apikey': SB_KEY_SCH,
-        'Authorization': `Bearer ${SB_KEY_SCH}`,
-        'Content-Type': 'application/json',
-        'Prefer': 'return=minimal'
-      },
-      body: JSON.stringify({
-        agent_id:   schMyAgentId,
-        agent_name: agentName,
-        type:       'Schedule Request',
-        details:    JSON.stringify(details),
-        status:     'Pending',
-        created_at: new Date().toISOString()
-      })
-    });
-  }
+  const body = JSON.stringify(existingId
+    ? { details: JSON.stringify(details), updated_at: new Date().toISOString() }
+    : { agent_id: schMyAgentId, agent_name: agentName, type: 'Schedule Request', details: JSON.stringify(details), status: 'Pending', created_at: new Date().toISOString() }
+  );
+
+  const res = await fetch(`${SB_URL_SCH}/rest/v1/requests${existingId ? '?id=eq.'+existingId : ''}`, {
+    method: existingId ? 'PATCH' : 'POST',
+    headers: { 'apikey': SB_KEY_SCH, 'Authorization': `Bearer ${SB_KEY_SCH}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+    body
+  });
 
   if (res.ok) {
-    msg.style.color = '#10b981';
-    msg.innerText   = '✅ Request submitted!';
+    msg.style.color = '#10b981'; msg.innerText = '✅ Request submitted!';
     showToast('✅', 'Schedule Request Submitted!', 'Pending admin review.', 'success', 5000);
     setTimeout(() => msg.innerText = '', 5000);
   } else {
-    msg.style.color = 'var(--danger)';
-    msg.innerText   = '❌ Failed. Try again.';
+    msg.style.color = 'var(--danger)'; msg.innerText = '❌ Failed. Try again.';
   }
 }
+
 function resetSchDraft() {
   schMyDraft = {};
   document.querySelectorAll('#sch-draft-grid select').forEach(sel => {
@@ -1997,31 +1927,20 @@ function resetSchDraft() {
   });
 }
 
-const origSwitchTab = switchTab;
-window.switchTab = function(id, btn, idx) {
-  origSwitchTab(id, btn, idx);
-  if (id === 'tab-sch-table') initSchTab();
-};
 function filterSchWeeks() {
   const year  = document.getElementById('sch-filter-year').value;
   const month = document.getElementById('sch-filter-month').value;
-
   const filtered = schWeeks.filter(w => {
-    if (year  && !w.week_start.startsWith(year))          return false;
-    if (month && w.week_start.substring(5,7) !== month)   return false;
+    if (year  && !w.week_start.startsWith(year))        return false;
+    if (month && w.week_start.substring(5,7) !== month) return false;
     return true;
   });
-
   const sel = document.getElementById('sch-week-select');
   sel.innerHTML = '<option value="">— Select a week —</option>' +
     filtered.map(w => `<option value="${w.id}">${fmtSchDate(w.week_start)} → ${fmtSchDate(w.week_end)}</option>`).join('');
-
   const tabsEl = document.getElementById('sch-week-tabs');
-  tabsEl.innerHTML = filtered.map(w => `
-    <div onclick="selectSchWeekTab('${w.id}')" id="sch-tab-${w.id}" style="
-      display:flex;align-items:center;gap:6px;padding:6px 12px;border-radius:10px;cursor:pointer;
-      border:1.5px solid var(--border);background:var(--surface2);color:var(--muted);
-      font-size:11px;font-weight:600;white-space:nowrap;transition:all 0.2s;">
+  if (tabsEl) tabsEl.innerHTML = filtered.map(w => `
+    <div onclick="selectSchWeekTab('${w.id}')" id="sch-tab-${w.id}" style="display:flex;align-items:center;gap:6px;padding:6px 12px;border-radius:10px;cursor:pointer;border:1.5px solid var(--border);background:var(--surface2);color:var(--muted);font-size:11px;font-weight:600;white-space:nowrap;transition:all 0.2s;">
       <i class="fas fa-calendar-week" style="font-size:10px;"></i>
       ${fmtSchDate(w.week_start)} → ${fmtSchDate(w.week_end)}
       <span style="font-size:9px;padding:2px 6px;border-radius:20px;background:rgba(16,185,129,0.1);color:#10b981;">${w.status}</span>
@@ -2031,15 +1950,15 @@ function filterSchWeeks() {
 function selectSchWeekTab(weekId) {
   document.getElementById('sch-week-select').value = weekId;
   document.querySelectorAll('[id^="sch-tab-"]').forEach(t => {
-    t.style.borderColor = 'var(--border)';
-    t.style.color       = 'var(--muted)';
-    t.style.background  = 'var(--surface2)';
+    t.style.borderColor = 'var(--border)'; t.style.color = 'var(--muted)'; t.style.background = 'var(--surface2)';
   });
   const tab = document.getElementById('sch-tab-'+weekId);
-  if (tab) {
-    tab.style.borderColor = 'var(--primary)';
-    tab.style.color       = 'var(--primary)';
-    tab.style.background  = 'rgba(212,175,55,0.08)';
-  }
+  if (tab) { tab.style.borderColor = 'var(--primary)'; tab.style.color = 'var(--primary)'; tab.style.background = 'rgba(212,175,55,0.08)'; }
   loadSchTable();
 }
+
+const origSwitchTab = switchTab;
+window.switchTab = function(id, btn, idx) {
+  origSwitchTab(id, btn, idx);
+  if (id === 'tab-sch-table') initSchTab();
+};
