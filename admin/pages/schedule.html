@@ -998,7 +998,22 @@ function getWeekStart(isoDate) {
   const diff = (day === 6) ? 0 : day + 1;
   ws.setDate(dt.getDate() - diff);
   return ws.toISOString().split('T')[0];
-}    dates.push({
+}
+
+function getWeekEnd(weekStart) {
+  const dt = new Date(weekStart + 'T00:00:00');
+  dt.setDate(dt.getDate() + 6);
+  return dt.toISOString().split('T')[0];
+}
+
+function getWeekDates(start, end) {
+  const dates = [];
+  const days  = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  let cur = new Date(start + 'T00:00:00');
+  const endDate = new Date(end + 'T00:00:00');
+  while (cur <= endDate) {
+    const iso = cur.toISOString().split('T')[0];
+    dates.push({
       iso,
       dayName: days[cur.getDay()],
       display: `${String(cur.getDate()).padStart(2,'0')}/${String(cur.getMonth()+1).padStart(2,'0')}`
@@ -1007,7 +1022,6 @@ function getWeekStart(isoDate) {
   }
   return dates;
 }
-
 function getNextSunday() {
   const d = new Date();
   const day = d.getDay();
