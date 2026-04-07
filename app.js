@@ -1561,10 +1561,13 @@ async function initSchTab() {
   schAgents     = agents     || [];
   schShiftTypes = shifts     || [];
 
-  const sel = document.getElementById('sch-week-select');
-  sel.innerHTML = '<option value="">— Select a week —</option>' +
-    schWeeks.map(w => `<option value="${w.id}">${fmtSchDate(w.week_start)} → ${fmtSchDate(w.week_end)}</option>`).join('');
-
+const years = [...new Set(schWeeks.map(w => w.week_start.substring(0,4)))].sort().reverse();
+  const yearEl = document.getElementById('sch-filter-year');
+  if (yearEl) {
+    yearEl.innerHTML = '<option value="">All Years</option>' +
+      years.map(y => `<option value="${y}">${y}</option>`).join('');
+  }
+  filterSchWeeks();
   const agentName = document.getElementById('user-name').innerText.trim();
   const me = schAgents.find(a => a.formal_name.toLowerCase() === agentName.toLowerCase());
   if (me) schMyAgentId = me.id;
@@ -1831,3 +1834,44 @@ window.switchTab = function(id, btn, idx) {
   origSwitchTab(id, btn, idx);
   if (id === 'tab-sch-table') initSchTab();
 };
+function filterSchWeeks() {
+  const year  = document.getElementById('sch-filter-year').value;
+  const month = document.getElementById('sch-filter-month').value;
+
+  const filtered = schWeeks.filter(w => {
+    if (year  && !w.week_start.startsWith(year))          return false;
+    if (month && w.week_start.substring(5,7) !== month)   return false;
+    return true;
+  });
+
+  const sel = document.getElementById('sch-week-select');
+  sel.innerHTML = '<option value="">— Select a week —</option>' +
+    filtered.map(w => `<option value="${w.id}">${fmtSchDate(w.week_start)} → ${fmtSchDate(w.week_end)}</option>`).join('');
+
+  const tabsEl = document.getElementById('sch-week-tabs');
+  tabsEl.innerHTML = filtered.map(w => `
+    <div onclick="selectSchWeekTab('${w.id}')" id="sch-tab-${w.id}" style="
+      display:flex;align-items:center;gap:6px;padding:6px 12px;border-radius:10px;cursor:pointer;
+      border:1.5px solid var(--border);background:var(--surface2);color:var(--muted);
+      font-size:11px;font-weight:600;white-space:nowrap;transition:all 0.2s;">
+      <i class="fas fa-calendar-week" style="font-size:10px;"></i>
+      ${fmtSchDate(w.week_start)} → ${fmtSchDate(w.week_end)}
+      <span style="font-size:9px;padding:2px 6px;border-radius:20px;background:rgba(16,185,129,0.1);color:#10b981;">${w.status}</span>
+    </div>`).join('');
+}
+
+function selectSchWeekTab(weekId) {
+  document.getElementById('sch-week-select').value = weekId;
+  document.querySelectorAll('[id^="sch-tab-"]').forEach(t => {
+    t.style.borderColor = 'var(--border)';
+    t.style.color       = 'var(--muted)';
+    t.style.background  = 'var(--surface2)';
+  });
+  const tab = document.getElementById('sch-tab-'+weekId);
+  if (tab) {
+    tab.style.borderColor = 'var(--primary)';
+    tab.style.color       = 'var(--primary)';
+    tab.style.background  = 'rgba(212,175,55,0.08)';
+  }
+  loadSchTable();
+}
