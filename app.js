@@ -428,7 +428,7 @@ function showDashboard(res) {
     knownSwapStatuses = {};
   }
 
-  renderSchedule(res.schedule  || []);
+  loadAgentSchedule();
   renderRequests(res.userRequests || []);
   globalScheduleData = res.schedule      || [];
   globalTeamData     = res.allStaffBreaks || [];
@@ -531,6 +531,93 @@ function renderSchedule(scheduleData) {
   }
 
   container.innerHTML = `<div class="sched-container">${buildWeekHtml(thisWeek,'📅 THIS WEEK')}${buildWeekHtml(nextWeek,'📆 NEXT WEEK')}</div>`;
+}
+async function loadAgentSchedule() {
+  if (!schMyAgentId) {
+    const agentName = document.getElementById('user-name').innerText.trim();
+    const agents = await sbFetchSch('agents?select=id,formal_name&status=eq.Active');
+    const me = (agents||[]).find(a => a.formal_name.toLowerCase() === agentName.toLowerCase());
+    if (me) schMyAgentId = me.id;
+  }
+  if (!schShiftTypes.length) {
+    const shifts = await sbFetchSch('shift_types?select=id,name,start_time,end_time&is_active=eq.true');
+    schShiftTypes = shifts || [];
+  }
+
+  const weeks = await sbFetchSch('schedule_weeks?select=id,week_start,week_end,status&status=eq.Published&order=week_start.desc');
+  if (!weeks || !weeks.length) return;
+
+  const records = await sbFetchSch(`schedule?select=*&agent_id=eq.${schMyAgentId}`);
+  const schedMap = {};
+  (records||[]).forEach(s => { schedMap[s.shift_date] = s; });
+
+  const container = document.getElementById('schedule-content');
+
+  let html = `
+  <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;align-items:center;">
+    <select id="agent-sched-week" class="form-input" style="flex:1;font-size:12px;" onchange="renderAgentWeek()">
+      ${weeks.map(w => `<option value="${w.id}">${fmtSchDate(w.week_start)} → ${fmtSchDate(w.week_end)}</option>`).join('')}
+    </select>
+  </div>
+  <div id="agent-sched-days"></div>`;
+
+  container.innerHTML = html;
+
+  window._agentSchedWeeks = weeks;
+  window._agentSchedMap   = schedMap;
+  renderAgentWeek();
+}
+
+function renderAgentWeek() {
+  const weekId = document.getElementById('agent-sched-week').value;
+  const week   = (window._agentSchedWeeks||[]).find(w => w.id === weekId);
+  if (!week) return;
+
+  const dates  = getSchWeekDates(week.week_start, week.week_end);
+  const today  = `${new Date().getFullYear()}-${String(new Date().getMonth()+1).padStart(2,'0')}-${String(new Date().getDate()).padStart(2,'0')}`;
+  const daysEl = document.getElementById('agent-sched-days');
+
+  let html = '<div class="nos-days-list">';
+  dates.forEach((d, i) => {
+    const entry   = (window._agentSchedMap||{})[d.iso];
+    const dayType = entry ? entry.day_type : 'Off';
+    const stId    = entry ? entry.shift_type_id : null;
+    const st      = schShiftTypes.find(s => s.id === stId);
+    const isToday = d.iso === today;
+
+    let shift = 'Day Off', badge = '', shiftClass = ' nos-off';
+    if (dayType === 'Work' && st) {
+      shift = st.start_time.substring(0,5) + ' - ' + st.end_time.substring(0,5);
+      badge = '<span class="nos-status-badge nos-badge-work">Working</span>';
+      shiftClass = '';
+    } else if (dayType === 'Annual') {
+      shift = ''; badge = '<span class="nos-status-badge nos-badge-annual">Annual</span>'; shiftClass = '';
+    } else if (dayType === 'Sick') {
+      shift = ''; badge = '<span class="nos-status-badge nos-badge-sick">Sick</span>'; shiftClass = '';
+    } else if (dayType === 'Casual') {
+      shift = ''; badge = '<span class="nos-status-badge nos-badge-casual">Casual</span>'; shiftClass = '';
+    } else if (dayType === 'PH') {
+      shift = ''; badge = '<span class="nos-status-badge nos-badge-ph">Public Holiday</span>'; shiftClass = '';
+    } else if (dayType === 'Task') {
+      shift = ''; badge = '<span class="nos-status-badge nos-badge-task">Task</span>'; shiftClass = '';
+    } else {
+      badge = '<span class="nos-status-badge nos-badge-off">OFF</span>';
+    }
+
+    html += `<div class="nos-day-card${isToday?' nos-today':''}" style="animation-delay:${i*40}ms">
+      <div class="nos-date-block">
+        <div class="nos-day-name">${d.dayName}</div>
+        <div class="nos-day-num">${d.display.split('/')[0]}</div>
+      </div>
+      <div class="nos-shift-block">
+        ${shift ? `<div class="nos-shift-time${shiftClass}">${shift}</div>` : ''}
+        ${badge}
+        ${isToday ? '<span class="nos-today-badge">TODAY</span>' : ''}
+      </div>
+    </div>`;
+  });
+  html += '</div>';
+  daysEl.innerHTML = html;
 }
 
 
