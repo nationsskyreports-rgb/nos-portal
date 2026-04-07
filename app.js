@@ -1553,7 +1553,7 @@ async function sbFetchSch(path) {
 async function initSchTab() {
   if (schWeeks.length) return;
   const [weeks, agents, shifts] = await Promise.all([
-    sbFetchSch('schedule_weeks?select=id,week_start,week_end,status&status=eq.Published&order=week_start.desc'),
+    sbFetchSch('schedule_weeks?select=id,week_start,week_end,status&status=eq.Draft&order=week_start.desc'),
     sbFetchSch('agents?select=id,formal_name&status=eq.Active&order=formal_name'),
     sbFetchSch('shift_types?select=id,name,start_time,end_time&is_active=eq.true&order=start_time')
   ]);
