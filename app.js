@@ -1668,8 +1668,45 @@ dates.forEach(d => {
 });
 html += `</tr></tbody></table></div>`;
 gridEl.innerHTML = html;
-}
 
+  const agentName = document.getElementById('user-name').innerText.trim();
+  const myAgent = schAgents.find(a => a.formal_name.toLowerCase() === agentName.toLowerCase());
+  if (!myAgent) { draftEl.innerHTML = '<div class="empty-state">Agent not found</div>'; return; }
+
+  const existingReqs = await sbFetchSch(`requests?select=*&agent_id=eq.${myAgent.id}&type=eq.Schedule%20Request&order=created_at.desc&limit=1`);
+  if (existingReqs && existingReqs.length) {
+    try {
+      const details = JSON.parse(existingReqs[0].details);
+      if (details.week_id === weekId) schDraftData = details.draft || {};
+    } catch(e) {}
+  }
+
+  let draftHtml = `<table style="width:100%;border-collapse:collapse;font-size:11px;">
+    <thead><tr>
+      <th style="padding:8px;background:var(--surface2);color:var(--muted);font-size:10px;text-align:left;border-bottom:1px solid var(--border);">Day</th>
+      <th style="padding:8px;background:var(--surface2);color:var(--muted);font-size:10px;text-align:center;border-bottom:1px solid var(--border);">Requested Shift</th>
+    </tr></thead><tbody>`;
+
+  dates.forEach(d => {
+    const draft = schDraftData[d.iso] || { day_type: 'Off', shift_type_id: null };
+    draftHtml += `<tr>
+      <td style="padding:8px;font-weight:700;font-size:12px;border-bottom:1px solid var(--border);">${d.dayName} ${d.display}</td>
+      <td style="padding:6px;border-bottom:1px solid var(--border);">
+        <select data-date="${d.iso}" onchange="onSchDraftChange(this)" style="width:100%;padding:6px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;font-size:11px;color:${draft.day_type==='Work'?'#10b981':draft.day_type!=='Off'?'#8b5cf6':'var(--muted)'}">
+          <option value="Off" ${draft.day_type==='Off'?'selected':''}>— Off —</option>
+          ${schShiftTypes.map(st => `<option value="Work__${st.id}" ${draft.day_type==='Work'&&draft.shift_type_id===st.id?'selected':''}>${st.start_time.substring(0,5)}-${st.end_time.substring(0,5)} (${st.name})</option>`).join('')}
+          <option value="Annual" ${draft.day_type==='Annual'?'selected':''}>Annual</option>
+          <option value="Sick" ${draft.day_type==='Sick'?'selected':''}>Sick</option>
+          <option value="Casual" ${draft.day_type==='Casual'?'selected':''}>Casual</option>
+          <option value="PH" ${draft.day_type==='PH'?'selected':''}>PH</option>
+        </select>
+      </td>
+    </tr>`;
+  });
+
+  draftHtml += '</tbody></table>';
+  draftEl.innerHTML = draftHtml;
+}
 function onSchDraftChange(sel) {  const date = sel.dataset.date;
   const val  = sel.value;
   let dayType = val, shiftTypeId = null;
