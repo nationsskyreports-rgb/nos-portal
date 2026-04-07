@@ -992,14 +992,12 @@ function updateSummary(dates) {
 
 // ── Helpers ──
 function getWeekStart(isoDate) {
-  const dt = new Date(isoDate + 'T00:00:00');
-  const ws = new Date(dt);
-  const day = dt.getDay();
-  const diff = (day === 6) ? 0 : day + 1;
-  ws.setDate(dt.getDate() - diff);
-  return ws.toISOString().split('T')[0];
+  const [y, m, d] = isoDate.split('-').map(Number);
+  const dt = new Date(y, m - 1, d);
+  const day = dt.getDay(); // 0=Sun
+  dt.setDate(d - day); // يرجع لـ Sunday
+  return `${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,'0')}-${String(dt.getDate()).padStart(2,'0')}`;
 }
-
 function getWeekEnd(weekStart) {
   const dt = new Date(weekStart + 'T00:00:00');
   dt.setDate(dt.getDate() + 6);
