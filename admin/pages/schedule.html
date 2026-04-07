@@ -991,14 +991,14 @@ function updateSummary(dates) {
 // buildCountRow removed - count row now inline in table
 
 // ── Helpers ──
-function getWeekDates(start, end) {
-  const dates = [];
-  const days  = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
-  let cur = new Date(start + 'T00:00:00');
-  const endDate = new Date(end + 'T00:00:00');
-  while (cur <= endDate) {
-    const iso = cur.toISOString().split('T')[0];
-    dates.push({
+function getWeekStart(isoDate) {
+  const dt = new Date(isoDate + 'T00:00:00');
+  const ws = new Date(dt);
+  const day = dt.getDay();
+  const diff = (day === 6) ? 0 : day + 1;
+  ws.setDate(dt.getDate() - diff);
+  return ws.toISOString().split('T')[0];
+}    dates.push({
       iso,
       dayName: days[cur.getDay()],
       display: `${String(cur.getDate()).padStart(2,'0')}/${String(cur.getMonth()+1).padStart(2,'0')}`
