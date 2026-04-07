@@ -427,7 +427,8 @@ function showDashboard(res) {
     if (swapPollTimer)   clearInterval(swapPollTimer);
     knownSwapStatuses = {};
   }
-
+schShiftTypes = [];
+schMyAgentId  = null;
   loadAgentSchedule();
   renderRequests(res.userRequests || []);
   globalScheduleData = res.schedule      || [];
@@ -1691,31 +1692,33 @@ async function sbFetchSch(path) {
 }
 
 async function initSchTab() {
-  if (schAgents.length) return;
-  const [pubWeeks, agents, shifts] = await Promise.all([
-    sbFetchSch('schedule_weeks?select=id,week_start,week_end,status&status=eq.Published&order=week_start.desc'),
-    sbFetchSch('agents?select=id,formal_name&status=eq.Active&order=formal_name'),
-    sbFetchSch('shift_types?select=id,name,start_time,end_time&is_active=eq.true&order=start_time')
-  ]);
-  schWeeks      = pubWeeks || [];
-  schAgents     = agents   || [];
-  schShiftTypes = shifts   || [];
+  schWeeks = [];
+  schAgents = [];
+  try {
+    const [pubWeeks, agents, shifts] = await Promise.all([
+      sbFetchSch('schedule_weeks?select=id,week_start,week_end,status&status=eq.Published&order=week_start.desc'),
+      sbFetchSch('agents?select=id,formal_name&status=eq.Active&order=formal_name'),
+      sbFetchSch('shift_types?select=id,name,start_time,end_time&is_active=eq.true&order=start_time')
+    ]);
+    schWeeks      = pubWeeks || [];
+    schAgents     = agents   || [];
+    schShiftTypes = shifts   || [];
 
-  const agentName = document.getElementById('user-name').innerText.trim();
-  const me = schAgents.find(a => a.formal_name.toLowerCase() === agentName.toLowerCase());
-  if (me) schMyAgentId = me.id;
+    const agentName = document.getElementById('user-name').innerText.trim();
+    const me = schAgents.find(a => a.formal_name.toLowerCase() === agentName.toLowerCase());
+    if (me) schMyAgentId = me.id;
 
-  // fill year dropdown
-  const years = [...new Set(schWeeks.map(w => w.week_start.substring(0,4)))].sort().reverse();
-  const yearEl = document.getElementById('sch-filter-year');
-  if (yearEl) {
-    yearEl.innerHTML = '<option value="">All Years</option>' +
-      years.map(y => `<option value="${y}">${y}</option>`).join('');
+    const years = [...new Set(schWeeks.map(w => w.week_start.substring(0,4)))].sort().reverse();
+    const yearEl = document.getElementById('sch-filter-year');
+    if (yearEl) {
+      yearEl.innerHTML = '<option value="">All Years</option>' +
+        years.map(y => `<option value="${y}">${y}</option>`).join('');
+    }
+    filterSchWeeks();
+    loadDraftGrid();
+  } catch(e) {
+    console.error('SCH Tab failed:', e);
   }
-  filterSchWeeks();
-
-  // load draft grid independently
-  loadDraftGrid();
 }
 
 function fmtSchDate(d) {
@@ -2014,8 +2017,11 @@ function selectSchWeekTab(weekId) {
   loadSchTable();
 }
 
-const origSwitchTab = switchTab;
-window.switchTab = function(id, btn, idx) {
-  origSwitchTab(id, btn, idx);
-  if (id === 'tab-sch-table') initSchTab();
-};
+if (!window._schTabHooked) {
+  window._schTabHooked = true;
+  const origSwitchTab = switchTab;
+  window.switchTab = function(id, btn, idx) {
+    origSwitchTab(id, btn, idx);
+    if (id === 'tab-sch-table') initSchTab();
+  };
+}
