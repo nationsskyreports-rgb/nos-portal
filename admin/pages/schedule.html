@@ -158,9 +158,17 @@
           </div>
           <div style="font-size:12px;color:var(--muted);" id="week-count">Loading...</div>
         </div>
-        <div style="padding:12px 16px;display:flex;gap:8px;flex-wrap:wrap;" id="weeks-tabs">
-          <div class="loading-wrap" style="padding:12px;"><div class="spinner"></div></div>
-        </div>
+        <div style="padding:12px 16px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;border-bottom:1px solid var(--border);">
+  <input type="text" id="week-search" placeholder="🔍 Search by date (e.g. 03/2025)" 
+    style="padding:8px 12px;border-radius:8px;border:1.5px solid var(--border);background:var(--surface2);color:var(--text);font-size:12px;width:200px;outline:none;"
+    oninput="filterWeeks()">
+  <select id="week-dropdown" class="form-input" style="width:220px;font-size:12px;" onchange="selectWeek(this.value)">
+    <option value="">— Select a week —</option>
+  </select>
+</div>
+<div style="padding:12px 16px;display:flex;gap:8px;flex-wrap:wrap;" id="weeks-tabs">
+  <div class="loading-wrap" style="padding:12px;"><div class="spinner"></div></div>
+</div>
       </div>
 
       <!-- SCHEDULE GRID -->
@@ -284,6 +292,13 @@ async function loadWeeks() {
 }
 
 function renderWeekTabs() {
+const dropdown = document.getElementById('week-dropdown');
+if (dropdown) {
+  dropdown.innerHTML = '<option value="">— Select a week —</option>' +
+    allWeeks.map(w => `<option value="${w.id}" ${currentWeek?.id === w.id ? 'selected' : ''}>
+      ${formatDateShort(w.week_start)} → ${formatDateShort(w.week_end)} (${w.status})
+    </option>`).join('');
+}
   const container = document.getElementById('weeks-tabs');
   document.getElementById('week-count').innerText = `${allWeeks.length} week(s)`;
 
@@ -1064,6 +1079,12 @@ function openTemplatePanel() {
     </button>
   `;
   openPanel();
+}
+  function filterWeeks() {
+  const q = document.getElementById('week-search').value.toLowerCase();
+  document.querySelectorAll('.week-tab').forEach(tab => {
+    tab.style.display = tab.innerText.toLowerCase().includes(q) ? 'flex' : 'none';
+  });
 }
 
 function applyTemplate() {
