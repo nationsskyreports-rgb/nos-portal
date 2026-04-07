@@ -471,13 +471,25 @@
 <div class="tab-content" id="tab-sch-table">
   <div style="padding:16px;">
 
-    <!-- Week selector -->
-    <div style="display:flex;gap:8px;align-items:center;margin-bottom:16px;flex-wrap:wrap;">
-      <select id="sch-week-select" class="form-input" style="flex:1;" onchange="loadSchTable()">
-        <option value="">— Select a week —</option>
-      </select>
-    </div>
-
+<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:12px;">
+  <select id="sch-filter-year" class="form-input" style="width:90px;font-size:12px;" onchange="filterSchWeeks()">
+    <option value="">All Years</option>
+  </select>
+  <select id="sch-filter-month" class="form-input" style="width:110px;font-size:12px;" onchange="filterSchWeeks()">
+    <option value="">All Months</option>
+    <option value="01">January</option><option value="02">February</option>
+    <option value="03">March</option><option value="04">April</option>
+    <option value="05">May</option><option value="06">June</option>
+    <option value="07">July</option><option value="08">August</option>
+    <option value="09">September</option><option value="10">October</option>
+    <option value="11">November</option><option value="12">December</option>
+  </select>
+  <select id="sch-week-select" class="form-input" style="flex:1;font-size:12px;" onchange="loadSchTable()">
+    <option value="">— Select a week —</option>
+  </select>
+</div>
+<div id="sch-week-tabs" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;"></div>
+    
     <!-- Schedule Grid (read-only) -->
     <div class="section-label"><i class="fas fa-calendar-alt"></i> Published Schedule</div>
     <div id="sch-table-grid" style="overflow-x:auto;margin-bottom:24px;">
