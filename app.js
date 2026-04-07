@@ -1603,85 +1603,71 @@ async function loadSchTable() {
 
   const dates = getSchWeekDates(schCurrentWeek.week_start, schCurrentWeek.week_end);
 
-  // ── Read-only grid ──
-  let html = `<table style="width:100%;border-collapse:collapse;font-size:11px;min-width:600px;">
-    <thead><tr>
-      <th style="padding:8px;background:var(--surface2);color:var(--muted);font-size:10px;text-align:left;min-width:120px;border-bottom:1px solid var(--border);">Agent</th>`;
-  dates.forEach(d => {
-    html += `<th style="padding:8px;background:var(--surface2);color:var(--muted);font-size:10px;text-align:center;border-bottom:1px solid var(--border);">
-      <div>${d.dayName}</div><div style="color:var(--muted);font-size:9px;">${d.display}</div>
-    </th>`;
-  });
-  html += `</tr></thead><tbody>`;
+// ── Read-only grid ──
+let html = `<div style="overflow-x:auto;-webkit-overflow-scrolling:touch;">
+<table style="width:100%;border-collapse:collapse;font-size:11px;min-width:700px;">
+<thead><tr>
+  <th style="padding:8px 12px;background:var(--surface2);color:var(--muted);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;border-bottom:1px solid var(--border);text-align:left;min-width:120px;white-space:nowrap;">Agent</th>`;
 
-  schAgents.forEach(agent => {
-    html += `<tr><td style="padding:8px;font-size:12px;font-weight:700;border-bottom:1px solid var(--border);background:var(--surface2);">${agent.formal_name}</td>`;
-    dates.forEach(d => {
-      const entry = schedMap[`${agent.id}_${d.iso}`];
-      const dayType = entry ? entry.day_type : 'Off';
-      const stId = entry ? entry.shift_type_id : null;
-      const st = schShiftTypes.find(s => s.id === stId);
-      let cell = '', color = 'var(--muted)';
-      if (dayType === 'Work' && st)    { cell = st.start_time.substring(0,5)+'-'+st.end_time.substring(0,5); color = '#10b981'; }
-      else if (dayType === 'Annual')   { cell = 'Annual'; color = '#8b5cf6'; }
-      else if (dayType === 'Sick')     { cell = 'Sick';   color = '#ef4444'; }
-      else if (dayType === 'Casual')   { cell = 'Casual'; color = '#f59e0b'; }
-      else if (dayType === 'PH')       { cell = 'PH';     color = '#3b82f6'; }
-      else if (dayType === 'Task')     { cell = 'Task';   color = '#06b6d4'; }
-      else                             { cell = 'Off'; }
-      html += `<td style="padding:6px;text-align:center;border-bottom:1px solid var(--border);font-size:10px;font-weight:700;color:${color};">${cell}</td>`;
-    });
-    html += '</tr>';
-  });
-  html += '</tbody></table>';
-  gridEl.innerHTML = html;
+dates.forEach(d => {
+  const isToday = d.iso === new Date().toISOString().split('T')[0];
+  html += `<th style="padding:8px;background:var(--surface2);color:${isToday?'#D4AF37':'var(--muted)'};font-size:10px;font-weight:700;text-transform:uppercase;border-bottom:1px solid var(--border);text-align:center;white-space:nowrap;">
+    <div>${d.dayName}</div>
+    <div style="font-size:9px;margin-top:2px;">${d.display}</div>
+  </th>`;
+});
+html += `</tr></thead><tbody>`;
 
-  // ── Draft grid (agent's own request) ──
-  const agentName = document.getElementById('user-name').innerText.trim();
-  const myAgent = schAgents.find(a => a.formal_name.toLowerCase() === agentName.toLowerCase());
-
-  if (!myAgent) {
-    draftEl.innerHTML = '<div class="empty-state">Agent not found in schedule</div>';
-    return;
-  }
-
-  // Load existing request if any
-  const existingReqs = await sbFetchSch(`requests?select=*&agent_id=eq.${myAgent.id}&type=eq.Schedule Request&order=created_at.desc&limit=1`);
-  if (existingReqs && existingReqs.length) {
-    try {
-      const details = JSON.parse(existingReqs[0].details);
-      if (details.week_id === weekId) schDraftData = details.draft || {};
-    } catch(e) {}
-  }
-
-  let draftHtml = `<table style="width:100%;border-collapse:collapse;font-size:11px;min-width:500px;">
-    <thead><tr>
-      <th style="padding:8px;background:var(--surface2);color:var(--muted);font-size:10px;text-align:left;border-bottom:1px solid var(--border);">Day</th>
-      <th style="padding:8px;background:var(--surface2);color:var(--muted);font-size:10px;text-align:center;border-bottom:1px solid var(--border);">Requested Shift</th>
-    </tr></thead><tbody>`;
+schAgents.forEach((agent, idx) => {
+  const rowBg = idx % 2 === 0 ? 'var(--surface)' : 'var(--surface2)';
+  html += `<tr style="background:${rowBg};">
+    <td style="padding:8px 12px;font-size:12px;font-weight:700;border-bottom:1px solid var(--border);white-space:nowrap;">
+      <div style="display:flex;align-items:center;gap:8px;">
+        <div style="width:26px;height:26px;border-radius:50%;background:var(--primary-gradient);display:flex;align-items:center;justify-content:center;color:#fff;font-size:9px;font-weight:800;flex-shrink:0;">
+          ${agent.formal_name.split(' ').map(n=>n[0]).join('').toUpperCase().slice(0,2)}
+        </div>
+        <span style="color:var(--text);">${agent.formal_name}</span>
+      </div>
+    </td>`;
 
   dates.forEach(d => {
-    const draft = schDraftData[d.iso] || { day_type: 'Off', shift_type_id: null };
-    const selClass = draft.day_type === 'Work' ? 'color:#10b981' : draft.day_type !== 'Off' ? 'color:#8b5cf6' : 'color:var(--muted)';
-    draftHtml += `<tr>
-      <td style="padding:8px;font-weight:700;font-size:12px;border-bottom:1px solid var(--border);">${d.dayName} ${d.display}</td>
-      <td style="padding:6px;border-bottom:1px solid var(--border);">
-        <select data-date="${d.iso}" onchange="onSchDraftChange(this)" style="width:100%;padding:6px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;font-size:11px;${selClass}">
-          <option value="Off" ${draft.day_type==='Off'?'selected':''}>— Off —</option>
-          ${schShiftTypes.map(st => `<option value="Work__${st.id}" ${draft.day_type==='Work'&&draft.shift_type_id===st.id?'selected':''}>${st.start_time.substring(0,5)}-${st.end_time.substring(0,5)} (${st.name})</option>`).join('')}
-          <option value="Annual" ${draft.day_type==='Annual'?'selected':''}>Annual</option>
-          <option value="Sick"   ${draft.day_type==='Sick'?'selected':''}>Sick</option>
-          <option value="Casual" ${draft.day_type==='Casual'?'selected':''}>Casual</option>
-          <option value="PH"     ${draft.day_type==='PH'?'selected':''}>PH</option>
-        </select>
-      </td>
-    </tr>`;
+    const entry = schedMap[`${agent.id}_${d.iso}`];
+    const dayType = entry ? entry.day_type : 'Off';
+    const stId = entry ? entry.shift_type_id : null;
+    const st = schShiftTypes.find(s => s.id === stId);
+    const isToday = d.iso === new Date().toISOString().split('T')[0];
+
+    let cell = '', bg = 'transparent', color = 'var(--muted)', border = 'transparent';
+    if      (dayType === 'Work' && st) { cell = st.start_time.substring(0,5)+' - '+st.end_time.substring(0,5); color = '#10b981'; bg = 'rgba(16,185,129,0.05)'; border = 'rgba(16,185,129,0.3)'; }
+    else if (dayType === 'Annual')     { cell = 'Annual'; color = '#8b5cf6'; bg = 'rgba(139,92,246,0.05)'; border = 'rgba(139,92,246,0.3)'; }
+    else if (dayType === 'Sick')       { cell = 'Sick';   color = '#ef4444'; bg = 'rgba(239,68,68,0.05)';   border = 'rgba(239,68,68,0.3)'; }
+    else if (dayType === 'Casual')     { cell = 'Casual'; color = '#f59e0b'; bg = 'rgba(245,158,11,0.05)';  border = 'rgba(245,158,11,0.3)'; }
+    else if (dayType === 'PH')         { cell = 'PH';     color = '#3b82f6'; bg = 'rgba(59,130,246,0.05)';  border = 'rgba(59,130,246,0.3)'; }
+    else if (dayType === 'Task')       { cell = 'Task';   color = '#06b6d4'; bg = 'rgba(6,182,212,0.05)';   border = 'rgba(6,182,212,0.3)'; }
+    else                               { cell = '— Off —'; }
+
+    html += `<td style="padding:6px;border-bottom:1px solid var(--border);text-align:center;${isToday?'background:rgba(212,175,55,0.05);':''}">
+      <div style="background:${bg};border:1.5px solid ${border};border-radius:8px;padding:5px 4px;font-size:10px;font-weight:700;color:${color};white-space:nowrap;">
+        ${cell}
+      </div>
+    </td>`;
   });
 
-  draftHtml += '</tbody></table>';
-  draftEl.innerHTML = draftHtml;
-}
+  html += `</tr>`;
+});
 
+// Daily count row
+html += `<tr style="background:var(--surface2);">
+  <td style="padding:8px 12px;font-size:11px;color:var(--muted);font-weight:700;">Daily Count</td>`;
+dates.forEach(d => {
+  const working = schAgents.filter(a => {
+    const e = schedMap[`${a.id}_${d.iso}`];
+    return e && e.day_type === 'Work';
+  }).length;
+  html += `<td style="padding:8px;text-align:center;font-size:12px;font-weight:800;color:#10b981;">${working} <span style="font-size:9px;color:var(--muted);font-weight:400;">working</span></td>`;
+});
+html += `</tr></tbody></table></div>`;
+gridEl.innerHTML = html;
 function onSchDraftChange(sel) {
   const date = sel.dataset.date;
   const val  = sel.value;
