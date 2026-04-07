@@ -1836,7 +1836,9 @@ async function loadSchTable() {
   draftTitle.style.cssText = 'font-size:12px;font-weight:700;color:var(--muted);margin-bottom:8px;';
   draftTitle.innerText = `Draft Week: ${fmtSchDate(draftWeek.week_start)} → ${fmtSchDate(draftWeek.week_end)}`;
   draftEl.innerHTML = '';
-  draftEl.appendChild(draftTitle);
+draftEl.appendChild(draftTitle);
+
+  let draftHtml = `<div style="overflow-x:auto;-webkit-overflow-scrolling:touch;">
   <table style="width:100%;border-collapse:collapse;font-size:11px;min-width:600px;">
   <thead><tr>
     <th style="padding:8px 12px;background:var(--surface2);color:var(--muted);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;border-bottom:1px solid var(--border);text-align:left;min-width:120px;">Agent</th>`;
