@@ -544,30 +544,89 @@ async function loadAgentSchedule() {
     schShiftTypes = shifts || [];
   }
 
-  const weeks = await sbFetchSch('schedule_weeks?select=id,week_start,week_end,status&status=eq.Published&order=week_start.desc');
-  if (!weeks || !weeks.length) return;
+  const container = document.getElementById('schedule-content');
+  if (!schMyAgentId) { container.innerHTML = '<div class="empty-state">Schedule not found.</div>'; return; }
 
-  const records = await sbFetchSch(`schedule?select=*&agent_id=eq.${schMyAgentId}`);
+  const records = await sbFetchSch(`schedule?select=*,schedule_weeks(week_start,week_end,status)&agent_id=eq.${schMyAgentId}`);
+  
+  const today = new Date(); today.setHours(0,0,0,0);
+  const todayIso = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
+
+  // حساب بداية الأسبوع الحالي والجاي
+  const curDay = today.getDay();
+  const thisWeekStart = new Date(today); thisWeekStart.setDate(today.getDate() - curDay);
+  const nextWeekStart = new Date(thisWeekStart); nextWeekStart.setDate(thisWeekStart.getDate() + 7);
+  const nextWeekEnd   = new Date(nextWeekStart); nextWeekEnd.setDate(nextWeekStart.getDate() + 6);
+
+  // بناء الداتا
   const schedMap = {};
   (records||[]).forEach(s => { schedMap[s.shift_date] = s; });
 
-  const container = document.getElementById('schedule-content');
+  function buildDays(startDate, endDate) {
+    const days = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+    const result = [];
+    let cur = new Date(startDate);
+    while (cur <= endDate) {
+      const iso = `${cur.getFullYear()}-${String(cur.getMonth()+1).padStart(2,'0')}-${String(cur.getDate()).padStart(2,'0')}`;
+      const entry   = schedMap[iso];
+      const dayType = entry ? entry.day_type : null;
+      const stId    = entry ? entry.shift_type_id : null;
+      const st      = schShiftTypes.find(s => s.id === stId);
+      result.push({ iso, dayName: days[cur.getDay()], dayNum: String(cur.getDate()).padStart(2,'0'), dayType, st, isToday: iso === todayIso });
+      cur.setDate(cur.getDate() + 1);
+    }
+    return result;
+  }
 
-  let html = `
-  <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;align-items:center;">
-    <select id="agent-sched-week" class="form-input" style="flex:1;font-size:12px;" onchange="renderAgentWeek()">
-      ${weeks.map(w => `<option value="${w.id}">${fmtSchDate(w.week_start)} → ${fmtSchDate(w.week_end)}</option>`).join('')}
-    </select>
-  </div>
-  <div id="agent-sched-days"></div>`;
+  function buildWeekHtml(days, label) {
+    if (!days.length) return '';
+    let html = `<div class="week-section"><div class="nos-week-label">${label}</div><div class="nos-days-list">`;
+    days.forEach((d, i) => {
+      const todayClass = d.isToday ? ' nos-today' : '';
+      let badge = '', displayShift = '', shiftClass = '';
 
-  container.innerHTML = html;
+      if (!d.dayType || d.dayType === 'Off') {
+        badge = '<span class="nos-status-badge nos-badge-off">OFF</span>';
+        displayShift = 'Day Off'; shiftClass = ' nos-off';
+      } else if (d.dayType === 'Work' && d.st) {
+        displayShift = d.st.start_time.substring(0,5) + ' - ' + d.st.end_time.substring(0,5);
+        badge = '<span class="nos-status-badge nos-badge-work">Working</span>';
+      } else if (d.dayType === 'Annual') {
+        badge = '<span class="nos-status-badge nos-badge-annual">Annual</span>';
+      } else if (d.dayType === 'Sick') {
+        badge = '<span class="nos-status-badge nos-badge-sick">Sick</span>';
+      } else if (d.dayType === 'Casual') {
+        badge = '<span class="nos-status-badge nos-badge-casual">Casual</span>';
+      } else if (d.dayType === 'PH') {
+        badge = '<span class="nos-status-badge nos-badge-ph">Public Holiday</span>';
+      } else if (d.dayType === 'Task') {
+        badge = '<span class="nos-status-badge nos-badge-task">Task</span>';
+      }
 
-  window._agentSchedWeeks = weeks;
-  window._agentSchedMap   = schedMap;
-  renderAgentWeek();
+      html += `<div class="nos-day-card${todayClass}" style="animation-delay:${i*40}ms">
+        <div class="nos-date-block">
+          <div class="nos-day-name">${d.dayName}</div>
+          <div class="nos-day-num">${d.dayNum}</div>
+        </div>
+        <div class="nos-shift-block">
+          ${displayShift ? `<div class="nos-shift-time${shiftClass}">${displayShift}</div>` : ''}
+          ${badge}
+          ${d.isToday ? '<span class="nos-today-badge">TODAY</span>' : ''}
+        </div>
+      </div>`;
+    });
+    html += '</div></div>';
+    return html;
+  }
+
+  const thisWeekDays = buildDays(thisWeekStart, new Date(thisWeekStart.getTime() + 6*24*60*60*1000));
+  const nextWeekDays = buildDays(nextWeekStart, nextWeekEnd);
+
+  container.innerHTML = `<div class="sched-container">
+    ${buildWeekHtml(thisWeekDays, '📅 THIS WEEK')}
+    ${buildWeekHtml(nextWeekDays, '📆 NEXT WEEK')}
+  </div>`;
 }
-
 function renderAgentWeek() {
   const weekId = document.getElementById('agent-sched-week').value;
   const week   = (window._agentSchedWeeks||[]).find(w => w.id === weekId);
