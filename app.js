@@ -1531,11 +1531,13 @@ function selectChannel(ch) {
 const SB_URL_SCH = 'https://xzxdaupwwwdcwfnqweub.supabase.co';
 const SB_KEY_SCH = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh6eGRhdXB3d3dkY3dmbnF3ZXViIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUzMTM5NTAsImV4cCI6MjA5MDg4OTk1MH0.KjNZpFvLxh8XfDDoWdpVsIQZAh1PjzGXOrfDmApZ4K8';
 
-let schWeeks      = [];
-let schAgents     = [];
-let schShiftTypes = [];
+let schWeeks       = [];
+let schAgents      = [];
+let schShiftTypes  = [];
 let schCurrentWeek = null;
-let schDraftData  = {}; // { date: { shift_type_id, day_type } }
+let schMyDraft     = {};
+let schAllDrafts   = {};
+let schMyAgentId   = null;
 
 async function sbFetchSch(path) {
   const res = await fetch(`${SB_URL_SCH}/rest/v1/${path}`, {
@@ -1562,6 +1564,10 @@ async function initSchTab() {
   const sel = document.getElementById('sch-week-select');
   sel.innerHTML = '<option value="">— Select a week —</option>' +
     schWeeks.map(w => `<option value="${w.id}">${fmtSchDate(w.week_start)} → ${fmtSchDate(w.week_end)}</option>`).join('');
+
+  const agentName = document.getElementById('user-name').innerText.trim();
+  const me = schAgents.find(a => a.formal_name.toLowerCase() === agentName.toLowerCase());
+  if (me) schMyAgentId = me.id;
 }
 
 function fmtSchDate(d) {
@@ -1585,146 +1591,203 @@ function getSchWeekDates(start, end) {
   return dates;
 }
 
+function schShiftLabel(dayType, shiftTypeId) {
+  if (dayType === 'Work') {
+    const st = schShiftTypes.find(s => s.id === shiftTypeId);
+    return st ? st.start_time.substring(0,5)+' - '+st.end_time.substring(0,5)+' ('+st.name+')' : 'Work';
+  }
+  if (dayType === 'Off') return '— Off —';
+  return dayType;
+}
+
+function schCellStyle(dayType) {
+  if (dayType === 'Work')   return 'color:#10b981;border-color:rgba(16,185,129,0.4);background:rgba(16,185,129,0.06)';
+  if (dayType === 'Annual') return 'color:#8b5cf6;border-color:rgba(139,92,246,0.4);background:rgba(139,92,246,0.06)';
+  if (dayType === 'Sick')   return 'color:#ef4444;border-color:rgba(239,68,68,0.4);background:rgba(239,68,68,0.06)';
+  if (dayType === 'Casual') return 'color:#f59e0b;border-color:rgba(245,158,11,0.4);background:rgba(245,158,11,0.06)';
+  if (dayType === 'PH')     return 'color:#3b82f6;border-color:rgba(59,130,246,0.4);background:rgba(59,130,246,0.06)';
+  return 'color:var(--muted);border-color:var(--border);background:var(--surface2)';
+}
+
+function buildShiftSelect(agentId, date, dayType, shiftTypeId, isEditable) {
+  const style = schCellStyle(dayType);
+  if (!isEditable) {
+    return `<div style="padding:6px 4px;border:1.5px solid;border-radius:8px;font-size:10px;font-weight:700;text-align:center;${style};white-space:nowrap;">
+      ${schShiftLabel(dayType, shiftTypeId)}
+    </div>`;
+  }
+
+  const opts = [
+    `<option value="Off" ${dayType==='Off'?'selected':''}>— Off —</option>`,
+    ...schShiftTypes.map(st =>
+      `<option value="Work__${st.id}" ${dayType==='Work'&&shiftTypeId===st.id?'selected':''}>
+        ${st.start_time.substring(0,5)} - ${st.end_time.substring(0,5)} (${st.name})
+      </option>`
+    ),
+    `<option value="Annual" ${dayType==='Annual'?'selected':''}>Annual</option>`,
+    `<option value="Sick"   ${dayType==='Sick'?'selected':''}>Sick</option>`,
+    `<option value="Casual" ${dayType==='Casual'?'selected':''}>Casual</option>`,
+    `<option value="PH"     ${dayType==='PH'?'selected':''}>PH</option>`,
+  ].join('');
+
+  return `<select
+    data-date="${date}"
+    onchange="onSchDraftChange(this)"
+    style="width:100%;padding:6px 4px;border:1.5px solid;border-radius:8px;font-size:10px;font-weight:700;text-align:center;outline:none;cursor:pointer;font-family:inherit;${style}">
+    ${opts}
+  </select>`;
+}
+
 async function loadSchTable() {
   const weekId = document.getElementById('sch-week-select').value;
   if (!weekId) return;
 
   schCurrentWeek = schWeeks.find(w => w.id === weekId);
-  schDraftData = {};
+  schMyDraft    = {};
+  schAllDrafts  = {};
 
   const gridEl  = document.getElementById('sch-table-grid');
   const draftEl = document.getElementById('sch-draft-grid');
   gridEl.innerHTML  = '<div class="empty-state"><i class="fas fa-spinner spinner"></i></div>';
   draftEl.innerHTML = '<div class="empty-state"><i class="fas fa-spinner spinner"></i></div>';
 
+  const dates = getSchWeekDates(schCurrentWeek.week_start, schCurrentWeek.week_end);
+  const today = `${new Date().getFullYear()}-${String(new Date().getMonth()+1).padStart(2,'0')}-${String(new Date().getDate()).padStart(2,'0')}`;
+
+  // ── Published Schedule ──
   const scheduleRecords = await sbFetchSch(`schedule?select=*&week_id=eq.${weekId}`);
   const schedMap = {};
   (scheduleRecords || []).forEach(s => { schedMap[`${s.agent_id}_${s.shift_date}`] = s; });
 
-  const dates = getSchWeekDates(schCurrentWeek.week_start, schCurrentWeek.week_end);
-
-// ── Read-only grid ──
-let html = `<div style="overflow-x:auto;-webkit-overflow-scrolling:touch;">
-<table style="width:100%;border-collapse:collapse;font-size:11px;min-width:700px;">
-<thead><tr>
-  <th style="padding:8px 12px;background:var(--surface2);color:var(--muted);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;border-bottom:1px solid var(--border);text-align:left;min-width:120px;white-space:nowrap;">Agent</th>`;
-
-dates.forEach(d => {
-  const isToday = d.iso === new Date().toISOString().split('T')[0];
-  html += `<th style="padding:8px;background:var(--surface2);color:${isToday?'#D4AF37':'var(--muted)'};font-size:10px;font-weight:700;text-transform:uppercase;border-bottom:1px solid var(--border);text-align:center;white-space:nowrap;">
-    <div>${d.dayName}</div>
-    <div style="font-size:9px;margin-top:2px;">${d.display}</div>
-  </th>`;
-});
-html += `</tr></thead><tbody>`;
-
-schAgents.forEach((agent, idx) => {
-  const rowBg = idx % 2 === 0 ? 'var(--surface)' : 'var(--surface2)';
-  html += `<tr style="background:${rowBg};">
-    <td style="padding:8px 12px;font-size:12px;font-weight:700;border-bottom:1px solid var(--border);white-space:nowrap;">
-      <div style="display:flex;align-items:center;gap:8px;">
-        <div style="width:26px;height:26px;border-radius:50%;background:var(--primary-gradient);display:flex;align-items:center;justify-content:center;color:#fff;font-size:9px;font-weight:800;flex-shrink:0;">
-          ${agent.formal_name.split(' ').map(n=>n[0]).join('').toUpperCase().slice(0,2)}
-        </div>
-        <span style="color:var(--text);">${agent.formal_name}</span>
-      </div>
-    </td>`;
-
+  let html = `<div style="overflow-x:auto;-webkit-overflow-scrolling:touch;">
+  <table style="width:100%;border-collapse:collapse;font-size:11px;min-width:600px;">
+  <thead><tr>
+    <th style="padding:8px 12px;background:var(--surface2);color:var(--muted);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;border-bottom:1px solid var(--border);text-align:left;min-width:120px;">Agent</th>`;
   dates.forEach(d => {
-    const entry = schedMap[`${agent.id}_${d.iso}`];
-    const dayType = entry ? entry.day_type : 'Off';
-    const stId = entry ? entry.shift_type_id : null;
-    const st = schShiftTypes.find(s => s.id === stId);
-    const isToday = d.iso === new Date().toISOString().split('T')[0];
+    const isTd = d.iso === today;
+    html += `<th style="padding:8px;background:var(--surface2);color:${isTd?'#D4AF37':'var(--muted)'};font-size:10px;font-weight:700;text-transform:uppercase;border-bottom:1px solid var(--border);text-align:center;white-space:nowrap;">
+      <div>${d.dayName}</div><div style="font-size:9px;margin-top:2px;">${d.display}</div>
+    </th>`;
+  });
+  html += `</tr></thead><tbody>`;
 
-    let cell = '', bg = 'transparent', color = 'var(--muted)', border = 'transparent';
-    if      (dayType === 'Work' && st) { cell = st.start_time.substring(0,5)+' - '+st.end_time.substring(0,5); color = '#10b981'; bg = 'rgba(16,185,129,0.05)'; border = 'rgba(16,185,129,0.3)'; }
-    else if (dayType === 'Annual')     { cell = 'Annual'; color = '#8b5cf6'; bg = 'rgba(139,92,246,0.05)'; border = 'rgba(139,92,246,0.3)'; }
-    else if (dayType === 'Sick')       { cell = 'Sick';   color = '#ef4444'; bg = 'rgba(239,68,68,0.05)';   border = 'rgba(239,68,68,0.3)'; }
-    else if (dayType === 'Casual')     { cell = 'Casual'; color = '#f59e0b'; bg = 'rgba(245,158,11,0.05)';  border = 'rgba(245,158,11,0.3)'; }
-    else if (dayType === 'PH')         { cell = 'PH';     color = '#3b82f6'; bg = 'rgba(59,130,246,0.05)';  border = 'rgba(59,130,246,0.3)'; }
-    else if (dayType === 'Task')       { cell = 'Task';   color = '#06b6d4'; bg = 'rgba(6,182,212,0.05)';   border = 'rgba(6,182,212,0.3)'; }
-    else                               { cell = '— Off —'; }
-
-    html += `<td style="padding:6px;border-bottom:1px solid var(--border);text-align:center;${isToday?'background:rgba(212,175,55,0.05);':''}">
-      <div style="background:${bg};border:1.5px solid ${border};border-radius:8px;padding:5px 4px;font-size:10px;font-weight:700;color:${color};white-space:nowrap;">
-        ${cell}
-      </div>
-    </td>`;
+  schAgents.forEach((agent, idx) => {
+    html += `<tr style="background:${idx%2===0?'var(--surface)':'var(--surface2)'};">
+      <td style="padding:8px 12px;font-size:12px;font-weight:700;border-bottom:1px solid var(--border);white-space:nowrap;">
+        <div style="display:flex;align-items:center;gap:8px;">
+          <div style="width:26px;height:26px;border-radius:50%;background:var(--primary-gradient);display:flex;align-items:center;justify-content:center;color:#fff;font-size:9px;font-weight:800;flex-shrink:0;">
+            ${agent.formal_name.split(' ').map(n=>n[0]).join('').toUpperCase().slice(0,2)}
+          </div>
+          <span style="color:var(--text);">${agent.formal_name}</span>
+        </div>
+      </td>`;
+    dates.forEach(d => {
+      const e = schedMap[`${agent.id}_${d.iso}`];
+      const dt = e ? e.day_type : 'Off';
+      const stId = e ? e.shift_type_id : null;
+      const st = schShiftTypes.find(s => s.id === stId);
+      const isTd = d.iso === today;
+      let cell = '', color = 'var(--muted)', bg = 'transparent', border = 'transparent';
+      if      (dt==='Work'&&st) { cell=st.start_time.substring(0,5)+' - '+st.end_time.substring(0,5); color='#10b981'; bg='rgba(16,185,129,0.05)'; border='rgba(16,185,129,0.3)'; }
+      else if (dt==='Annual')   { cell='Annual'; color='#8b5cf6'; bg='rgba(139,92,246,0.05)'; border='rgba(139,92,246,0.3)'; }
+      else if (dt==='Sick')     { cell='Sick';   color='#ef4444'; bg='rgba(239,68,68,0.05)';  border='rgba(239,68,68,0.3)'; }
+      else if (dt==='Casual')   { cell='Casual'; color='#f59e0b'; bg='rgba(245,158,11,0.05)'; border='rgba(245,158,11,0.3)'; }
+      else if (dt==='PH')       { cell='PH';     color='#3b82f6'; bg='rgba(59,130,246,0.05)'; border='rgba(59,130,246,0.3)'; }
+      else if (dt==='Task')     { cell='Task';   color='#06b6d4'; bg='rgba(6,182,212,0.05)';  border='rgba(6,182,212,0.3)'; }
+      else                      { cell='— Off —'; }
+      html += `<td style="padding:5px;border-bottom:1px solid var(--border);text-align:center;${isTd?'background:rgba(212,175,55,0.04);':''}">
+        <div style="background:${bg};border:1.5px solid ${border};border-radius:8px;padding:5px 4px;font-size:10px;font-weight:700;color:${color};white-space:nowrap;">${cell}</div>
+      </td>`;
+    });
+    html += `</tr>`;
   });
 
-  html += `</tr>`;
-});
+  html += `<tr style="background:var(--surface2);">
+    <td style="padding:8px 12px;font-size:10px;color:var(--muted);font-weight:700;">Daily Count</td>`;
+  dates.forEach(d => {
+    const w = schAgents.filter(a => { const e=schedMap[`${a.id}_${d.iso}`]; return e&&e.day_type==='Work'; }).length;
+    html += `<td style="padding:8px;text-align:center;font-size:12px;font-weight:800;color:#10b981;">${w} <span style="font-size:9px;color:var(--muted);font-weight:400;">working</span></td>`;
+  });
+  html += `</tr></tbody></table></div>`;
+  gridEl.innerHTML = html;
 
-// Daily count row
-html += `<tr style="background:var(--surface2);">
-  <td style="padding:8px 12px;font-size:11px;color:var(--muted);font-weight:700;">Daily Count</td>`;
-dates.forEach(d => {
-  const working = schAgents.filter(a => {
-    const e = schedMap[`${a.id}_${d.iso}`];
-    return e && e.day_type === 'Work';
-  }).length;
-  html += `<td style="padding:8px;text-align:center;font-size:12px;font-weight:800;color:#10b981;">${working} <span style="font-size:9px;color:var(--muted);font-weight:400;">working</span></td>`;
-});
-html += `</tr></tbody></table></div>`;
-gridEl.innerHTML = html;
+  // ── Schedule Requests Grid ──
+  const allReqs = await sbFetchSch(`requests?select=*&type=eq.Schedule%20Request&status=eq.Pending&order=created_at.desc`);
 
-  const agentName = document.getElementById('user-name').innerText.trim();
-  const myAgent = schAgents.find(a => a.formal_name.toLowerCase() === agentName.toLowerCase());
-  if (!myAgent) { draftEl.innerHTML = '<div class="empty-state">Agent not found</div>'; return; }
-
-  const existingReqs = await sbFetchSch(`requests?select=*&agent_id=eq.${myAgent.id}&type=eq.Schedule%20Request&order=created_at.desc&limit=1`);
-  if (existingReqs && existingReqs.length) {
+  // بناء map لكل agent آخر request بتاعه للأسبوع ده
+  schAllDrafts = {};
+  (allReqs || []).forEach(req => {
     try {
-      const details = JSON.parse(existingReqs[0].details);
-      if (details.week_id === weekId) schDraftData = details.draft || {};
+      const det = JSON.parse(req.details);
+      if (det.week_id === weekId) {
+        if (!schAllDrafts[req.agent_id]) {
+          schAllDrafts[req.agent_id] = det.draft || {};
+        }
+      }
     } catch(e) {}
+  });
+
+  // لو عندي request خاص بيا، حطه في schMyDraft
+  if (schMyAgentId && schAllDrafts[schMyAgentId]) {
+    schMyDraft = { ...schAllDrafts[schMyAgentId] };
   }
 
-  let draftHtml = `<table style="width:100%;border-collapse:collapse;font-size:11px;">
-    <thead><tr>
-      <th style="padding:8px;background:var(--surface2);color:var(--muted);font-size:10px;text-align:left;border-bottom:1px solid var(--border);">Day</th>
-      <th style="padding:8px;background:var(--surface2);color:var(--muted);font-size:10px;text-align:center;border-bottom:1px solid var(--border);">Requested Shift</th>
-    </tr></thead><tbody>`;
-
+  let draftHtml = `<div style="overflow-x:auto;-webkit-overflow-scrolling:touch;">
+  <table style="width:100%;border-collapse:collapse;font-size:11px;min-width:600px;">
+  <thead><tr>
+    <th style="padding:8px 12px;background:var(--surface2);color:var(--muted);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;border-bottom:1px solid var(--border);text-align:left;min-width:120px;">Agent</th>`;
   dates.forEach(d => {
-    const draft = schDraftData[d.iso] || { day_type: 'Off', shift_type_id: null };
-    draftHtml += `<tr>
-      <td style="padding:8px;font-weight:700;font-size:12px;border-bottom:1px solid var(--border);">${d.dayName} ${d.display}</td>
-      <td style="padding:6px;border-bottom:1px solid var(--border);">
-        <select data-date="${d.iso}" onchange="onSchDraftChange(this)" style="width:100%;padding:6px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;font-size:11px;color:${draft.day_type==='Work'?'#10b981':draft.day_type!=='Off'?'#8b5cf6':'var(--muted)'}">
-          <option value="Off" ${draft.day_type==='Off'?'selected':''}>— Off —</option>
-          ${schShiftTypes.map(st => `<option value="Work__${st.id}" ${draft.day_type==='Work'&&draft.shift_type_id===st.id?'selected':''}>${st.start_time.substring(0,5)}-${st.end_time.substring(0,5)} (${st.name})</option>`).join('')}
-          <option value="Annual" ${draft.day_type==='Annual'?'selected':''}>Annual</option>
-          <option value="Sick" ${draft.day_type==='Sick'?'selected':''}>Sick</option>
-          <option value="Casual" ${draft.day_type==='Casual'?'selected':''}>Casual</option>
-          <option value="PH" ${draft.day_type==='PH'?'selected':''}>PH</option>
-        </select>
-      </td>
-    </tr>`;
+    const isTd = d.iso === today;
+    draftHtml += `<th style="padding:8px;background:var(--surface2);color:${isTd?'#D4AF37':'var(--muted)'};font-size:10px;font-weight:700;text-transform:uppercase;border-bottom:1px solid var(--border);text-align:center;white-space:nowrap;">
+      <div>${d.dayName}</div><div style="font-size:9px;margin-top:2px;">${d.display}</div>
+    </th>`;
+  });
+  draftHtml += `</tr></thead><tbody>`;
+
+  schAgents.forEach((agent, idx) => {
+    const isMe = agent.id === schMyAgentId;
+    const agentDraft = isMe ? schMyDraft : (schAllDrafts[agent.id] || {});
+    draftHtml += `<tr style="background:${idx%2===0?'var(--surface)':'var(--surface2)'};">
+      <td style="padding:8px 12px;font-size:12px;font-weight:700;border-bottom:1px solid var(--border);white-space:nowrap;">
+        <div style="display:flex;align-items:center;gap:8px;">
+          <div style="width:26px;height:26px;border-radius:50%;background:${isMe?'var(--primary-gradient)':'linear-gradient(135deg,#475569,#334155)'};display:flex;align-items:center;justify-content:center;color:#fff;font-size:9px;font-weight:800;flex-shrink:0;">
+            ${agent.formal_name.split(' ').map(n=>n[0]).join('').toUpperCase().slice(0,2)}
+          </div>
+          <span style="color:${isMe?'var(--primary)':'var(--text)'};">${agent.formal_name}${isMe?' (You)':''}</span>
+        </div>
+      </td>`;
+    dates.forEach(d => {
+      const draft = agentDraft[d.iso] || { day_type: 'Off', shift_type_id: null };
+      const isTd  = d.iso === today;
+      draftHtml += `<td style="padding:5px;border-bottom:1px solid var(--border);text-align:center;${isTd?'background:rgba(212,175,55,0.04);':''}">
+        ${buildShiftSelect(agent.id, d.iso, draft.day_type, draft.shift_type_id, isMe)}
+      </td>`;
+    });
+    draftHtml += `</tr>`;
   });
 
-  draftHtml += '</tbody></table>';
+  draftHtml += `</tbody></table></div>`;
   draftEl.innerHTML = draftHtml;
 }
-function onSchDraftChange(sel) {  const date = sel.dataset.date;
+
+function onSchDraftChange(sel) {
+  const date = sel.dataset.date;
   const val  = sel.value;
   let dayType = val, shiftTypeId = null;
   if (val.startsWith('Work__')) { dayType = 'Work'; shiftTypeId = val.split('__')[1]; }
-  schDraftData[date] = { day_type: dayType, shift_type_id: shiftTypeId };
-  sel.style.color = dayType === 'Work' ? '#10b981' : dayType !== 'Off' ? '#8b5cf6' : 'var(--muted)';
+  schMyDraft[date] = { day_type: dayType, shift_type_id: shiftTypeId };
+  sel.style.cssText += ';' + schCellStyle(dayType);
 }
 
 async function submitSchRequest() {
   if (!schCurrentWeek) { customAlert('Error', 'Select a week first!'); return; }
-  const agentName = document.getElementById('user-name').innerText.trim();
-  const myAgent   = schAgents.find(a => a.formal_name.toLowerCase() === agentName.toLowerCase());
-  if (!myAgent) { customAlert('Error', 'Agent not found!'); return; }
+  if (!schMyAgentId)   { customAlert('Error', 'Agent not found!'); return; }
 
+  const agentName = document.getElementById('user-name').innerText.trim();
   const msg = document.getElementById('sch-request-msg');
   msg.style.color = 'var(--muted)'; msg.innerText = 'Submitting...';
 
-  const details = { week_id: schCurrentWeek.id, week_start: schCurrentWeek.week_start, draft: schDraftData };
+  const details = { week_id: schCurrentWeek.id, week_start: schCurrentWeek.week_start, draft: schMyDraft };
 
   const res = await fetch(`${SB_URL_SCH}/rest/v1/requests`, {
     method: 'POST',
@@ -1735,7 +1798,7 @@ async function submitSchRequest() {
       'Prefer': 'return=minimal'
     },
     body: JSON.stringify({
-      agent_id:   myAgent.id,
+      agent_id:   schMyAgentId,
       agent_name: agentName,
       type:       'Schedule Request',
       details:    JSON.stringify(details),
@@ -1746,24 +1809,23 @@ async function submitSchRequest() {
 
   if (res.ok) {
     msg.style.color = '#10b981';
-    msg.innerText   = '✅ Request submitted successfully!';
+    msg.innerText   = '✅ Request submitted!';
     showToast('✅', 'Schedule Request Submitted!', 'Pending admin review.', 'success', 5000);
     setTimeout(() => msg.innerText = '', 5000);
   } else {
     msg.style.color = 'var(--danger)';
-    msg.innerText   = '❌ Failed to submit. Try again.';
+    msg.innerText   = '❌ Failed. Try again.';
   }
 }
 
 function resetSchDraft() {
-  schDraftData = {};
+  schMyDraft = {};
   document.querySelectorAll('#sch-draft-grid select').forEach(sel => {
     sel.value = 'Off';
-    sel.style.color = 'var(--muted)';
+    sel.style.cssText += ';' + schCellStyle('Off');
   });
 }
 
-// Initialize when tab is opened
 const origSwitchTab = switchTab;
 window.switchTab = function(id, btn, idx) {
   origSwitchTab(id, btn, idx);
