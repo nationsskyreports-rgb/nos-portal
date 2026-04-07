@@ -1771,6 +1771,15 @@ async function loadSchTable() {
 
   draftHtml += `</tbody></table></div>`;
   draftEl.innerHTML = draftHtml;
+   // بعد draftEl.innerHTML = draftHtml;
+  if (!isSchRequestOpen()) {
+    const closedBanner = document.createElement('div');
+    closedBanner.style.cssText = 'margin-top:16px;padding:16px;background:rgba(239,68,68,0.06);border:1.5px solid rgba(239,68,68,0.3);border-radius:12px;text-align:center;font-size:13px;font-weight:700;color:#ef4444;white-space:pre-line;';
+    closedBanner.innerText = schRequestClosedMsg();
+    draftEl.appendChild(closedBanner);
+    draftEl.querySelectorAll('select').forEach(s => s.disabled = true);
+    document.getElementById('sch-request-msg') && (document.getElementById('sch-request-msg').innerText = '');
+  }
 }
 
 function onSchDraftChange(sel) {
@@ -1782,7 +1791,25 @@ function onSchDraftChange(sel) {
   sel.style.cssText += ';' + schCellStyle(dayType);
 }
 
+function isSchRequestOpen() {
+  const day = new Date().getDay(); // 0=Sun, 1=Mon, 2=Tue
+  return day === 0 || day === 1 || day === 2;
+}
+
+function schRequestClosedMsg() {
+  const next = new Date();
+  const daysUntilSun = (7 - next.getDay()) % 7 || 7;
+  next.setDate(next.getDate() + daysUntilSun);
+  const dd = String(next.getDate()).padStart(2,'0');
+  const mm = String(next.getMonth()+1).padStart(2,'0');
+  return `🔒 Requests are closed now.\nOpens every Sunday — next opening: ${dd}/${mm}`;
+}
+
 async function submitSchRequest() {
+  if (!isSchRequestOpen()) {
+    customAlert('Closed', schRequestClosedMsg());
+    return;
+  }
   if (!schCurrentWeek) { customAlert('Error', 'Select a week first!'); return; }
   if (!schMyAgentId)   { customAlert('Error', 'Agent not found!'); return; }
 
@@ -1792,23 +1819,47 @@ async function submitSchRequest() {
 
   const details = { week_id: schCurrentWeek.id, week_start: schCurrentWeek.week_start, draft: schMyDraft };
 
-  const res = await fetch(`${SB_URL_SCH}/rest/v1/requests`, {
-    method: 'POST',
-    headers: {
-      'apikey': SB_KEY_SCH,
-      'Authorization': `Bearer ${SB_KEY_SCH}`,
-      'Content-Type': 'application/json',
-      'Prefer': 'return=minimal'
-    },
-    body: JSON.stringify({
-      agent_id:   schMyAgentId,
-      agent_name: agentName,
-      type:       'Schedule Request',
-      details:    JSON.stringify(details),
-      status:     'Pending',
-      created_at: new Date().toISOString()
-    })
-  });
+  // لو عنده request قديم للأسبوع ده، نعمله update بدل insert
+  const existing = await sbFetchSch(`requests?select=id&agent_id=eq.${schMyAgentId}&type=eq.Schedule%20Request&status=eq.Pending&order=created_at.desc&limit=1`);
+  let existingId = null;
+  if (existing && existing.length) {
+    try {
+      const det = JSON.parse((await sbFetchSch(`requests?select=details&id=eq.${existing[0].id}`))[0].details);
+      if (det.week_id === schCurrentWeek.id) existingId = existing[0].id;
+    } catch(e) {}
+  }
+
+  let res;
+  if (existingId) {
+    res = await fetch(`${SB_URL_SCH}/rest/v1/requests?id=eq.${existingId}`, {
+      method: 'PATCH',
+      headers: {
+        'apikey': SB_KEY_SCH,
+        'Authorization': `Bearer ${SB_KEY_SCH}`,
+        'Content-Type': 'application/json',
+        'Prefer': 'return=minimal'
+      },
+      body: JSON.stringify({ details: JSON.stringify(details), updated_at: new Date().toISOString() })
+    });
+  } else {
+    res = await fetch(`${SB_URL_SCH}/rest/v1/requests`, {
+      method: 'POST',
+      headers: {
+        'apikey': SB_KEY_SCH,
+        'Authorization': `Bearer ${SB_KEY_SCH}`,
+        'Content-Type': 'application/json',
+        'Prefer': 'return=minimal'
+      },
+      body: JSON.stringify({
+        agent_id:   schMyAgentId,
+        agent_name: agentName,
+        type:       'Schedule Request',
+        details:    JSON.stringify(details),
+        status:     'Pending',
+        created_at: new Date().toISOString()
+      })
+    });
+  }
 
   if (res.ok) {
     msg.style.color = '#10b981';
@@ -1820,7 +1871,6 @@ async function submitSchRequest() {
     msg.innerText   = '❌ Failed. Try again.';
   }
 }
-
 function resetSchDraft() {
   schMyDraft = {};
   document.querySelectorAll('#sch-draft-grid select').forEach(sel => {
