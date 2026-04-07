@@ -158,17 +158,30 @@
           </div>
           <div style="font-size:12px;color:var(--muted);" id="week-count">Loading...</div>
         </div>
-        <div style="padding:12px 16px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;border-bottom:1px solid var(--border);">
-  <input type="text" id="week-search" placeholder="🔍 Search by date (e.g. 03/2025)" 
-    style="padding:8px 12px;border-radius:8px;border:1.5px solid var(--border);background:var(--surface2);color:var(--text);font-size:12px;width:200px;outline:none;"
-    oninput="filterWeeks()">
-  <select id="week-dropdown" class="form-input" style="width:220px;font-size:12px;" onchange="selectWeek(this.value)">
+<div style="padding:12px 16px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;border-bottom:1px solid var(--border);">
+  <select id="filter-year" class="form-input" style="width:110px;font-size:12px;" onchange="filterWeekTabs()">
+    <option value="">All Years</option>
+  </select>
+  <select id="filter-month" class="form-input" style="width:130px;font-size:12px;" onchange="filterWeekTabs()">
+    <option value="">All Months</option>
+    <option value="01">January</option>
+    <option value="02">February</option>
+    <option value="03">March</option>
+    <option value="04">April</option>
+    <option value="05">May</option>
+    <option value="06">June</option>
+    <option value="07">July</option>
+    <option value="08">August</option>
+    <option value="09">September</option>
+    <option value="10">October</option>
+    <option value="11">November</option>
+    <option value="12">December</option>
+  </select>
+  <select id="filter-week" class="form-input" style="width:220px;font-size:12px;" onchange="selectWeek(this.value)">
     <option value="">— Select a week —</option>
   </select>
 </div>
-<div style="padding:12px 16px;display:flex;gap:8px;flex-wrap:wrap;" id="weeks-tabs">
-  <div class="loading-wrap" style="padding:12px;"><div class="spinner"></div></div>
-</div>
+<div style="padding:12px 16px;display:flex;gap:8px;flex-wrap:wrap;" id="weeks-tabs"></div>
       </div>
 
       <!-- SCHEDULE GRID -->
@@ -292,24 +305,46 @@ async function loadWeeks() {
 }
 
 function renderWeekTabs() {
-const dropdown = document.getElementById('week-dropdown');
-if (dropdown) {
-  dropdown.innerHTML = '<option value="">— Select a week —</option>' +
-    allWeeks.map(w => `<option value="${w.id}" ${currentWeek?.id === w.id ? 'selected' : ''}>
-      ${formatDateShort(w.week_start)} → ${formatDateShort(w.week_end)} (${w.status})
-    </option>`).join('');
-}
-  const container = document.getElementById('weeks-tabs');
   document.getElementById('week-count').innerText = `${allWeeks.length} week(s)`;
 
-  if (!allWeeks.length) {
-    container.innerHTML = `<div style="color:var(--muted);font-size:13px;padding:8px;">No weeks yet. Create one!</div>`;
+  // Fill years dropdown
+  const years = [...new Set(allWeeks.map(w => w.week_start.substring(0,4)))].sort().reverse();
+  const yearEl = document.getElementById('filter-year');
+  const curYear = yearEl.value;
+  yearEl.innerHTML = '<option value="">All Years</option>' +
+    years.map(y => `<option value="${y}" ${curYear===y?'selected':''}>${y}</option>`).join('');
+
+  filterWeekTabs();
+}
+
+function filterWeekTabs() {
+  const year  = document.getElementById('filter-year').value;
+  const month = document.getElementById('filter-month').value;
+
+  // Filter weeks
+  const filtered = allWeeks.filter(w => {
+    const ws = w.week_start;
+    if (year  && !ws.startsWith(year))       return false;
+    if (month && ws.substring(5,7) !== month) return false;
+    return true;
+  });
+
+  // Fill week dropdown
+  const weekEl = document.getElementById('filter-week');
+  weekEl.innerHTML = '<option value="">— Select a week —</option>' +
+    filtered.map(w => `<option value="${w.id}" ${currentWeek?.id===w.id?'selected':''}>
+      ${formatDateShort(w.week_start)} → ${formatDateShort(w.week_end)} (${w.status})
+    </option>`).join('');
+
+  // Render tabs
+  const container = document.getElementById('weeks-tabs');
+  if (!filtered.length) {
+    container.innerHTML = `<div style="color:var(--muted);font-size:13px;padding:8px;">No weeks found.</div>`;
     return;
   }
 
   const statusColor = { Draft:'badge-muted', Open:'badge-warning', Published:'badge-success', Closed:'badge-danger' };
-
-  container.innerHTML = allWeeks.map(w => `
+  container.innerHTML = filtered.map(w => `
     <div class="week-tab ${currentWeek?.id === w.id ? 'active' : ''}" onclick="selectWeek('${w.id}')">
       <i class="fas fa-calendar-week" style="font-size:12px;"></i>
       <div>
@@ -320,7 +355,6 @@ if (dropdown) {
     </div>
   `).join('');
 }
-
 // ── Select Week ──
 async function selectWeek(weekId) {
   if (unsaved) {
