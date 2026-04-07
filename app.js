@@ -1527,3 +1527,221 @@ function selectChannel(ch) {
 
   formArea.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
+/* ─── 25. SCH TABLE ─── */
+const SB_URL_SCH = 'https://xzxdaupwwwdcwfnqweub.supabase.co';
+const SB_KEY_SCH = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh6eGRhdXB3d3dkY3dmbnF3ZXViIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUzMTM5NTAsImV4cCI6MjA5MDg4OTk1MH0.KjNZpFvLxh8XfDDoWdpVsIQZAh1PjzGXOrfDmApZ4K8';
+
+let schWeeks      = [];
+let schAgents     = [];
+let schShiftTypes = [];
+let schCurrentWeek = null;
+let schDraftData  = {}; // { date: { shift_type_id, day_type } }
+
+async function sbFetchSch(path) {
+  const res = await fetch(`${SB_URL_SCH}/rest/v1/${path}`, {
+    headers: {
+      'apikey': SB_KEY_SCH,
+      'Authorization': `Bearer ${SB_KEY_SCH}`,
+      'Content-Type': 'application/json'
+    }
+  });
+  return res.json();
+}
+
+async function initSchTab() {
+  if (schWeeks.length) return;
+  const [weeks, agents, shifts] = await Promise.all([
+    sbFetchSch('schedule_weeks?select=id,week_start,week_end,status&status=eq.Published&order=week_start.desc'),
+    sbFetchSch('agents?select=id,formal_name&status=eq.Active&order=formal_name'),
+    sbFetchSch('shift_types?select=id,name,start_time,end_time&is_active=eq.true&order=start_time')
+  ]);
+  schWeeks      = weeks      || [];
+  schAgents     = agents     || [];
+  schShiftTypes = shifts     || [];
+
+  const sel = document.getElementById('sch-week-select');
+  sel.innerHTML = '<option value="">— Select a week —</option>' +
+    schWeeks.map(w => `<option value="${w.id}">${fmtSchDate(w.week_start)} → ${fmtSchDate(w.week_end)}</option>`).join('');
+}
+
+function fmtSchDate(d) {
+  if (!d) return '';
+  const [y,m,day] = d.split('-');
+  return `${day}/${m}`;
+}
+
+function getSchWeekDates(start, end) {
+  const days = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  const dates = [];
+  const [sy,sm,sd] = start.split('-').map(Number);
+  const [ey,em,ed] = end.split('-').map(Number);
+  let cur = new Date(sy, sm-1, sd);
+  const endDate = new Date(ey, em-1, ed);
+  while (cur <= endDate) {
+    const iso = `${cur.getFullYear()}-${String(cur.getMonth()+1).padStart(2,'0')}-${String(cur.getDate()).padStart(2,'0')}`;
+    dates.push({ iso, dayName: days[cur.getDay()], display: `${String(cur.getDate()).padStart(2,'0')}/${String(cur.getMonth()+1).padStart(2,'0')}` });
+    cur.setDate(cur.getDate() + 1);
+  }
+  return dates;
+}
+
+async function loadSchTable() {
+  const weekId = document.getElementById('sch-week-select').value;
+  if (!weekId) return;
+
+  schCurrentWeek = schWeeks.find(w => w.id === weekId);
+  schDraftData = {};
+
+  const gridEl  = document.getElementById('sch-table-grid');
+  const draftEl = document.getElementById('sch-draft-grid');
+  gridEl.innerHTML  = '<div class="empty-state"><i class="fas fa-spinner spinner"></i></div>';
+  draftEl.innerHTML = '<div class="empty-state"><i class="fas fa-spinner spinner"></i></div>';
+
+  const scheduleRecords = await sbFetchSch(`schedule?select=*&week_id=eq.${weekId}`);
+  const schedMap = {};
+  (scheduleRecords || []).forEach(s => { schedMap[`${s.agent_id}_${s.shift_date}`] = s; });
+
+  const dates = getSchWeekDates(schCurrentWeek.week_start, schCurrentWeek.week_end);
+
+  // ── Read-only grid ──
+  let html = `<table style="width:100%;border-collapse:collapse;font-size:11px;min-width:600px;">
+    <thead><tr>
+      <th style="padding:8px;background:var(--surface2);color:var(--muted);font-size:10px;text-align:left;min-width:120px;border-bottom:1px solid var(--border);">Agent</th>`;
+  dates.forEach(d => {
+    html += `<th style="padding:8px;background:var(--surface2);color:var(--muted);font-size:10px;text-align:center;border-bottom:1px solid var(--border);">
+      <div>${d.dayName}</div><div style="color:var(--muted);font-size:9px;">${d.display}</div>
+    </th>`;
+  });
+  html += `</tr></thead><tbody>`;
+
+  schAgents.forEach(agent => {
+    html += `<tr><td style="padding:8px;font-size:12px;font-weight:700;border-bottom:1px solid var(--border);background:var(--surface2);">${agent.formal_name}</td>`;
+    dates.forEach(d => {
+      const entry = schedMap[`${agent.id}_${d.iso}`];
+      const dayType = entry ? entry.day_type : 'Off';
+      const stId = entry ? entry.shift_type_id : null;
+      const st = schShiftTypes.find(s => s.id === stId);
+      let cell = '', color = 'var(--muted)';
+      if (dayType === 'Work' && st)    { cell = st.start_time.substring(0,5)+'-'+st.end_time.substring(0,5); color = '#10b981'; }
+      else if (dayType === 'Annual')   { cell = 'Annual'; color = '#8b5cf6'; }
+      else if (dayType === 'Sick')     { cell = 'Sick';   color = '#ef4444'; }
+      else if (dayType === 'Casual')   { cell = 'Casual'; color = '#f59e0b'; }
+      else if (dayType === 'PH')       { cell = 'PH';     color = '#3b82f6'; }
+      else if (dayType === 'Task')     { cell = 'Task';   color = '#06b6d4'; }
+      else                             { cell = 'Off'; }
+      html += `<td style="padding:6px;text-align:center;border-bottom:1px solid var(--border);font-size:10px;font-weight:700;color:${color};">${cell}</td>`;
+    });
+    html += '</tr>';
+  });
+  html += '</tbody></table>';
+  gridEl.innerHTML = html;
+
+  // ── Draft grid (agent's own request) ──
+  const agentName = document.getElementById('user-name').innerText.trim();
+  const myAgent = schAgents.find(a => a.formal_name.toLowerCase() === agentName.toLowerCase());
+
+  if (!myAgent) {
+    draftEl.innerHTML = '<div class="empty-state">Agent not found in schedule</div>';
+    return;
+  }
+
+  // Load existing request if any
+  const existingReqs = await sbFetchSch(`requests?select=*&agent_id=eq.${myAgent.id}&type=eq.Schedule Request&order=created_at.desc&limit=1`);
+  if (existingReqs && existingReqs.length) {
+    try {
+      const details = JSON.parse(existingReqs[0].details);
+      if (details.week_id === weekId) schDraftData = details.draft || {};
+    } catch(e) {}
+  }
+
+  let draftHtml = `<table style="width:100%;border-collapse:collapse;font-size:11px;min-width:500px;">
+    <thead><tr>
+      <th style="padding:8px;background:var(--surface2);color:var(--muted);font-size:10px;text-align:left;border-bottom:1px solid var(--border);">Day</th>
+      <th style="padding:8px;background:var(--surface2);color:var(--muted);font-size:10px;text-align:center;border-bottom:1px solid var(--border);">Requested Shift</th>
+    </tr></thead><tbody>`;
+
+  dates.forEach(d => {
+    const draft = schDraftData[d.iso] || { day_type: 'Off', shift_type_id: null };
+    const selClass = draft.day_type === 'Work' ? 'color:#10b981' : draft.day_type !== 'Off' ? 'color:#8b5cf6' : 'color:var(--muted)';
+    draftHtml += `<tr>
+      <td style="padding:8px;font-weight:700;font-size:12px;border-bottom:1px solid var(--border);">${d.dayName} ${d.display}</td>
+      <td style="padding:6px;border-bottom:1px solid var(--border);">
+        <select data-date="${d.iso}" onchange="onSchDraftChange(this)" style="width:100%;padding:6px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;font-size:11px;${selClass}">
+          <option value="Off" ${draft.day_type==='Off'?'selected':''}>— Off —</option>
+          ${schShiftTypes.map(st => `<option value="Work__${st.id}" ${draft.day_type==='Work'&&draft.shift_type_id===st.id?'selected':''}>${st.start_time.substring(0,5)}-${st.end_time.substring(0,5)} (${st.name})</option>`).join('')}
+          <option value="Annual" ${draft.day_type==='Annual'?'selected':''}>Annual</option>
+          <option value="Sick"   ${draft.day_type==='Sick'?'selected':''}>Sick</option>
+          <option value="Casual" ${draft.day_type==='Casual'?'selected':''}>Casual</option>
+          <option value="PH"     ${draft.day_type==='PH'?'selected':''}>PH</option>
+        </select>
+      </td>
+    </tr>`;
+  });
+
+  draftHtml += '</tbody></table>';
+  draftEl.innerHTML = draftHtml;
+}
+
+function onSchDraftChange(sel) {
+  const date = sel.dataset.date;
+  const val  = sel.value;
+  let dayType = val, shiftTypeId = null;
+  if (val.startsWith('Work__')) { dayType = 'Work'; shiftTypeId = val.split('__')[1]; }
+  schDraftData[date] = { day_type: dayType, shift_type_id: shiftTypeId };
+  sel.style.color = dayType === 'Work' ? '#10b981' : dayType !== 'Off' ? '#8b5cf6' : 'var(--muted)';
+}
+
+async function submitSchRequest() {
+  if (!schCurrentWeek) { customAlert('Error', 'Select a week first!'); return; }
+  const agentName = document.getElementById('user-name').innerText.trim();
+  const myAgent   = schAgents.find(a => a.formal_name.toLowerCase() === agentName.toLowerCase());
+  if (!myAgent) { customAlert('Error', 'Agent not found!'); return; }
+
+  const msg = document.getElementById('sch-request-msg');
+  msg.style.color = 'var(--muted)'; msg.innerText = 'Submitting...';
+
+  const details = { week_id: schCurrentWeek.id, week_start: schCurrentWeek.week_start, draft: schDraftData };
+
+  const res = await fetch(`${SB_URL_SCH}/rest/v1/requests`, {
+    method: 'POST',
+    headers: {
+      'apikey': SB_KEY_SCH,
+      'Authorization': `Bearer ${SB_KEY_SCH}`,
+      'Content-Type': 'application/json',
+      'Prefer': 'return=minimal'
+    },
+    body: JSON.stringify({
+      agent_id:   myAgent.id,
+      agent_name: agentName,
+      type:       'Schedule Request',
+      details:    JSON.stringify(details),
+      status:     'Pending',
+      created_at: new Date().toISOString()
+    })
+  });
+
+  if (res.ok) {
+    msg.style.color = '#10b981';
+    msg.innerText   = '✅ Request submitted successfully!';
+    showToast('✅', 'Schedule Request Submitted!', 'Pending admin review.', 'success', 5000);
+    setTimeout(() => msg.innerText = '', 5000);
+  } else {
+    msg.style.color = 'var(--danger)';
+    msg.innerText   = '❌ Failed to submit. Try again.';
+  }
+}
+
+function resetSchDraft() {
+  schDraftData = {};
+  document.querySelectorAll('#sch-draft-grid select').forEach(sel => {
+    sel.value = 'Off';
+    sel.style.color = 'var(--muted)';
+  });
+}
+
+// Initialize when tab is opened
+const origSwitchTab = switchTab;
+window.switchTab = function(id, btn, idx) {
+  origSwitchTab(id, btn, idx);
+  if (id === 'tab-sch-table') initSchTab();
+};
