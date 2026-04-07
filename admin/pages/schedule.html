@@ -1012,7 +1012,7 @@ function getWeekDates(start, end) {
   let cur = new Date(start + 'T00:00:00');
   const endDate = new Date(end + 'T00:00:00');
   while (cur <= endDate) {
-    const iso = cur.toISOString().split('T')[0];
+    const iso = `${cur.getFullYear()}-${String(cur.getMonth()+1).padStart(2,'0')}-${String(cur.getDate()).padStart(2,'0')}`;
     dates.push({
       iso,
       dayName: days[cur.getDay()],
