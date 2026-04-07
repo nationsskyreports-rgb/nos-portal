@@ -1890,60 +1890,6 @@ draftEl.appendChild(draftTitle);
 
   // حفظ الـ draft week id عشان submitSchRequest يستخدمه
   schCurrentWeek = draftWeek;
-  // بناء map لكل agent آخر request بتاعه للأسبوع ده
-  schAllDrafts = {};
-  (allReqs || []).forEach(req => {
-    try {
-      const det = JSON.parse(req.details);
-      if (det.week_id === weekId) {
-        if (!schAllDrafts[req.agent_id]) {
-          schAllDrafts[req.agent_id] = det.draft || {};
-        }
-      }
-    } catch(e) {}
-  });
-
-  // لو عندي request خاص بيا، حطه في schMyDraft
-  if (schMyAgentId && schAllDrafts[schMyAgentId]) {
-    schMyDraft = { ...schAllDrafts[schMyAgentId] };
-  }
-
-  <table style="width:100%;border-collapse:collapse;font-size:11px;min-width:600px;">
-  <thead><tr>
-    <th style="padding:8px 12px;background:var(--surface2);color:var(--muted);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;border-bottom:1px solid var(--border);text-align:left;min-width:120px;">Agent</th>`;
-  dates.forEach(d => {
-    const isTd = d.iso === today;
-    draftHtml += `<th style="padding:8px;background:var(--surface2);color:${isTd?'#D4AF37':'var(--muted)'};font-size:10px;font-weight:700;text-transform:uppercase;border-bottom:1px solid var(--border);text-align:center;white-space:nowrap;">
-      <div>${d.dayName}</div><div style="font-size:9px;margin-top:2px;">${d.display}</div>
-    </th>`;
-  });
-  draftHtml += `</tr></thead><tbody>`;
-
-  schAgents.forEach((agent, idx) => {
-    const isMe = agent.id === schMyAgentId;
-    const agentDraft = isMe ? schMyDraft : (schAllDrafts[agent.id] || {});
-    draftHtml += `<tr style="background:${idx%2===0?'var(--surface)':'var(--surface2)'};">
-      <td style="padding:8px 12px;font-size:12px;font-weight:700;border-bottom:1px solid var(--border);white-space:nowrap;">
-        <div style="display:flex;align-items:center;gap:8px;">
-          <div style="width:26px;height:26px;border-radius:50%;background:${isMe?'var(--primary-gradient)':'linear-gradient(135deg,#475569,#334155)'};display:flex;align-items:center;justify-content:center;color:#fff;font-size:9px;font-weight:800;flex-shrink:0;">
-            ${agent.formal_name.split(' ').map(n=>n[0]).join('').toUpperCase().slice(0,2)}
-          </div>
-          <span style="color:${isMe?'var(--primary)':'var(--text)'};">${agent.formal_name}${isMe?' (You)':''}</span>
-        </div>
-      </td>`;
-    dates.forEach(d => {
-      const draft = agentDraft[d.iso] || { day_type: 'Off', shift_type_id: null };
-      const isTd  = d.iso === today;
-      draftHtml += `<td style="padding:5px;border-bottom:1px solid var(--border);text-align:center;${isTd?'background:rgba(212,175,55,0.04);':''}">
-        ${buildShiftSelect(agent.id, d.iso, draft.day_type, draft.shift_type_id, isMe)}
-      </td>`;
-    });
-    draftHtml += `</tr>`;
-  });
-
-  draftHtml += `</tbody></table></div>`;
-  draftEl.innerHTML = draftHtml;
-   // بعد draftEl.innerHTML = draftHtml;
   if (!isSchRequestOpen()) {
     const closedBanner = document.createElement('div');
     closedBanner.style.cssText = 'margin-top:16px;padding:16px;background:rgba(239,68,68,0.06);border:1.5px solid rgba(239,68,68,0.3);border-radius:12px;text-align:center;font-size:13px;font-weight:700;color:#ef4444;white-space:pre-line;';
