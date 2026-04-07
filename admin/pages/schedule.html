@@ -393,14 +393,28 @@ async function loadScheduleGrid() {
     .eq('week_id', currentWeek.id);
 
   scheduleData = {};
-  (existing || []).forEach(s => {
-    scheduleData[`${s.agent_id}_${s.shift_date}`] = {
-      id:            s.id,
-      day_type:      s.day_type,
-      shift_type_id: s.shift_type_id
-    };
-  });
+(existing || []).forEach(s => {
+  let shiftTypeId = s.shift_type_id;
 
+  // لو مفيش shift_type_id، دور على الشيفت من الوقت
+  if (!shiftTypeId && s.shift_time && s.day_type === 'Work') {
+    const parts = s.shift_time.split(' - ');
+    if (parts.length === 2) {
+      const matched = allShiftTypes.find(st =>
+        st.start_time.startsWith(parts[0].trim()) &&
+        st.end_time.startsWith(parts[1].trim())
+      );
+      if (matched) shiftTypeId = matched.id;
+    }
+  }
+
+  scheduleData[`${s.agent_id}_${s.shift_date}`] = {
+    id:            s.id,
+    day_type:      s.day_type,
+    shift_type_id: shiftTypeId
+  };
+});
+  
   // Generate dates for the week
   const dates = getWeekDates(currentWeek.week_start, currentWeek.week_end);
 
