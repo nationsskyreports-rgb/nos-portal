@@ -1839,7 +1839,7 @@ async function loadDraftGrid() {
     draftDates.forEach(d => {
       const draft = agentDraft[d.iso] || { day_type: 'Off', shift_type_id: null };
       const isTd  = d.iso === today;
-      draftHtml += `<td style="padding:5px;border-bottom:1px solid var(--border);text-align:center;${isTd?'background:rgba(212,175,55,0.04);''}">${buildShiftSelect(agent.id, d.iso, draft.day_type, draft.shift_type_id, isMe)}</td>`;
+      draftHtml += `<td style="padding:5px;border-bottom:1px solid var(--border);text-align:center;${isTd?'background:rgba(212,175,55,0.04);':''}">${buildShiftSelect(agent.id, d.iso, draft.day_type, draft.shift_type_id, isMe)}</td>`;
     });
     draftHtml += `</tr>`;
   });
