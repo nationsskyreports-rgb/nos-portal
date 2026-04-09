@@ -13,7 +13,7 @@
 <div class="admin-layout">
 
   <!-- ══ SIDEBAR ══ -->
-  <aside class="sidebar" id="sidebar"></aside>
+  <aside class="sidebar">
     <div class="sidebar-brand">
       <div class="brand-logo">✦</div>
       <div class="brand-text">
@@ -255,6 +255,7 @@
 <script src="../js/auth.js"></script>
 <script src="../js/ui.js"></script>
 <script>
+// ── Init ──
 renderSidebar();
 const session = checkAuth();
 if (session) {
@@ -269,10 +270,12 @@ let searchQuery  = '';
 async function loadAgents() {
   const tbody = document.getElementById('agents-tbody');
   tbody.innerHTML = `<tr><td colspan="9"><div class="loading-wrap"><div class="spinner"></div></div></td></tr>`;
+
   try {
     const { data, error } = await db.from('agents')
       .select('*')
       .order('formal_name');
+
     if (error) throw error;
     allAgents = data || [];
     updateKPIs();
@@ -282,6 +285,7 @@ async function loadAgents() {
     showToast('Failed to load agents: ' + e.message, 'error');
   }
 }
+
 // ── Update KPIs ──
 function updateKPIs() {
   document.getElementById('k-total').innerText   = allAgents.length;
