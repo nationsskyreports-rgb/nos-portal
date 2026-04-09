@@ -153,41 +153,31 @@
 <script src="../js/auth.js"></script>
 <script src="../js/ui.js"></script>
 <script>
+renderSidebar();
 const session = checkAuth();
 if (session) {
   document.getElementById('admin-name').innerText = session.username || 'Admin';
   document.getElementById('admin-avatar').innerText = initials(session.username || 'Admin');
 }
-
 const PAGE_SIZE = 50;
 let currentPage = 0;
 let totalCount  = 0;
 let searchQuery = '';
 let searchTimer = null;
-
 const TODAY = new Date().toISOString().split('T')[0];
 const MONTH = new Date().toISOString().slice(0,7);
-
-// ── Init ──
 async function init() {
-  // Set default dates (this month)
   document.getElementById('date-from').value = MONTH + '-01';
   document.getElementById('date-to').value   = TODAY;
-
-  // Load agents for filter
   const { data: agents } = await db.from('agents').select('formal_name').order('formal_name');
   const agentSel = document.getElementById('agent-filter');
   (agents||[]).forEach(a => agentSel.add(new Option(a.formal_name, a.formal_name)));
-
-  // Load reasons for filter
   const { data: reasons } = await db.from('call_reasons').select('name').eq('is_active',true).order('name');
   const reasonSel = document.getElementById('reason-filter');
   (reasons||[]).forEach(r => reasonSel.add(new Option(r.name, r.name)));
-
   await loadKPIs();
   await loadCalls();
 }
-
 // ── KPIs ──
 async function loadKPIs() {
   const { count: total }    = await db.from('call_logs').select('*',{count:'exact',head:true});
