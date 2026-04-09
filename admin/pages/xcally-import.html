@@ -520,23 +520,20 @@ async function saveAll() {
   btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
 
   try {
-    // Get all dates in processed data
     const allDates = Object.keys(processedDays).sort();
     const dateFrom = allDates[0];
     const dateTo   = allDates[allDates.length-1];
 
-    // Load approved excuses for this date range from Supabase
     const { data: excusesData } = await db.from('excuses')
       .select('agent_id,agent_name,excuse_date,excuse_type')
       .eq('status','Approved')
       .gte('excuse_date', dateFrom)
       .lte('excuse_date', dateTo);
 
-    // Build excuses map: { 'agentName_date': excHours }
     const excusesMap = {};
     (excusesData||[]).forEach(e => {
       const key = e.agent_name.toLowerCase()+'_'+e.excuse_date;
-      excusesMap[key] = (excusesMap[key]||0) + 2; // كل عذر = 2 ساعة
+      excusesMap[key] = true;
     });
 
     const upserts = [];
@@ -546,9 +543,23 @@ async function saveAll() {
         const name = agentEntry[0]; const d = agentEntry[1];
         const agent = allAgents.find(a => (a.xcally_name||'').toLowerCase() === name.toLowerCase());
 
-        // Get excuse hours for this agent on this date
-const conf       = TARGET_SEC > 0 ? Math.min(100, (d.activeSec / TARGET_SEC) * 100) : 0;
-const netMissing = Math.max(0, TARGET_SEC - d.activeSec);
+        const excKey     = name.toLowerCase()+'_'+date;
+        const hasExcuse  = !!excusesMap[excKey];
+        const EXC_SEC    = 2 * 3600;
+        const rawMissing = Math.max(0, TARGET_SEC - d.activeSec);
+        const avgAHT     = d.calls > 0 ? Math.round(d.talkSec / d.calls) : 0;
+
+        let netMissing, conf;
+        if (hasExcuse && rawMissing <= EXC_SEC) {
+          netMissing = 0;
+          conf       = 100;
+        } else if (hasExcuse && rawMissing > EXC_SEC) {
+          netMissing = rawMissing - EXC_SEC;
+          conf       = Math.min(100, (d.activeSec / TARGET_SEC) * 100);
+        } else {
+          netMissing = rawMissing;
+          conf       = TARGET_SEC > 0 ? Math.min(100, (d.activeSec / TARGET_SEC) * 100) : 0;
+        }
 
         upserts.push({
           agent_id:    agent?.id || null,
@@ -582,7 +593,6 @@ const netMissing = Math.max(0, TARGET_SEC - d.activeSec);
     btn.innerHTML = '<i class="fas fa-save"></i> Save All Days';
   }
 }
-
 function setViewMode(mode, btn) {
   viewModeVal = mode;
   document.querySelectorAll('.view-tab').forEach(b => b.classList.remove('active'));
