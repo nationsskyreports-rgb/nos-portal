@@ -257,7 +257,7 @@ function recalcRow(i) {
   const r = leaveData[i];
   const ent = parseInt(document.getElementById('ent-' + i).value) || 0;
   const co  = parseInt(document.getElementById('co-'  + i).value) || 0;
-  const total_used = r.total_used || 0;
+  const total_used = MONTHS.reduce((s, m) => s + (r['used_' + m] || 0), 0);
   const remaining  = ent + co - total_used;
   const remClass   = remaining <= 3 ? 'remaining-low' : remaining <= 7 ? 'remaining-warn' : 'remaining-ok';
 
