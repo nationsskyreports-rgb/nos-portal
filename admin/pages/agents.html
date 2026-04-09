@@ -255,28 +255,24 @@
 <script src="../js/auth.js"></script>
 <script src="../js/ui.js"></script>
 <script>
-// ── Init ──
+renderSidebar();
 const session = checkAuth();
 if (session) {
   document.getElementById('admin-name').innerText = session.username || 'Admin';
   document.getElementById('admin-avatar').innerText = initials(session.username || 'Admin');
 }
-
 let allAgents = [];
 let filterStatus = '';
 let filterRole   = '';
 let searchQuery  = '';
-
 // ── Load Agents ──
 async function loadAgents() {
   const tbody = document.getElementById('agents-tbody');
   tbody.innerHTML = `<tr><td colspan="9"><div class="loading-wrap"><div class="spinner"></div></div></td></tr>`;
-
   try {
     const { data, error } = await db.from('agents')
       .select('*')
       .order('formal_name');
-
     if (error) throw error;
     allAgents = data || [];
     updateKPIs();
@@ -286,7 +282,6 @@ async function loadAgents() {
     showToast('Failed to load agents: ' + e.message, 'error');
   }
 }
-
 // ── Update KPIs ──
 function updateKPIs() {
   document.getElementById('k-total').innerText   = allAgents.length;
