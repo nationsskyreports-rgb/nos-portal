@@ -77,6 +77,7 @@ function renderSidebar() {
     { section: 'Main' },
     { label: 'Dashboard',     icon: 'fa-tachometer-alt', href: base + 'index.html' },
     { label: 'Agents',        icon: 'fa-users',          href: base + 'pages/agents.html' },
+    { label: 'Annual Leave',  icon: 'fa-umbrella-beach',  href: base + 'pages/annual-leave.html' },
     { label: 'Schedule',      icon: 'fa-calendar-alt',   href: base + 'pages/schedule.html' },
     { label: 'Breaks',        icon: 'fa-coffee',         href: base + 'pages/breaks.html' },
     { section: 'Operations' },
