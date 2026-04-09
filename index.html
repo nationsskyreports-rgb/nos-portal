@@ -598,22 +598,14 @@
       <button class="modal-btn-ok" id="modal-ok" onclick="closeModal(true)">OK</button>
     </div>
   </div>
-
-  <!-- Toast Container -->
   <div id="nos-toast-container"></div>
-
-  <!-- Firebase KB -->
   <script type="module" src="firebase-kb.js"></script>
-
-  <!-- App JS -->
   <script src="app.js"></script>
-
-  <!-- Service Worker -->
   <script>
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('sw.js');
     }
   </script>
-
+<div id="nos-result-popup" style="display:none"></div>
 </body>
 </html>
