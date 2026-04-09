@@ -576,18 +576,15 @@ async function saveSchedule() {
 
 // ── Publish Week ──
 async function publishWeek() {
-  // Check if there are older unpublished weeks
   const unpublished = allWeeks.filter(w =>
     w.id !== currentWeek.id &&
     w.status !== 'Published' &&
     w.status !== 'Closed' &&
     new Date(w.week_start) < new Date(currentWeek.week_start)
   );
-
   const warningMsg = unpublished.length > 0
     ? `⚠️ Warning: ${unpublished.length} older week(s) are not published yet.\n\nPublishing will make this schedule visible to all agents and auto-generate breaks. Continue?`
     : 'Publishing will make this schedule visible to all agents and auto-generate breaks. Continue?';
-
   openModal('Publish Week', warningMsg,
     async () => {
       try {
@@ -597,11 +594,10 @@ async function publishWeek() {
           .eq('id', currentWeek.id);
         if (error) throw error;
         currentWeek.status = 'Published';
-
-        // Auto-generate breaks
         showToast('Generating breaks...', 'info');
         await autoGenerateBreaks();
-
+        showToast('Updating leave balance...', 'info');
+        await updateAnnualLeave();
         showToast('Week published & breaks generated!', 'success');
         await loadWeeks();
         renderWeekTabs();
@@ -614,6 +610,53 @@ async function publishWeek() {
   );
 }
 
+async function updateAnnualLeave() {
+  const year = new Date(currentWeek.week_start).getFullYear();
+  const yearStart = year + '-01-01';
+  const weekEnd = currentWeek.week_end;
+
+  const { data: leaves } = await db.from('schedule')
+    .select('agent_id, shift_date')
+    .eq('day_type', 'Annual')
+    .gte('shift_date', yearStart)
+    .lte('shift_date', weekEnd);
+
+  if (!leaves) return;
+
+  const map = {};
+  leaves.forEach(l => {
+    const month = new Date(l.shift_date).getMonth();
+    const cols = ['jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec'];
+    if (!map[l.agent_id]) map[l.agent_id] = {};
+    map[l.agent_id][cols[month]] = (map[l.agent_id][cols[month]] || 0) + 1;
+  });
+
+  for (const [agent_id, months] of Object.entries(map)) {
+    const cols = ['jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec'];
+
+    const updates = {};
+    cols.forEach(m => { updates['used_' + m] = months[m] || 0; });
+
+    updates.total_used = cols.reduce((s, m) => s + (months[m] || 0), 0);
+
+    const { data: current } = await db.from('annual_leave')
+      .select('entitlement, carry_over')
+      .eq('agent_id', agent_id)
+      .eq('year', year)
+      .single();
+
+    if (current) {
+      updates.remaining = (current.entitlement + current.carry_over) - updates.total_used;
+    }
+
+    await db.from('annual_leave')
+      .update(updates)
+      .eq('agent_id', agent_id)
+      .eq('year', year);
+  }
+
+  showToast('Leave balance updated! ✅', 'success');
+}
 // ── AUTO GENERATE BREAKS ──
 async function autoGenerateBreaks() {
   const dates = getWeekDates(currentWeek.week_start, currentWeek.week_end);
