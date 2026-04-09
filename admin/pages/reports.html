@@ -143,31 +143,25 @@
 <script src="../js/auth.js"></script>
 <script src="../js/ui.js"></script>
 <script>
+renderSidebar();
 const session = checkAuth();
 if (session) {
   document.getElementById('admin-name').innerText = session.username || 'Admin';
   document.getElementById('admin-avatar').innerText = initials(session.username || 'Admin');
 }
-
 // Set current month
 const now = new Date();
 document.getElementById('month-filter').value = String(now.getMonth()+1).padStart(2,'0');
-
 const CHART_COLORS = ['#D4AF37','#10B981','#3B82F6','#8B5CF6','#EF4444','#F59E0B','#EC4899','#14B8A6','#F97316','#6366F1'];
-
 let reasonChart, agentChart, trendChart, requestsChart;
-
 const MONTH_NAMES = ['','January','February','March','April','May','June','July','August','September','October','November','December'];
-
 async function loadAll() {
   const month = document.getElementById('month-filter').value;
   const year  = parseInt(document.getElementById('year-filter').value);
   const monthName = MONTH_NAMES[parseInt(month)];
   const dateFrom  = `${year}-${month}-01T00:00:00`;
   const dateTo    = `${year}-${month}-31T23:59:59`;
-
   document.getElementById('kpi-month-label').innerText = `${monthName} ${year}`;
-
   await Promise.all([
     loadCallStats(dateFrom, dateTo, monthName, year),
     loadKPITable(monthName, year),
