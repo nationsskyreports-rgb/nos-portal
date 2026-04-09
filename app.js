@@ -1067,9 +1067,8 @@ function submitCallLogForm() {
   gasRun(gasAction, data).then(res => {
     btn.disabled = false; btn.innerHTML = '<i class="fas fa-paper-plane"></i> Submit to Database';
     if (res.status === 'success') {
-      document.getElementById('form-success').style.display = 'block';
-      setTimeout(() => { document.getElementById('form-success').style.display = 'none'; resetCallForm(); }, 3000);
-    } else { showFormErr(res.msg || 'Something went wrong.'); }
+  showResultPopup('success', 'Call Logged! 🎉', 'Customer data has been saved to the database successfully.', 'Great!', () => resetCallForm());
+} else { showFormErr(res.msg || 'Something went wrong.'); }
   }).catch(err => {
     btn.disabled = false; btn.innerHTML = '<i class="fas fa-paper-plane"></i> Submit to Database';
     showFormErr('Network error. Please try again.');
@@ -1088,11 +1087,8 @@ function resetCallForm() {
 }
 
 function showFormErr(msg) {
-  const el = document.getElementById('form-error');
-  el.innerText = msg; el.style.display = 'block';
-  setTimeout(() => el.style.display = 'none', 5000);
+  showResultPopup('error', 'Check Your Data', msg, 'Got it');
 }
-
 /* ─── 17. CUSTOMER SEARCH ─── */
 function searchCustomer() {
   const query      = document.getElementById('search-query').value.trim();
@@ -2024,4 +2020,30 @@ if (!window._schTabHooked) {
     origSwitchTab(id, btn, idx);
     if (id === 'tab-sch-table') initSchTab();
   };
+}
+function showResultPopup(type, title, msg, btnText, onClose) {
+  const el = document.getElementById('nos-result-popup');
+  el.innerHTML = `
+    <div class="nos-popup-inner">
+      <div class="nos-popup-icon ${type}">${type === 'success' ? '✅' : '❌'}</div>
+      <div class="nos-popup-title">${title}</div>
+      <div class="nos-popup-msg">${msg}</div>
+      <button class="nos-popup-btn ${type === 'error' ? 'danger' : ''}"
+        onclick="closeResultPopup()">${btnText || 'تمام'}</button>
+    </div>`;
+  el.style.display = 'flex';
+  window._popupOnClose = onClose || null;
+  if (type === 'success') {
+    window._popupAutoClose = setTimeout(() => closeResultPopup(), 4000);
+  }
+  el.onclick = function(e) { if (e.target === el) closeResultPopup(); };
+}
+
+function closeResultPopup() {
+  const el = document.getElementById('nos-result-popup');
+  if (!el) return;
+  el.style.display = 'none';
+  el.innerHTML = '';
+  if (window._popupAutoClose) { clearTimeout(window._popupAutoClose); window._popupAutoClose = null; }
+  if (window._popupOnClose)   { window._popupOnClose(); window._popupOnClose = null; }
 }
