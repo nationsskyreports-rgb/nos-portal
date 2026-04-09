@@ -547,16 +547,8 @@ async function saveAll() {
         const agent = allAgents.find(a => (a.xcally_name||'').toLowerCase() === name.toLowerCase());
 
         // Get excuse hours for this agent on this date
-        const excKey  = name.toLowerCase()+'_'+date;
-        const excHours = excusesMap[excKey] || 0;
-        const excSec   = excHours * 3600;
-
-        // Calculate with excuses deducted
-        const rawMissing = Math.max(0, TARGET_SEC - d.activeSec);
-        const netMissing = Math.max(0, rawMissing - excSec);
-        const netTarget  = Math.max(d.activeSec, TARGET_SEC - excSec);
-        const conf = netTarget > 0 ? Math.min(100, (d.activeSec / netTarget) * 100) : 0;
-        const avgAHT = d.calls > 0 ? Math.round(d.talkSec / d.calls) : 0;
+const conf       = TARGET_SEC > 0 ? Math.min(100, (d.activeSec / TARGET_SEC) * 100) : 0;
+const netMissing = Math.max(0, TARGET_SEC - d.activeSec);
 
         upserts.push({
           agent_id:    agent?.id || null,
