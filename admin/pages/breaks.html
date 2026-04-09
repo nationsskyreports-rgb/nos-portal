@@ -179,26 +179,21 @@ input[type="time"] { -webkit-appearance: none; }
 <script src="../js/auth.js"></script>
 <script src="../js/ui.js"></script>
 <script>
+renderSidebar();
 const session = checkAuth();
 if (session) {
   document.getElementById('admin-name').innerText = session.username || 'Admin';
   document.getElementById('admin-avatar').innerText = initials(session.username || 'Admin');
 }
-
 let allAgents  = [];
-let breaksData = {}; // agentId -> break record
-let editRows   = {}; // agentId -> { shift, break1, lunch, break2 }
-
-// Set today as default
+let breaksData = {};
+let editRows   = {};
 document.getElementById('date-picker').value = new Date().toISOString().split('T')[0];
-
-// ── Load ──
 async function init() {
   const { data } = await db.from('agents').select('id,formal_name').eq('status','Active').order('formal_name');
   allAgents = data || [];
   await loadBreaks();
 }
-
 async function loadBreaks() {
   const date  = document.getElementById('date-picker').value;
   const tbody = document.getElementById('breaks-tbody');
