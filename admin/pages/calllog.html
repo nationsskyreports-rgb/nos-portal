@@ -343,8 +343,6 @@ function openModal(title, msg, onConfirm) {
   document.getElementById('modal-confirm').onclick = () => { closeModal(); onConfirm(); };
 }
 function closeModal() { document.getElementById('modal-overlay').classList.remove('open'); }
-function openPanel()  { document.getElementById('panel-overlay').classList.add('open'); document.getElementById('slide-panel').classList.add('open'); }
-function closePanel() { document.getElementById('panel-overlay').classList.remove('open'); document.getElementById('slide-panel').classList.remove('open'); }
 
 init();
 </script>
