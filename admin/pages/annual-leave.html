@@ -225,19 +225,16 @@ function renderTable() {
     tbody.innerHTML = '<tr><td colspan="17"><div class="empty-state"><span class="empty-icon">📭</span>No data found</div></td></tr>';
     return;
   }
-
   tbody.innerHTML = leaveData.map((r, i) => {
     const entitlement  = r.entitlement  || 0;
     const carry_over   = r.carry_over   || 0;
-    const total_used   = r.total_used   || 0;
-    const remaining = entitlement + carry_over - total_used;
+    const total_used   = MONTHS.reduce((s, m) => s + (r['used_' + m] || 0), 0);
+    const remaining    = entitlement + carry_over - total_used;
     const remClass     = remaining <= 3 ? 'remaining-low' : remaining <= 7 ? 'remaining-warn' : 'remaining-ok';
-
     const monthCells = MONTHS.map(m => {
       const val = r['used_' + m] || 0;
       return '<td><span class="month-val ' + (val === 0 ? 'zero' : '') + '">' + (val === 0 ? '—' : val) + '</span></td>';
     }).join('');
-
     return '<tr id="row-' + i + '">' +
       '<td><div style="display:flex;align-items:center;gap:8px;">' +
         '<div class="agent-avatar" style="width:28px;height:28px;font-size:10px;">' + initials(r.formal_name) + '</div>' +
@@ -252,7 +249,6 @@ function renderTable() {
     '</tr>';
   }).join('');
 }
-
 function recalcRow(i) {
   const r = leaveData[i];
   const ent = parseInt(document.getElementById('ent-' + i).value) || 0;
