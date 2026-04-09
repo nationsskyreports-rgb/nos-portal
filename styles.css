@@ -684,3 +684,72 @@ select.form-input option { background: var(--surface); color: var(--text); }
 .preloader-logo { width:60px; height:60px; object-fit:contain; position:relative; z-index:2; animation:pulseLogo 2s ease-in-out infinite; }
 .preloader-spinner { position:absolute; inset:0; border:3px solid transparent; border-top-color:var(--primary); border-radius:50%; animation:spin 1s linear infinite; }
 .preloader-text { color:var(--primary); font-family:'Plus Jakarta Sans',sans-serif; font-size:14px; font-weight:600; letter-spacing:1px; text-transform:uppercase; }
+#nos-result-popup {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.6);
+  backdrop-filter: blur(6px);
+  z-index: 99999;
+  display: flex; align-items: center; justify-content: center;
+  padding: 20px;
+  animation: popupFadeIn 0.3s ease both;
+}
+@keyframes popupFadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+.nos-popup-inner {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 24px;
+  padding: 32px 28px;
+  max-width: 340px; width: 100%;
+  text-align: center;
+  box-shadow: 0 24px 60px rgba(0,0,0,0.4);
+  animation: popupSlideIn 0.4s cubic-bezier(0.34,1.56,0.64,1) both;
+}
+@keyframes popupSlideIn {
+  from { transform: scale(0.85) translateY(20px); opacity: 0; }
+  to   { transform: scale(1)    translateY(0);    opacity: 1; }
+}
+.nos-popup-icon {
+  width: 72px; height: 72px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 2rem; margin: 0 auto 20px;
+  animation: iconPop 0.4s cubic-bezier(0.34,1.56,0.64,1) 0.15s both;
+}
+@keyframes iconPop {
+  from { transform: scale(0.3); opacity: 0; }
+  to   { transform: scale(1);   opacity: 1; }
+}
+.nos-popup-icon.success {
+  background: rgba(5,150,105,0.12); color: #059669;
+  box-shadow: 0 0 0 10px rgba(5,150,105,0.06);
+}
+.nos-popup-icon.error {
+  background: rgba(239,68,68,0.12); color: #ef4444;
+  box-shadow: 0 0 0 10px rgba(239,68,68,0.06);
+}
+.nos-popup-title {
+  font-family: 'Syne', sans-serif;
+  font-size: 18px; font-weight: 800;
+  color: var(--text); margin-bottom: 8px;
+}
+.nos-popup-msg {
+  font-size: 13px; color: var(--muted);
+  line-height: 1.6; margin-bottom: 24px;
+}
+.nos-popup-btn {
+  width: 100%; padding: 13px;
+  background: var(--primary-gradient);
+  color: white; border: none; border-radius: 14px;
+  font-size: 14px; font-weight: 700;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  cursor: pointer;
+  box-shadow: 0 6px 20px rgba(212,175,55,0.3);
+  transition: all 0.2s;
+}
+.nos-popup-btn:hover { transform: translateY(-2px); }
+.nos-popup-btn.danger {
+  background: linear-gradient(135deg, #ef4444, #dc2626);
+  box-shadow: 0 6px 20px rgba(239,68,68,0.3);
+}
