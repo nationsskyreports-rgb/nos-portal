@@ -328,7 +328,7 @@ let viewModeVal   = 'day';
 const TODAY       = new Date().toISOString().split('T')[0];
 
 async function init() {
-  const { data } = await db.from('agents').select('id,formal_name').eq('status','Active').order('formal_name');
+  const { data } = await db.from('agents').select('id,formal_name,xcally_name').eq('status','Active').order('formal_name');
   allAgents = data || [];
   const sel = document.getElementById('filter-agent');
   allAgents.forEach(a => sel.add(new Option(a.formal_name, a.formal_name)));
@@ -569,7 +569,7 @@ async function saveAll() {
       const date = dayEntry[0]; const dayData = dayEntry[1];
       Object.entries(dayData).forEach(function(agentEntry) {
         const name = agentEntry[0]; const d = agentEntry[1];
-        const agent = allAgents.find(a => a.formal_name.toLowerCase() === name.toLowerCase());
+        const agent = allAgents.find(a => (a.xcally_name||'').toLowerCase() === name.toLowerCase());
 
         // Get excuse hours for this agent on this date
         const excKey  = name.toLowerCase()+'_'+date;
