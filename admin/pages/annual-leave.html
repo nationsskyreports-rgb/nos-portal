@@ -230,7 +230,7 @@ function renderTable() {
     const entitlement  = r.entitlement  || 0;
     const carry_over   = r.carry_over   || 0;
     const total_used   = r.total_used   || 0;
-    const remaining    = r.remaining    !== undefined ? r.remaining : (entitlement + carry_over - total_used);
+    const remaining = entitlement + carry_over - total_used;
     const remClass     = remaining <= 3 ? 'remaining-low' : remaining <= 7 ? 'remaining-warn' : 'remaining-ok';
 
     const monthCells = MONTHS.map(m => {
