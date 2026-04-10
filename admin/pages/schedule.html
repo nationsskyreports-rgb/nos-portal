@@ -371,29 +371,54 @@ async function updateAnnualLeave() {
   const year      = new Date(currentWeek.week_start).getFullYear();
   const yearStart = year + '-01-01';
   const weekEnd   = currentWeek.week_end;
-  const { data: leaves } = await db.from('schedule').select('agent_id, shift_date').eq('day_type', 'Annual').gte('shift_date', yearStart).lte('shift_date', weekEnd);
+
+  const { data: leaves } = await db.from('schedule')
+    .select('agent_id, shift_date')
+    .eq('day_type', 'Annual')
+    .gte('shift_date', yearStart)
+    .lte('shift_date', weekEnd);
+
   const cols = ['jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec'];
-  const { data: annualRecords } = await db.from('annual_leave').select('*').eq('year', year);
+
+  const { data: annualRecords } = await db.from('annual_leave')
+    .select('*').eq('year', year);
+
   const map = {};
   (leaves || []).forEach(l => {
     const month = new Date(l.shift_date + 'T00:00:00').getMonth();
     if (!map[l.agent_id]) map[l.agent_id] = {};
     map[l.agent_id][cols[month]] = (map[l.agent_id][cols[month]] || 0) + 1;
   });
+
   for (const agent of allAgents) {
     const agentMonths  = map[agent.id] || {};
     const annualRecord = (annualRecords || []).find(a => a.agent_id === agent.id);
-    if (!annualRecord) { await db.from('annual_leave').insert({ agent_id: agent.id, agent_name: agent.formal_name, year, ...updates, created_at: new Date().toISOString() }); continue; }
+
     const updates = {};
     cols.forEach(m => { updates['used_' + m] = agentMonths[m] || 0; });
     updates.total_used = cols.reduce((s, m) => s + (agentMonths[m] || 0), 0);
+
+    if (!annualRecord) {
+      await db.from('annual_leave').insert({
+        agent_id:   agent.id,
+        agent_name: agent.formal_name,
+        year, ...updates,
+        entitlement: 21,
+        carry_over:  0,
+        remaining:   21 - updates.total_used,
+        created_at:  new Date().toISOString(),
+        updated_at:  new Date().toISOString(),
+      });
+      continue;
+    }
+
     updates.remaining  = (annualRecord.entitlement + annualRecord.carry_over) - updates.total_used;
     updates.updated_at = new Date().toISOString();
     await db.from('annual_leave').update(updates).eq('agent_id', agent.id).eq('year', year);
   }
+
   showToast('Leave balance updated! ✅', 'success');
 }
-
 // ── AUTO GENERATE BREAKS ──
 async function autoGenerateBreaks() {
   const dates = getWeekDates(currentWeek.week_start, currentWeek.week_end);
