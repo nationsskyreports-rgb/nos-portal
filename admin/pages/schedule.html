@@ -697,9 +697,7 @@ async function autoGenerateBreaks() {
 
       group.forEach((agent, idx) => {
         // Slot index (cycle through maxOut slots)
-        const slotIdx  = idx % maxOut;
-        const offset   = slotIdx * gapMins;
-
+        const offset = idx * gapMins;
         const b1 = break1BaseMin + offset;
         const ln = lunchBaseMin  + offset;
         const b2 = break2BaseMin + offset;
