@@ -354,8 +354,8 @@ async function loadKPIs(monthName, year) {
       }
 
       const ann     = (annualRes.data||[]).find(a => a.agent_id===agent.id) || {};
-      const totalUsed = MONTHS_SHORT.reduce((s,m) => s+(ann['used_'+m]||0), 0);
-      const annLeft   = ann.entitlement !== undefined ? ((ann.entitlement||21)+(ann.carry_over||0)-totalUsed) : '—';
+      const annLeft    = ann.remaining  !== undefined ? ann.remaining  : '—';
+      const totalUsed  = ann.total_used !== undefined ? ann.total_used : 0;
       const annUsedMTD = (leavesRes.data||[]).filter(l=>l.agent_id===agent.id).reduce((s,l)=>s+(l.days||0),0);
 
       const conf = parseFloat(kpi.conformance)||0;
