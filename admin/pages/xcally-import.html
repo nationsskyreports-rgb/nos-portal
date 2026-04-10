@@ -694,23 +694,24 @@ function renderSummaryTable(data) {
 
   const rows = Object.values(agentMap).sort((a,b) => b.confSum/b.days - a.confSum/a.days);
 
-  tbody.innerHTML = rows.map(a => {
-    const avgConf = a.days > 0 ? a.confSum/a.days : 0;
-    const avgAHT  = a.totalCalls > 0 ? Math.round(a.totalTalk/a.totalCalls) : 0;
-    const confCls = avgConf>=98?'conf-high':avgConf>=90?'conf-mid':'conf-low';
+tbody.innerHTML = rows.map(a => {
+    const avgConf    = a.days > 0 ? a.confSum/a.days : 0;
+    const avgAHT     = a.totalCalls > 0 ? Math.round(a.totalTalk/a.totalCalls) : 0;
+    const avgMissing = a.days > 0 ? Math.round(a.totalMissing / a.days) : 0;
+    const missingDisplay = avgMissing <= 300 ? 'Full Time' : secToTime(avgMissing) + ' avg';
+    const confCls    = avgConf>=98?'conf-high':avgConf>=90?'conf-mid':'conf-low';
     return '<tr>' +
       '<td><div style="display:flex;align-items:center;gap:8px;"><div class="agent-avatar" style="width:26px;height:26px;font-size:9px;">' + initials(a.name) + '</div><span style="font-weight:700;">' + a.name + '</span></div></td>' +
       '<td style="text-align:center;font-weight:700;">' + a.days + '</td>' +
       '<td style="font-family:monospace;font-size:12px;">' + secToTime(a.totalActive) + '</td>' +
       '<td class="' + confCls + '">' + avgConf.toFixed(0) + '%</td>' +
-      '<td style="color:' + (a.totalMissing>300?'#EF4444':'#10B981') + ';font-size:12px;">' + (a.totalMissing<=300?'✅ Full':secToTime(a.totalMissing)) + '</td>' +
+      '<td style="color:' + (avgMissing>300?'#EF4444':'#10B981') + ';font-size:12px;">' + missingDisplay + '</td>' +
       '<td style="font-weight:700;">' + a.totalCalls + '</td>' +
       '<td style="font-family:monospace;font-size:12px;">' + (avgAHT?secToTime(avgAHT):'—') + '</td>' +
       '<td><span class="badge ' + (a.below98>0?'badge-danger':'badge-success') + '">' + a.below98 + ' day(s)</span></td>' +
       '</tr>';
   }).join('');
-}
-
+  
 function updateHistoryKPIs(data) {
   if (!data.length) {
     ['h-conf','h-calls','h-aht','h-below','h-days'].forEach(id => document.getElementById(id).innerText='—');
