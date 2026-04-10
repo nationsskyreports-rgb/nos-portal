@@ -696,7 +696,7 @@ function viewReview(id) {
           <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;">
             <div style="font-size:12px;font-weight:600;color:var(--text);flex:1;">${a.question}</div>
             <div style="display:flex;gap:2px;flex-shrink:0;">
-              ${[1,2,3,4,5].map(s => `<span style="color:${s<=a.stars?'#D4AF37':'var(--border2)';font-size:14px;">★</span>`).join('')}
+              ${[1,2,3,4,5].map(s => `<span style="color:${s<=a.stars?'#D4AF37':'var(--border2)'}; font-size:14px;">★</span>`).join('')}
               <span style="font-size:10px;color:var(--muted);margin-right:4px;">${a.stars}/5</span>
             </div>
           </div>
