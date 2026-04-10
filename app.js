@@ -1745,14 +1745,12 @@ async function sbFetchSch(path) {
 // ── جيب بريكات اليوم من Supabase ──
 async function loadTodayBreaksFromSB(agentId) {
   const today = new Date().toISOString().split('T')[0];
-  console.log('🔍 agentId:', agentId, '| date:', today);  // ← ضيف دي
   try {
     const res = await fetch(
       `${SB_URL_SCH}/rest/v1/breaks?agent_id=eq.${agentId}&break_date=eq.${today}&select=*`,
       { headers: { 'apikey': SB_KEY_SCH, 'Authorization': `Bearer ${SB_KEY_SCH}` } }
     );
     const data = await res.json();
-    console.log('📦 Breaks from Supabase:', data);  // ← وضيف دي
     if (!data || !data.length) return null;
     const b = data[0];
     return {
