@@ -8,10 +8,6 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
-/* Force 24-hour time display */
-input[type="time"]::-webkit-datetime-edit-ampm-field { display: none; }
-input[type="time"] { -webkit-appearance: none; }
-
 .week-grid { width:100%; border-collapse:collapse; font-size:11px; }
 .week-grid th {
   padding:8px 6px; background:var(--surface2);
@@ -30,18 +26,13 @@ input[type="time"] { -webkit-appearance: none; }
 .week-grid td.agent-col { text-align:left; padding:6px 10px; background:var(--surface2); font-weight:700; font-size:12px; }
 .week-grid tr:last-child td { border-bottom:none; }
 .break-cell { display:flex; flex-direction:column; gap:2px; padding:3px; }
-.break-time {
-  font-size:10px; font-family:monospace;
-  padding:2px 4px; border-radius:4px;
-  background:var(--surface3); color:var(--muted);
-}
+.break-time { font-size:10px; font-family:monospace; padding:2px 4px; border-radius:4px; background:var(--surface3); color:var(--muted); }
 .break-time.b1 { background:rgba(212,175,55,0.1); color:var(--gold); }
 .break-time.ln { background:rgba(16,185,129,0.1); color:#10B981; }
 .break-time.b2 { background:rgba(59,130,246,0.1); color:#3B82F6; }
 </style>
 </head>
 <body>
-
 <div class="admin-layout">
 <aside class="sidebar" id="sidebar"></aside>
   <div class="main-content">
@@ -61,69 +52,64 @@ input[type="time"] { -webkit-appearance: none; }
 
     <div class="page-content">
 
-      <!-- TABS -->
       <div class="tabs fade-up">
         <button class="tab-btn active" onclick="switchBreakTab('daily',this)">📅 Daily View</button>
         <button class="tab-btn" onclick="switchBreakTab('weekly',this)">📆 Weekly View</button>
       </div>
 
-      <!-- INFO BANNER -->
       <div style="background:rgba(212,175,55,0.06);border:1px solid rgba(212,175,55,0.2);border-radius:14px;padding:14px 18px;margin-bottom:20px;display:flex;align-items:center;gap:12px;" class="fade-up">
         <i class="fas fa-info-circle" style="color:var(--gold);font-size:18px;flex-shrink:0;"></i>
         <div style="font-size:13px;color:var(--muted);">
-          Set daily breaks for each agent. Agents will see their breaks in the portal automatically.
+          Breaks are auto-generated when you Publish a schedule. Use <strong style="color:var(--text);">Regenerate</strong> if you change the schedule after publishing.
           <strong style="color:var(--text);">Break 1 = 15 min · Lunch = 30 min · Break 2 = 15 min</strong>
         </div>
       </div>
 
       <!-- DAILY VIEW -->
       <div id="tab-daily">
-      <!-- BREAKS TABLE -->
-      <div class="section-card fade-up">
-        <div class="section-header">
-          <div class="section-title">
-            <i class="fas fa-coffee" style="color:var(--gold)"></i>
-            <span id="table-title">Today's Breaks</span>
+        <div class="section-card fade-up">
+          <div class="section-header">
+            <div class="section-title">
+              <i class="fas fa-coffee" style="color:var(--gold)"></i>
+              <span id="table-title">Today's Breaks</span>
+            </div>
+            <div style="display:flex;gap:8px;">
+              <button class="btn btn-ghost btn-sm" onclick="copyFromYesterday()">
+                <i class="fas fa-copy"></i> Copy from Yesterday
+              </button>
+              <button class="btn btn-ghost btn-sm" onclick="regenerateBreaks()">
+                <i class="fas fa-magic"></i> Regenerate from Schedule
+              </button>
+              <button class="btn btn-primary btn-sm" onclick="saveAllBreaks()">
+                <i class="fas fa-save"></i> Save All
+              </button>
+            </div>
           </div>
-          <div style="display:flex;gap:8px;">
-            <button class="btn btn-ghost btn-sm" onclick="copyFromYesterday()">
-              <i class="fas fa-copy"></i> Copy from Yesterday
-            </button>
-            <button class="btn btn-primary btn-sm" onclick="saveAllBreaks()">
-              <i class="fas fa-save"></i> Save All
-            </button>
-          </div>
-        </div>
-        <div class="section-body no-pad">
-          <div class="table-wrap">
-            <table class="nos-table">
-              <thead>
-                <tr>
-                  <th>Agent</th>
-                  <th>Shift</th>
-                  <th>☕ Break 1</th>
-                  <th>🍽️ Lunch</th>
-                  <th>🫖 Break 2</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody id="breaks-tbody">
-                <tr><td colspan="6"><div class="loading-wrap"><div class="spinner"></div></div></td></tr>
-              </tbody>
-            </table>
+          <div class="section-body no-pad">
+            <div class="table-wrap">
+              <table class="nos-table">
+                <thead>
+                  <tr>
+                    <th>Agent</th><th>Shift</th>
+                    <th>☕ Break 1</th><th>🍽️ Lunch</th><th>🫖 Break 2</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="breaks-tbody">
+                  <tr><td colspan="6"><div class="loading-wrap"><div class="spinner"></div></div></td></tr>
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       </div>
-
-      </div><!-- end tab-daily -->
 
       <!-- WEEKLY VIEW -->
       <div id="tab-weekly" style="display:none;">
         <div class="section-card fade-up">
           <div class="section-header">
             <div class="section-title">
-              <i class="fas fa-calendar-week" style="color:var(--gold)"></i>
-              Weekly Breaks
+              <i class="fas fa-calendar-week" style="color:var(--gold)"></i> Weekly Breaks
             </div>
             <div style="display:flex;align-items:center;gap:10px;">
               <select id="week-select" class="form-input" style="width:auto;padding:8px 12px;" onchange="loadWeeklyBreaks()">
@@ -141,21 +127,10 @@ input[type="time"] { -webkit-appearance: none; }
             </div>
           </div>
         </div>
-      </div><!-- end tab-weekly -->
+      </div>
 
     </div>
   </div>
-</div>
-
-<!-- PANEL -->
-<div class="panel-overlay" id="panel-overlay" onclick="closePanel()"></div>
-<div class="slide-panel" id="slide-panel">
-  <div class="panel-header">
-    <div class="panel-title" id="panel-title">Add Break</div>
-    <button class="panel-close" onclick="closePanel()"><i class="fas fa-times"></i></button>
-  </div>
-  <div class="panel-body" id="panel-body"></div>
-  <div class="panel-footer" id="panel-footer"></div>
 </div>
 
 <!-- MODAL -->
@@ -174,7 +149,6 @@ input[type="time"] { -webkit-appearance: none; }
 </div>
 
 <div id="toast-container"></div>
-
 <script src="../js/supabase.js"></script>
 <script src="../js/auth.js"></script>
 <script src="../js/ui.js"></script>
@@ -182,56 +156,69 @@ input[type="time"] { -webkit-appearance: none; }
 renderSidebar();
 const session = checkAuth();
 if (session) {
-  document.getElementById('admin-name').innerText = session.username || 'Admin';
+  document.getElementById('admin-name').innerText  = session.username || 'Admin';
   document.getElementById('admin-avatar').innerText = initials(session.username || 'Admin');
 }
-let allAgents  = [];
-let breaksData = {}; // agentId -> break record
-let editRows   = {}; // agentId -> { shift, break1, lunch, break2 }
-// Set today as default
+
+let allAgents     = [];
+let allShiftTypes = [];
+let breaksData    = {};
+let editRows      = {};
+let workingAgents = []; // فقط اللي شغالين في اليوم المختار
+
 document.getElementById('date-picker').value = new Date().toISOString().split('T')[0];
-// ── Load ──
+
 async function init() {
-  const { data } = await db.from('agents').select('id,formal_name').eq('status','Active').order('formal_name');
-  allAgents = data || [];
+  const [agentsRes, shiftsRes] = await Promise.all([
+    db.from('agents').select('id,formal_name').eq('status','Active').order('formal_name'),
+    db.from('shift_types').select('*').eq('is_active',true)
+  ]);
+  allAgents     = agentsRes.data  || [];
+  allShiftTypes = shiftsRes.data  || [];
   await loadBreaks();
 }
 
+// ── LOAD BREAKS (Daily View — شغالين بس) ──
 async function loadBreaks() {
   const date  = document.getElementById('date-picker').value;
   const tbody = document.getElementById('breaks-tbody');
-  document.getElementById('table-title').innerText = `Breaks — ${formatDate(date)}`;
-  tbody.innerHTML = `<tr><td colspan="6"><div class="loading-wrap"><div class="spinner"></div></div></td></tr>`;
-  editRows = {};
+  document.getElementById('table-title').innerText = 'Breaks — ' + formatDate(date);
+  tbody.innerHTML = '<tr><td colspan="6"><div class="loading-wrap"><div class="spinner"></div></div></td></tr>';
+  editRows      = {};
+  workingAgents = [];
 
   try {
-    // Load breaks for this date
-    const { data: breaks } = await db.from('breaks')
-      .select('*').eq('break_date', date);
-
-    breaksData = {};
-    (breaks || []).forEach(b => { breaksData[b.agent_id] = b; });
-
-    // Load schedule for shift info - only Work days
+    // جيب Schedule لليوم ده — Work فقط
     const { data: schedules } = await db.from('schedule')
-      .select('agent_id, shift_types(name,start_time,end_time), day_type')
+      .select('agent_id, day_type, shift_type_id, shift_types(name,start_time,end_time)')
       .eq('shift_date', date)
       .eq('day_type', 'Work');
 
     const shiftMap = {};
     (schedules || []).forEach(s => { shiftMap[s.agent_id] = s; });
 
-    if (!allAgents.length) {
-      tbody.innerHTML = `<tr><td colspan="6"><div class="empty-state"><span class="empty-icon">👥</span>No agents found</div></td></tr>`;
+    // فلتر الـ agents اللي شغالين بس
+    workingAgents = allAgents.filter(a => !!shiftMap[a.id]);
+
+    if (!workingAgents.length) {
+      tbody.innerHTML = '<tr><td colspan="6"><div class="empty-state"><span class="empty-icon">😴</span>No agents working on this day</div></td></tr>';
       return;
     }
 
-    tbody.innerHTML = allAgents.map(agent => {
-      const b   = breaksData[agent.id] || {};
+    // جيب الـ breaks الموجودة
+    const { data: breaks } = await db.from('breaks')
+      .select('*').eq('break_date', date);
+
+    breaksData = {};
+    (breaks || []).forEach(b => { breaksData[b.agent_id] = b; });
+
+    // ابني الـ editRows
+    workingAgents.forEach(agent => {
       const sch = shiftMap[agent.id];
+      const b   = breaksData[agent.id] || {};
       const shiftStr = sch?.shift_types
-        ? `${formatTime(sch.shift_types.start_time)} - ${formatTime(sch.shift_types.end_time)}`
-        : (sch?.day_type || '—');
+        ? formatTime(sch.shift_types.start_time) + ' - ' + formatTime(sch.shift_types.end_time)
+        : '—';
 
       editRows[agent.id] = {
         shift:  shiftStr,
@@ -239,224 +226,190 @@ async function loadBreaks() {
         lunch:  b.lunch  ? b.lunch.substring(0,5)  : '',
         break2: b.break2 ? b.break2.substring(0,5) : '',
       };
+    });
 
-      const isOff = sch?.day_type && !['Work'].includes(sch?.day_type);
-      const rowBg = isOff ? 'opacity:0.5;' : '';
-
-      return `
-        <tr style="${rowBg}">
-          <td>
-            <div style="display:flex;align-items:center;gap:8px;">
-              <div class="agent-avatar" style="width:28px;height:28px;font-size:10px;">${initials(agent.formal_name)}</div>
-              <span style="font-weight:700;font-size:13px;">${agent.formal_name}</span>
-            </div>
-          </td>
-          <td>
-            <span class="badge ${isOff?'badge-muted':'badge-success'}" style="font-size:11px;">${shiftStr}</span>
-          </td>
-          <td>
-            <input type="text" class="form-input" style="width:90px;padding:6px 10px;font-size:13px;font-family:monospace;text-align:center;" placeholder="HH:MM"
-              value="${editRows[agent.id].break1}"
-              onchange="editRows['${agent.id}'].break1=formatTimeInput(this.value);this.value=formatTimeInput(this.value)">
-          </td>
-          <td>
-            <input type="text" class="form-input" style="width:90px;padding:6px 10px;font-size:13px;font-family:monospace;text-align:center;" placeholder="HH:MM"
-              value="${editRows[agent.id].lunch}"
-              onchange="editRows['${agent.id}'].lunch=formatTimeInput(this.value);this.value=formatTimeInput(this.value)">
-          </td>
-          <td>
-            <input type="text" class="form-input" style="width:90px;padding:6px 10px;font-size:13px;font-family:monospace;text-align:center;" placeholder="HH:MM"
-              value="${editRows[agent.id].break2}"
-              onchange="editRows['${agent.id}'].break2=formatTimeInput(this.value);this.value=formatTimeInput(this.value)">
-          </td>
-          <td>
-            <button class="btn btn-danger btn-sm btn-icon" onclick="clearAgentBreaks('${agent.id}')" title="Clear">
-              <i class="fas fa-times"></i>
-            </button>
-          </td>
-        </tr>
-      `;
+    tbody.innerHTML = workingAgents.map(agent => {
+      const r = editRows[agent.id];
+      return '<tr>' +
+        '<td><div style="display:flex;align-items:center;gap:8px;"><div class="agent-avatar" style="width:28px;height:28px;font-size:10px;">'+initials(agent.formal_name)+'</div><span style="font-weight:700;font-size:13px;">'+agent.formal_name+'</span></div></td>' +
+        '<td><span class="badge badge-success" style="font-size:11px;">'+r.shift+'</span></td>' +
+        '<td><input type="text" class="form-input" style="width:90px;padding:6px 10px;font-size:13px;font-family:monospace;text-align:center;" placeholder="HH:MM" value="'+r.break1+'" onchange="editRows[\''+agent.id+'\'].break1=fmtTime(this.value);this.value=fmtTime(this.value)"></td>' +
+        '<td><input type="text" class="form-input" style="width:90px;padding:6px 10px;font-size:13px;font-family:monospace;text-align:center;" placeholder="HH:MM" value="'+r.lunch+'" onchange="editRows[\''+agent.id+'\'].lunch=fmtTime(this.value);this.value=fmtTime(this.value)"></td>' +
+        '<td><input type="text" class="form-input" style="width:90px;padding:6px 10px;font-size:13px;font-family:monospace;text-align:center;" placeholder="HH:MM" value="'+r.break2+'" onchange="editRows[\''+agent.id+'\'].break2=fmtTime(this.value);this.value=fmtTime(this.value)"></td>' +
+        '<td><button class="btn btn-danger btn-sm btn-icon" onclick="clearRow(\''+agent.id+'\')" title="Clear"><i class="fas fa-times"></i></button></td>' +
+        '</tr>';
     }).join('');
 
   } catch(e) {
-    tbody.innerHTML = `<tr><td colspan="6"><div class="empty-state"><span class="empty-icon">❌</span>Failed to load</div></td></tr>`;
+    tbody.innerHTML = '<tr><td colspan="6"><div class="empty-state"><span class="empty-icon">❌</span>Failed</div></td></tr>';
     showToast('Failed: ' + e.message, 'error');
   }
 }
 
-// ── Save All Breaks ──
+function clearRow(agentId) {
+  if (editRows[agentId]) {
+    editRows[agentId].break1 = '';
+    editRows[agentId].lunch  = '';
+    editRows[agentId].break2 = '';
+  }
+  // امسح من الـ inputs مباشرة
+  const rows = document.querySelectorAll('#breaks-tbody tr');
+  rows.forEach(row => {
+    if (row.innerHTML.includes(agentId)) {
+      row.querySelectorAll('input').forEach(inp => inp.value = '');
+    }
+  });
+}
+
+// ── SAVE ALL ──
 async function saveAllBreaks() {
   const date = document.getElementById('date-picker').value;
   const btn  = document.querySelector('.btn-primary[onclick="saveAllBreaks()"]');
-  if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...'; }
+  if (btn) { btn.disabled=true; btn.innerHTML='<i class="fas fa-spinner fa-spin"></i> Saving...'; }
 
   try {
-    const upserts = allAgents.map(agent => ({
-      agent_id:   agent.agent_id || agent.id,
-      break_date: date,
-      shift_time: editRows[agent.id]?.shift || null,
-      break1:     editRows[agent.id]?.break1 || null,
-      lunch:      editRows[agent.id]?.lunch  || null,
-      break2:     editRows[agent.id]?.break2 || null,
-      updated_at: new Date().toISOString(),
-    }));
-
-    // Filter agents that have at least one break set
-    const toSave = upserts.filter(u => u.break1 || u.lunch || u.break2);
+    const toSave = workingAgents
+      .filter(a => editRows[a.id]?.break1 || editRows[a.id]?.lunch || editRows[a.id]?.break2)
+      .map(a => ({
+        agent_id:   a.id,
+        break_date: date,
+        shift_time: editRows[a.id]?.shift || null,
+        break1:     editRows[a.id]?.break1 ? editRows[a.id].break1+':00' : null,
+        lunch:      editRows[a.id]?.lunch  ? editRows[a.id].lunch+':00'  : null,
+        break2:     editRows[a.id]?.break2 ? editRows[a.id].break2+':00' : null,
+        updated_at: new Date().toISOString(),
+      }));
 
     if (toSave.length) {
-      const { error } = await db.from('breaks')
-        .upsert(toSave, { onConflict: 'agent_id,break_date' });
+      const { error } = await db.from('breaks').upsert(toSave, { onConflict: 'agent_id,break_date' });
       if (error) throw error;
     }
-
-    showToast(`Breaks saved for ${toSave.length} agent(s)!`, 'success');
+    showToast('Breaks saved for ' + toSave.length + ' agent(s)!', 'success');
   } catch(e) {
     showToast('Save failed: ' + e.message, 'error');
   } finally {
-    if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-save"></i> Save All'; }
+    if (btn) { btn.disabled=false; btn.innerHTML='<i class="fas fa-save"></i> Save All'; }
   }
 }
 
-// ── Copy from Yesterday ──
+// ── COPY FROM YESTERDAY (شغالين بس) ──
 async function copyFromYesterday() {
   const date = document.getElementById('date-picker').value;
-  const yesterday = new Date(date);
+  const yesterday = new Date(date + 'T00:00:00');
   yesterday.setDate(yesterday.getDate() - 1);
   const yStr = yesterday.toISOString().split('T')[0];
 
   try {
     const { data } = await db.from('breaks').select('*').eq('break_date', yStr);
-    if (!data || !data.length) {
-      showToast('No breaks found for yesterday', 'warning');
-      return;
-    }
+    if (!data || !data.length) { showToast('No breaks found for yesterday', 'warning'); return; }
 
-    // Apply to edit rows
+    // كوبي بس لو الـ agent شغال في اليوم الجديد
+    let copied = 0;
     data.forEach(b => {
-      if (editRows[b.agent_id]) {
+      if (editRows[b.agent_id]) { // شغال في اليوم الجديد
         editRows[b.agent_id].break1 = b.break1 ? b.break1.substring(0,5) : '';
         editRows[b.agent_id].lunch  = b.lunch  ? b.lunch.substring(0,5)  : '';
         editRows[b.agent_id].break2 = b.break2 ? b.break2.substring(0,5) : '';
+        copied++;
       }
     });
 
-    // Update inputs
-    allAgents.forEach((agent, idx) => {
-      const inputs = document.querySelectorAll(`#breaks-tbody tr:nth-child(${idx+1}) input[type="text"]`);
-      if (inputs.length >= 3 && editRows[agent.id]) {
+    // حدث الـ inputs في الـ DOM
+    const rows = document.querySelectorAll('#breaks-tbody tr');
+    workingAgents.forEach((agent, idx) => {
+      const row = rows[idx];
+      if (!row) return;
+      const inputs = row.querySelectorAll('input');
+      if (inputs.length >= 3) {
         inputs[0].value = editRows[agent.id].break1;
         inputs[1].value = editRows[agent.id].lunch;
         inputs[2].value = editRows[agent.id].break2;
       }
     });
 
-    showToast('Copied from yesterday!', 'success');
+    showToast('Copied breaks for ' + copied + ' working agent(s)!', 'success');
   } catch(e) {
     showToast('Failed: ' + e.message, 'error');
   }
 }
 
-// ── Clear Agent Breaks ──
-function clearAgentBreaks(agentId) {
-  if (editRows[agentId]) {
-    editRows[agentId].break1 = '';
-    editRows[agentId].lunch  = '';
-    editRows[agentId].break2 = '';
-  }
-  loadBreaks();
+// ── REGENERATE BREAKS من الـ Schedule ──
+async function regenerateBreaks() {
+  const date = document.getElementById('date-picker').value;
+
+  openModal('Regenerate Breaks',
+    'This will recalculate breaks based on current schedule for ' + formatDate(date) + '. Existing breaks will be overwritten. Continue?',
+    async () => {
+      const btn = document.querySelector('.btn-ghost[onclick="regenerateBreaks()"]');
+      if (btn) { btn.disabled=true; btn.innerHTML='<i class="fas fa-spinner fa-spin"></i>'; }
+      try {
+        // جيب الـ schedule لليوم ده
+        const { data: schedules } = await db.from('schedule')
+          .select('agent_id, shift_type_id, shift_types(name,start_time,end_time)')
+          .eq('shift_date', date)
+          .eq('day_type', 'Work');
+
+        if (!schedules || !schedules.length) {
+          showToast('No working agents found for this day', 'warning');
+          return;
+        }
+
+        // حساب الـ breaks بنفس الـ logic بتاع الـ Schedule publish
+        const shiftGroups = {};
+        schedules.forEach(s => {
+          if (!s.shift_types) return;
+          const key = s.shift_types.start_time + '_' + s.shift_types.end_time;
+          if (!shiftGroups[key]) shiftGroups[key] = [];
+          shiftGroups[key].push({ agent_id: s.agent_id, ...s.shift_types });
+        });
+
+        const upserts = [];
+        Object.values(shiftGroups).forEach(group => {
+          const shiftStartMins = timeToMins(group[0].start_time);
+          const shiftEndMins   = timeToMins(group[0].end_time);
+          const noBreakStart   = shiftStartMins + 60;
+          const noBreakEnd     = shiftEndMins   - 60;
+          const window         = noBreakEnd - noBreakStart;
+          const windowThird    = Math.floor(window / 3);
+          const maxOut         = Math.max(1, group.length - 1);
+          const gapMins        = 15;
+
+          group.forEach((agent, idx) => {
+            const slotIdx = idx % maxOut;
+            const offset  = slotIdx * gapMins;
+            const b1 = Math.min(noBreakStart + Math.floor(windowThird*0.3) + offset, noBreakEnd-15);
+            const ln = Math.min(noBreakStart + windowThird + Math.floor(windowThird*0.3) + offset, noBreakEnd-30);
+            const b2 = Math.min(noBreakStart + windowThird*2 + Math.floor(windowThird*0.3) + offset, noBreakEnd-15);
+
+            upserts.push({
+              agent_id:   agent.agent_id,
+              break_date: date,
+              shift_time: group[0].start_time.substring(0,5)+' - '+group[0].end_time.substring(0,5),
+              break1:     minsToTime(b1),
+              lunch:      minsToTime(ln),
+              break2:     minsToTime(b2),
+              updated_at: new Date().toISOString(),
+            });
+          });
+        });
+
+        if (upserts.length) {
+          const { error } = await db.from('breaks').upsert(upserts, { onConflict: 'agent_id,break_date' });
+          if (error) throw error;
+        }
+
+        showToast('Breaks regenerated for ' + upserts.length + ' agent(s)!', 'success');
+        await loadBreaks();
+      } catch(e) {
+        showToast('Failed: ' + e.message, 'error');
+      } finally {
+        if (btn) { btn.disabled=false; btn.innerHTML='<i class="fas fa-magic"></i> Regenerate from Schedule'; }
+      }
+    }
+  );
 }
 
-// ── Open Add Panel (bulk set) ──
-function openAddPanel() {
-  document.getElementById('panel-title').innerText = 'Quick Set Breaks';
-  document.getElementById('panel-body').innerHTML = `
-    <div style="font-size:13px;color:var(--muted);margin-bottom:16px;">
-      Set the same break times for all working agents at once.
-    </div>
-    <div class="form-grid">
-      <div class="form-group">
-        <label class="form-label">☕ Break 1</label>
-        <input type="time" id="bulk-break1" class="form-input" value="12:00">
-      </div>
-      <div class="form-group">
-        <label class="form-label">🍽️ Lunch</label>
-        <input type="time" id="bulk-lunch" class="form-input" value="14:00">
-      </div>
-      <div class="form-group">
-        <label class="form-label">🫖 Break 2</label>
-        <input type="time" id="bulk-break2" class="form-input" value="16:00">
-      </div>
-    </div>
-    <div class="divider"></div>
-    <div style="font-size:12px;color:var(--muted);">
-      <i class="fas fa-info-circle" style="color:var(--gold);margin-right:6px;"></i>
-      This will override existing breaks for all agents on the selected date.
-    </div>
-  `;
-  document.getElementById('panel-footer').innerHTML = `
-    <button class="btn btn-ghost" onclick="closePanel()">Cancel</button>
-    <button class="btn btn-primary" onclick="applyBulkBreaks()">
-      <i class="fas fa-magic"></i> Apply to All
-    </button>
-  `;
-  openPanel();
-}
-
-async function applyBulkBreaks() {
-  const break1 = document.getElementById('bulk-break1').value;
-  const lunch  = document.getElementById('bulk-lunch').value;
-  const break2 = document.getElementById('bulk-break2').value;
-  const date   = document.getElementById('date-picker').value;
-
-  try {
-    const upserts = allAgents.map(agent => ({
-      agent_id:   agent.id,
-      break_date: date,
-      break1, lunch, break2,
-      updated_at: new Date().toISOString(),
-    }));
-
-    const { error } = await db.from('breaks')
-      .upsert(upserts, { onConflict: 'agent_id,break_date' });
-    if (error) throw error;
-
-    showToast('Breaks applied to all agents!', 'success');
-    closePanel();
-    loadBreaks();
-  } catch(e) {
-    showToast('Failed: ' + e.message, 'error');
-  }
-}
-
-// ── Helpers ──
-function formatTimeInput(val) {
-  if (!val) return '';
-  // Accept HH:MM or HH:MM:SS
-  const m = val.match(/^(\d{1,2}):(\d{2})/);
-  if (!m) return val;
-  const h = String(parseInt(m[1])).padStart(2,'0');
-  const min = m[2];
-  return h + ':' + min + ':00';
-}
-
-function formatDate(d) {
-  if (!d) return '—';
-  return new Date(d+'T00:00:00').toLocaleDateString('en-GB',{weekday:'long',day:'2-digit',month:'long',year:'numeric'});
-}
-function formatTime(t) { return t ? t.substring(0,5) : '—'; }
-
-function openModal(title, msg, onConfirm) {
-  document.getElementById('modal-title').innerText = title;
-  document.getElementById('modal-msg').innerText   = msg;
-  document.getElementById('modal-overlay').classList.add('open');
-  document.getElementById('modal-confirm').onclick = () => { closeModal(); onConfirm(); };
-}
-function closeModal() { document.getElementById('modal-overlay').classList.remove('open'); }
-function openPanel()  { document.getElementById('panel-overlay').classList.add('open'); document.getElementById('slide-panel').classList.add('open'); }
-function closePanel() { document.getElementById('panel-overlay').classList.remove('open'); document.getElementById('slide-panel').classList.remove('open'); }
-
-// ── Tab Switch ──
+// ── WEEKLY VIEW ──
 function switchBreakTab(tab, btn) {
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
@@ -465,170 +418,93 @@ function switchBreakTab(tab, btn) {
   if (tab==='weekly') loadWeekSelectOptions();
 }
 
-// ── Load Week Options ──
 async function loadWeekSelectOptions() {
   const sel = document.getElementById('week-select');
-  if (sel.options.length > 1) return; // already loaded
-
+  if (sel.options.length > 1) return;
   try {
-    const { data } = await db.from('schedule_weeks')
-      .select('*')
-      .order('week_start', { ascending: false });
-
-    (data||[]).forEach((w, idx) => {
-      const weekNum = (data.length - idx);
-      const from = formatDateShort(w.week_start);
-      const to   = formatDateShort(w.week_end);
-      const opt  = new Option(`Week ${weekNum}  (${from} → ${to})`, w.id);
+    const { data } = await db.from('schedule_weeks').select('*').order('week_start',{ascending:false});
+    (data||[]).forEach((w,idx) => {
+      const opt = new Option('Week '+(data.length-idx)+'  ('+formatDateShort(w.week_start)+' → '+formatDateShort(w.week_end)+')', w.id);
       opt.dataset.start = w.week_start;
       opt.dataset.end   = w.week_end;
       sel.add(opt);
     });
-  } catch(e) {
-    showToast('Failed to load weeks: ' + e.message, 'error');
-  }
+  } catch(e) { showToast('Failed to load weeks', 'error'); }
 }
 
-// ── Load Weekly Breaks ──
 async function loadWeeklyBreaks() {
-  const sel     = document.getElementById('week-select');
-  const weekId  = sel.value;
-  const gridEl  = document.getElementById('weekly-grid');
-
+  const sel    = document.getElementById('week-select');
+  const weekId = sel.value;
+  const gridEl = document.getElementById('weekly-grid');
   if (!weekId) return;
 
   const opt   = sel.selectedOptions[0];
   const start = opt.dataset.start;
   const end   = opt.dataset.end;
-
-  // Update label
-  document.getElementById('week-dates-label').innerText =
-    formatDateShort(start) + ' → ' + formatDateShort(end);
-
+  document.getElementById('week-dates-label').innerText = formatDateShort(start)+' → '+formatDateShort(end);
   gridEl.innerHTML = '<div class="loading-wrap"><div class="spinner"></div></div>';
 
   try {
-    // Get working agents for each day of the week
     const dates = getWeekDates(start, end);
-
-    // Load schedule for this week (only Work days)
     const { data: schedules } = await db.from('schedule')
-      .select('agent_id, shift_date, day_type, shift_types(name,start_time,end_time)')
-      .eq('week_id', weekId)
-      .eq('day_type', 'Work');
-
-    // Load breaks for this week
+      .select('agent_id,shift_date,day_type,shift_types(name,start_time,end_time)')
+      .eq('week_id', weekId).eq('day_type','Work');
     const { data: breaks } = await db.from('breaks')
-      .select('*')
-      .gte('break_date', start)
-      .lte('break_date', end);
+      .select('*').gte('break_date',start).lte('break_date',end);
 
-    // Build set of agents who work at least one day this week
-    const workingAgentIds = new Set((schedules||[]).map(s => s.agent_id));
-    const workingAgents   = allAgents.filter(a => workingAgentIds.has(a.id));
+    const workingIds = new Set((schedules||[]).map(s=>s.agent_id));
+    const wAgents    = allAgents.filter(a=>workingIds.has(a.id));
+    if (!wAgents.length) { gridEl.innerHTML='<div class="empty-state" style="padding:40px;"><span class="empty-icon">📭</span>No working agents this week</div>'; return; }
 
-    if (!workingAgents.length) {
-      gridEl.innerHTML = '<div class="empty-state" style="padding:40px;"><span class="empty-icon">📭</span>No working agents this week</div>';
-      return;
-    }
-
-    // Build breaks map: agentId_date -> {break1, lunch, break2}
     const breaksMap = {};
-    (breaks||[]).forEach(b => {
-      breaksMap[b.agent_id + '_' + b.break_date] = b;
-    });
+    (breaks||[]).forEach(b => { breaksMap[b.agent_id+'_'+b.break_date]=b; });
+    const schedMap  = {};
+    (schedules||[]).forEach(s => { schedMap[s.agent_id+'_'+s.shift_date]=s; });
 
-    // Build schedule map: agentId_date -> shift
-    const schedMap = {};
-    (schedules||[]).forEach(s => {
-      schedMap[s.agent_id + '_' + s.shift_date] = s;
-    });
-
-    // Build HTML table
-    let html = '<table class="week-grid"><thead><tr>';
-    html += '<th class="agent-col">Agent</th>';
-    dates.forEach(d => {
-      html += `<th>
-        <div style="display:flex;flex-direction:column;align-items:center;gap:2px;">
-          <span style="font-size:10px;font-weight:700;">${d.dayName}</span>
-          <span style="font-size:9px;color:var(--muted);">${d.display}</span>
-        </div>
-      </th>`;
-    });
+    let html = '<table class="week-grid"><thead><tr><th class="agent-col">Agent</th>';
+    dates.forEach(d => { html+='<th><div style="display:flex;flex-direction:column;align-items:center;gap:2px;"><span style="font-size:10px;font-weight:700;">'+d.dayName+'</span><span style="font-size:9px;color:var(--muted);">'+d.display+'</span></div></th>'; });
     html += '</tr></thead><tbody>';
 
-    workingAgents.forEach(agent => {
-      html += `<tr>
-        <td class="agent-col">
-          <div style="display:flex;align-items:center;gap:6px;">
-            <div class="agent-avatar" style="width:24px;height:24px;font-size:9px;flex-shrink:0;">${initials(agent.formal_name)}</div>
-            <span style="font-size:12px;">${agent.formal_name}</span>
-          </div>
-        </td>`;
-
+    wAgents.forEach(agent => {
+      html += '<tr><td class="agent-col"><div style="display:flex;align-items:center;gap:6px;"><div class="agent-avatar" style="width:24px;height:24px;font-size:9px;flex-shrink:0;">'+initials(agent.formal_name)+'</div><span style="font-size:12px;">'+agent.formal_name+'</span></div></td>';
       dates.forEach(d => {
-        const schedKey  = agent.id + '_' + d.iso;
-        const breakKey  = agent.id + '_' + d.iso;
-        const isWorking = !!schedMap[schedKey];
-        const b         = breaksMap[breakKey];
-
+        const isWorking = !!schedMap[agent.id+'_'+d.iso];
+        const b         = breaksMap[agent.id+'_'+d.iso];
         if (!isWorking) {
-          html += `<td style="background:var(--surface2);text-align:center;">
-            <span style="font-size:10px;color:var(--border2);">—</span>
-          </td>`;
+          html += '<td style="background:var(--surface2);text-align:center;"><span style="font-size:10px;color:var(--border2);">—</span></td>';
         } else if (b) {
-          html += `<td>
-            <div class="break-cell">
-              <span class="break-time b1">☕ ${b.break1 ? b.break1.substring(0,5) : '—'}</span>
-              <span class="break-time ln">🍽 ${b.lunch  ? b.lunch.substring(0,5)  : '—'}</span>
-              <span class="break-time b2">🫖 ${b.break2 ? b.break2.substring(0,5) : '—'}</span>
-            </div>
-          </td>`;
+          html += '<td><div class="break-cell"><span class="break-time b1">☕ '+(b.break1?b.break1.substring(0,5):'—')+'</span><span class="break-time ln">🍽 '+(b.lunch?b.lunch.substring(0,5):'—')+'</span><span class="break-time b2">🫖 '+(b.break2?b.break2.substring(0,5):'—')+'</span></div></td>';
         } else {
-          html += `<td style="text-align:center;">
-            <span style="font-size:10px;color:var(--muted);">Not set</span>
-          </td>`;
+          html += '<td style="text-align:center;"><span style="font-size:10px;color:var(--muted);">Not set</span></td>';
         }
       });
-
       html += '</tr>';
     });
-
     html += '</tbody></table>';
     gridEl.innerHTML = html;
-
   } catch(e) {
-    gridEl.innerHTML = '<div class="empty-state"><span class="empty-icon">❌</span>Failed: ' + e.message + '</div>';
-    showToast('Failed: ' + e.message, 'error');
+    gridEl.innerHTML = '<div class="empty-state"><span class="empty-icon">❌</span>Failed: '+e.message+'</div>';
+    showToast('Failed: '+e.message,'error');
   }
 }
 
-// ── Get Week Dates ──
-function getWeekDates(start, end) {
-  const dates = [];
-  const days  = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
-  let cur = new Date(start + 'T00:00:00');
-  const endDate = new Date(end + 'T00:00:00');
-  while (cur <= endDate) {
-    const iso = cur.toISOString().split('T')[0];
-    dates.push({
-      iso,
-      dayName: days[cur.getDay()],
-      display: String(cur.getDate()).padStart(2,'0') + '/' + String(cur.getMonth()+1).padStart(2,'0')
-    });
-    cur.setDate(cur.getDate() + 1);
-  }
+// ── HELPERS ──
+function timeToMins(t) { if(!t)return 0; const p=t.substring(0,5).split(':'); return (+p[0])*60+(+p[1]); }
+function minsToTime(m) { const h=Math.floor(m/60).toString().padStart(2,'0'); const mn=(m%60).toString().padStart(2,'0'); return h+':'+mn+':00'; }
+function fmtTime(val) { if(!val)return ''; const m=val.match(/^(\d{1,2}):(\d{2})/); if(!m)return val; return String(parseInt(m[1])).padStart(2,'0')+':'+m[2]; }
+function formatDate(d) { if(!d)return '—'; return new Date(d+'T00:00:00').toLocaleDateString('en-GB',{weekday:'long',day:'2-digit',month:'long',year:'numeric'}); }
+function formatTime(t) { return t?t.substring(0,5):'—'; }
+function formatDateShort(d) { if(!d)return '—'; const dt=new Date(d+'T00:00:00'); return String(dt.getDate()).padStart(2,'0')+'/'+String(dt.getMonth()+1).padStart(2,'0'); }
+function getWeekDates(start,end) {
+  const dates=[]; const days=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  let cur=new Date(start+'T00:00:00'); const endDate=new Date(end+'T00:00:00');
+  while(cur<=endDate){const iso=cur.toISOString().split('T')[0];dates.push({iso,dayName:days[cur.getDay()],display:String(cur.getDate()).padStart(2,'0')+'/'+String(cur.getMonth()+1).padStart(2,'0')});cur.setDate(cur.getDate()+1);}
   return dates;
 }
-
-function formatDateShort(d) {
-  if (!d) return '—';
-  const dt = new Date(d + 'T00:00:00');
-  return String(dt.getDate()).padStart(2,'0') + '/' + String(dt.getMonth()+1).padStart(2,'0');
-}
+function openModal(title,msg,onConfirm){document.getElementById('modal-title').innerText=title;document.getElementById('modal-msg').innerText=msg;document.getElementById('modal-overlay').classList.add('open');document.getElementById('modal-confirm').onclick=()=>{closeModal();onConfirm();};}
+function closeModal(){document.getElementById('modal-overlay').classList.remove('open');}
 
 init();
 </script>
-
 </body>
 </html>
