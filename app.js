@@ -1119,9 +1119,9 @@ function quickLogCall(reason) {
   const agent = document.getElementById('f-agent').value;
   if (!agent) { customAlert('Error', 'Please select Agent Name first!'); return; }
   document.getElementById('f-reason').value = reason;
+  goStep(4);
   setTimeout(() => submitCallLogForm(), 200);
 }
-
 function submitCallLogForm() {
   const agent  = document.getElementById('f-agent').value;
   const reason = document.getElementById('f-reason').value;
@@ -1141,7 +1141,13 @@ function submitCallLogForm() {
   if (!isQ && !radioValues['f-unit'])     { showFormErr('Select Unit Type!'); return; }
 
   const btn = document.getElementById('formSubmitBtn');
-  btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner spinner"></i> Submitting...';
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fas fa-spinner spinner"></i> Submitting...';
+
+  const slowTimer = setTimeout(() => {
+    if (btn.disabled) btn.innerHTML = '<i class="fas fa-spinner spinner"></i> Almost there...';
+  }, 5000);
+
   document.getElementById('form-error').style.display = 'none';
 
   const data = {
@@ -1158,18 +1164,24 @@ function submitCallLogForm() {
   };
 
   const gasAction = (_activeChannel === 'whatsapp') ? 'submitWhatsAppLog' : 'submitCallLog';
+
   gasRun(gasAction, data).then(res => {
-    btn.disabled = false; btn.innerHTML = '<i class="fas fa-paper-plane"></i> Submit to Database';
+    clearTimeout(slowTimer);
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fas fa-paper-plane"></i> Submit to Database';
     if (res.status === 'success') {
       showResultPopup('success', 'Call Logged! 🎉', 'Customer data has been saved to the database successfully.', 'Great!', () => resetCallForm());
-    } else { showFormErr(res.msg || 'Something went wrong.'); }
+    } else {
+      showFormErr(res.msg || 'Something went wrong.');
+    }
   }).catch(err => {
-    btn.disabled = false; btn.innerHTML = '<i class="fas fa-paper-plane"></i> Submit to Database';
+    clearTimeout(slowTimer);
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fas fa-paper-plane"></i> Submit to Database';
     showFormErr('Network error. Please try again.');
     console.error('gasRun error:', err);
   });
 }
-
 function resetCallForm() {
   ['f-reason','f-mobile','f-extra'].forEach(id => document.getElementById(id).value = '');
   document.getElementById('f-cname').value = '';
