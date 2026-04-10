@@ -371,12 +371,9 @@ async function regenerateBreaks() {
           const noBreakEnd     = shiftEndMins   - 60;
           const window         = noBreakEnd - noBreakStart;
           const windowThird    = Math.floor(window / 3);
-          const maxOut         = Math.max(1, group.length - 1);
-          const gapMins        = 15;
-
-          group.forEach((agent, idx) => {
-            const slotIdx = idx % maxOut;
-            const offset  = slotIdx * gapMins;
+         group.forEach((agent, idx) => {
+            const spread = group.length > 1 ? windowThird / group.length : 0;
+            const offset = Math.floor(idx * spread);
             const b1 = Math.min(noBreakStart + Math.floor(windowThird*0.3) + offset, noBreakEnd-15);
             const ln = Math.min(noBreakStart + windowThird + Math.floor(windowThird*0.3) + offset, noBreakEnd-30);
             const b2 = Math.min(noBreakStart + windowThird*2 + Math.floor(windowThird*0.3) + offset, noBreakEnd-15);
