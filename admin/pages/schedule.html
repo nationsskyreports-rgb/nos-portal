@@ -83,12 +83,9 @@
 <body>
 
 <div class="admin-layout">
-  <!-- ══ SIDEBAR ══ -->
   <aside class="sidebar" id="sidebar"></aside>
-  <!-- ══ MAIN ══ -->
   <div class="main-content">
 
-    <!-- TOP BAR -->
     <div class="topbar">
       <div class="topbar-left">
         <div class="page-title">Schedule</div>
@@ -117,7 +114,6 @@
       </div>
     </div>
 
-    <!-- PAGE CONTENT -->
     <div class="page-content">
 
       <!-- WEEKS TABS -->
@@ -129,30 +125,30 @@
           </div>
           <div style="font-size:12px;color:var(--muted);" id="week-count">Loading...</div>
         </div>
-<div style="padding:12px 16px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;border-bottom:1px solid var(--border);">
-  <select id="filter-year" class="form-input" style="width:110px;font-size:12px;" onchange="filterWeekTabs()">
-    <option value="">All Years</option>
-  </select>
-  <select id="filter-month" class="form-input" style="width:130px;font-size:12px;" onchange="filterWeekTabs()">
-    <option value="">All Months</option>
-    <option value="01">January</option>
-    <option value="02">February</option>
-    <option value="03">March</option>
-    <option value="04">April</option>
-    <option value="05">May</option>
-    <option value="06">June</option>
-    <option value="07">July</option>
-    <option value="08">August</option>
-    <option value="09">September</option>
-    <option value="10">October</option>
-    <option value="11">November</option>
-    <option value="12">December</option>
-  </select>
-  <select id="filter-week" class="form-input" style="width:220px;font-size:12px;" onchange="selectWeek(this.value)">
-    <option value="">— Select a week —</option>
-  </select>
-</div>
-<div style="padding:12px 16px;display:flex;gap:8px;flex-wrap:wrap;" id="weeks-tabs"></div>
+        <div style="padding:12px 16px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;border-bottom:1px solid var(--border);">
+          <select id="filter-year" class="form-input" style="width:110px;font-size:12px;" onchange="filterWeekTabs()">
+            <option value="">All Years</option>
+          </select>
+          <select id="filter-month" class="form-input" style="width:130px;font-size:12px;" onchange="filterWeekTabs()">
+            <option value="">All Months</option>
+            <option value="01">January</option>
+            <option value="02">February</option>
+            <option value="03">March</option>
+            <option value="04">April</option>
+            <option value="05">May</option>
+            <option value="06">June</option>
+            <option value="07">July</option>
+            <option value="08">August</option>
+            <option value="09">September</option>
+            <option value="10">October</option>
+            <option value="11">November</option>
+            <option value="12">December</option>
+          </select>
+          <select id="filter-week" class="form-input" style="width:220px;font-size:12px;" onchange="selectWeek(this.value)">
+            <option value="">— Select a week —</option>
+          </select>
+        </div>
+        <div style="padding:12px 16px;display:flex;gap:8px;flex-wrap:wrap;" id="weeks-tabs"></div>
       </div>
 
       <!-- SCHEDULE GRID -->
@@ -175,11 +171,7 @@
             </button>
           </div>
         </div>
-
-        <!-- Count Summary -->
         <div style="padding:10px 16px;border-bottom:1px solid var(--border);display:flex;gap:12px;flex-wrap:wrap;" id="shift-summary"></div>
-
-        <!-- Grid -->
         <div class="section-body no-pad">
           <div class="table-wrap">
             <div id="schedule-grid"></div>
@@ -203,7 +195,7 @@
   </div>
 </div>
 
-<!-- ══ NEW WEEK PANEL ══ -->
+<!-- PANEL -->
 <div class="panel-overlay" id="panel-overlay" onclick="closePanel()"></div>
 <div class="slide-panel" id="slide-panel">
   <div class="panel-header">
@@ -214,7 +206,7 @@
   <div class="panel-footer" id="panel-footer"></div>
 </div>
 
-<!-- CONFIRM MODAL -->
+<!-- MODAL -->
 <div class="modal-overlay" id="modal-overlay">
   <div class="modal-box">
     <div class="modal-header">
@@ -229,7 +221,6 @@
   </div>
 </div>
 
-<!-- TOAST -->
 <div id="toast-container"></div>
 
 <script src="../js/supabase.js"></script>
@@ -246,13 +237,12 @@ let allWeeks      = [];
 let allAgents     = [];
 let allShiftTypes = [];
 let currentWeek   = null;
-let scheduleData  = {}; // { agentId_date: { day_type, shift_type_id } }
+let scheduleData  = {};
 let unsaved       = false;
 
 const DAY_TYPES = ['Work','Off','Annual','Sick','Casual','PH','Task'];
 const TODAY     = new Date().toISOString().split('T')[0];
 
-// ── Load All ──
 async function loadAll() {
   await Promise.all([loadAgents(), loadShiftTypes(), loadWeeks()]);
 }
@@ -267,7 +257,6 @@ async function loadShiftTypes() {
   allShiftTypes = data || [];
 }
 
-// ── Load Weeks ──
 async function loadWeeks() {
   const { data } = await db.from('schedule_weeks').select('*').order('week_start', { ascending: false });
   allWeeks = data || [];
@@ -276,14 +265,11 @@ async function loadWeeks() {
 
 function renderWeekTabs() {
   document.getElementById('week-count').innerText = `${allWeeks.length} week(s)`;
-
-  // Fill years dropdown
   const years = [...new Set(allWeeks.map(w => w.week_start.substring(0,4)))].sort().reverse();
   const yearEl = document.getElementById('filter-year');
   const curYear = yearEl.value;
   yearEl.innerHTML = '<option value="">All Years</option>' +
     years.map(y => `<option value="${y}" ${curYear===y?'selected':''}>${y}</option>`).join('');
-
   filterWeekTabs();
 }
 
@@ -291,7 +277,6 @@ function filterWeekTabs() {
   const year  = document.getElementById('filter-year').value;
   const month = document.getElementById('filter-month').value;
 
-  // Filter weeks
   const filtered = allWeeks.filter(w => {
     const ws = w.week_start;
     if (year  && !ws.startsWith(year))       return false;
@@ -299,14 +284,12 @@ function filterWeekTabs() {
     return true;
   });
 
-  // Fill week dropdown
   const weekEl = document.getElementById('filter-week');
   weekEl.innerHTML = '<option value="">— Select a week —</option>' +
     filtered.map(w => `<option value="${w.id}" ${currentWeek?.id===w.id?'selected':''}>
       ${formatDateShort(w.week_start)} → ${formatDateShort(w.week_end)} (${w.status})
     </option>`).join('');
 
-  // Render tabs
   const container = document.getElementById('weeks-tabs');
   if (!filtered.length) {
     container.innerHTML = `<div style="color:var(--muted);font-size:13px;padding:8px;">No weeks found.</div>`;
@@ -325,31 +308,26 @@ function filterWeekTabs() {
     </div>
   `).join('');
 }
-// ── Select Week ──
+
 async function selectWeek(weekId) {
   if (unsaved) {
     const go = confirm('You have unsaved changes. Discard?');
     if (!go) return;
     unsaved = false;
   }
-
   currentWeek = allWeeks.find(w => w.id === weekId);
   renderWeekTabs();
-
   document.getElementById('no-week-selected').style.display = 'none';
   document.getElementById('schedule-card').style.display    = 'block';
-
   await loadScheduleGrid();
 }
 
-// ── Load Schedule Grid ──
 async function loadScheduleGrid() {
   if (!currentWeek) return;
 
   const gridEl = document.getElementById('schedule-grid');
   gridEl.innerHTML = `<div class="loading-wrap"><div class="spinner"></div></div>`;
 
-  // Update header
   document.getElementById('sched-week-title').innerText =
     `${formatDateFull(currentWeek.week_start)}  →  ${formatDateFull(currentWeek.week_end)}`;
 
@@ -357,122 +335,86 @@ async function loadScheduleGrid() {
   document.getElementById('sched-status-badge').innerHTML =
     `<span class="badge ${statusColor[currentWeek.status]||'badge-muted'}">${currentWeek.status}</span>`;
 
-  // Load existing schedule
-  const { data: existing } = await db.from('schedule')
-    .select('*')
-    .eq('week_id', currentWeek.id);
+  const { data: existing } = await db.from('schedule').select('*').eq('week_id', currentWeek.id);
 
   scheduleData = {};
-(existing || []).forEach(s => {
-  let shiftTypeId = s.shift_type_id;
-
-  // لو مفيش shift_type_id، دور على الشيفت من الوقت
-  if (!shiftTypeId && s.shift_time && s.day_type === 'Work') {
-    const parts = s.shift_time.split(' - ');
-    if (parts.length === 2) {
-      const matched = allShiftTypes.find(st =>
-        st.start_time.startsWith(parts[0].trim()) &&
-        st.end_time.startsWith(parts[1].trim())
-      );
-      if (matched) shiftTypeId = matched.id;
+  (existing || []).forEach(s => {
+    let shiftTypeId = s.shift_type_id;
+    if (!shiftTypeId && s.shift_time && s.day_type === 'Work') {
+      const parts = s.shift_time.split(' - ');
+      if (parts.length === 2) {
+        const matched = allShiftTypes.find(st =>
+          st.start_time.startsWith(parts[0].trim()) &&
+          st.end_time.startsWith(parts[1].trim())
+        );
+        if (matched) shiftTypeId = matched.id;
+      }
     }
-  }
+    scheduleData[`${s.agent_id}_${s.shift_date}`] = {
+      id:            s.id,
+      day_type:      s.day_type,
+      shift_type_id: shiftTypeId
+    };
+  });
 
-  scheduleData[`${s.agent_id}_${s.shift_date}`] = {
-    id:            s.id,
-    day_type:      s.day_type,
-    shift_type_id: shiftTypeId
-  };
-});
-  
-  // Generate dates for the week
   const dates = getWeekDates(currentWeek.week_start, currentWeek.week_end);
 
-  // Build table
-  let html = `<table class="sched-table"><thead><tr>
-    <th class="agent-col">Agent</th>`;
-
+  let html = `<table class="sched-table"><thead><tr><th class="agent-col">Agent</th>`;
   dates.forEach(d => {
     const isToday = d.iso === TODAY;
-    html += `<th>
-      <div class="day-header">
-        <span class="day-name ${isToday?'day-today':''}">${d.dayName}</span>
-        <span class="day-date ${isToday?'day-today':''}">${d.display}</span>
-      </div>
-    </th>`;
+    html += `<th><div class="day-header">
+      <span class="day-name ${isToday?'day-today':''}">${d.dayName}</span>
+      <span class="day-date ${isToday?'day-today':''}">${d.display}</span>
+    </div></th>`;
   });
   html += `</tr></thead><tbody>`;
 
   allAgents.forEach(agent => {
-    html += `<tr>
-      <td class="agent-col">
-        <div style="display:flex;align-items:center;gap:8px;">
-          <div class="agent-avatar" style="width:26px;height:26px;font-size:9px;flex-shrink:0;">
-            ${initials(agent.formal_name)}
-          </div>
-          <span>${agent.formal_name}</span>
-        </div>
-      </td>`;
-
+    html += `<tr><td class="agent-col">
+      <div style="display:flex;align-items:center;gap:8px;">
+        <div class="agent-avatar" style="width:26px;height:26px;font-size:9px;flex-shrink:0;">${initials(agent.formal_name)}</div>
+        <span>${agent.formal_name}</span>
+      </div></td>`;
     dates.forEach(d => {
       const key   = `${agent.id}_${d.iso}`;
       const entry = scheduleData[key] || { day_type: 'Off', shift_type_id: null };
       const cls   = getSelectClass(entry.day_type, entry.shift_type_id);
-
-      html += `<td>
-        <select class="shift-select ${cls}"
-          data-agent="${agent.id}" data-date="${d.iso}"
-          onchange="onShiftChange(this)">
-          ${buildShiftOptions(entry.day_type, entry.shift_type_id)}
-        </select>
-      </td>`;
+      html += `<td><select class="shift-select ${cls}" data-agent="${agent.id}" data-date="${d.iso}" onchange="onShiftChange(this)">
+        ${buildShiftOptions(entry.day_type, entry.shift_type_id)}
+      </select></td>`;
     });
-
     html += `</tr>`;
   });
 
-  // Day count rows
-  // Add count row inside the table before closing
-  html += `<tr style="background:var(--surface2);">
-    <td class="agent-col" style="font-size:11px;color:var(--muted);font-weight:700;padding:8px 12px;">Daily Count</td>`;
-  
+  html += `<tr style="background:var(--surface2);"><td class="agent-col" style="font-size:11px;color:var(--muted);font-weight:700;padding:8px 12px;">Daily Count</td>`;
   dates.forEach(d => {
-    const dayEntries = Object.entries(scheduleData)
-      .filter(([k]) => k.endsWith('_' + d.iso));
+    const dayEntries = Object.entries(scheduleData).filter(([k]) => k.endsWith('_' + d.iso));
     const working = dayEntries.filter(([,v]) => v.day_type === 'Work').length;
     html += `<td style="text-align:center;padding:8px 4px;">
       <span style="color:#10B981;font-weight:800;font-size:13px;">${working}</span>
       <span style="color:var(--muted);font-size:10px;"> working</span>
     </td>`;
   });
-  
-  html += `</tr>`;
-  html += `</tbody></table>`;
+  html += `</tr></tbody></table>`;
 
   gridEl.innerHTML = html;
   updateSummary(dates);
 }
 
-// ── Build Shift Options ──
 function buildShiftOptions(dayType, shiftTypeId) {
   let opts = `<option value="Off" ${dayType==='Off'?'selected':''}>— Off —</option>`;
-
-  // Work shifts
   allShiftTypes.forEach(st => {
     const val = `Work__${st.id}`;
     const sel = dayType==='Work' && shiftTypeId===st.id ? 'selected' : '';
     opts += `<option value="${val}" ${sel}>${formatTime(st.start_time)} - ${formatTime(st.end_time)} (${st.name})</option>`;
   });
-
-  // Leave types
   ['Annual','Sick','Casual','PH','Task'].forEach(t => {
     opts += `<option value="${t}" ${dayType===t?'selected':''}>${t}</option>`;
   });
-
   return opts;
 }
 
-function getSelectClass(dayType, shiftTypeId) {
+function getSelectClass(dayType) {
   if (dayType === 'Work')   return 'is-work';
   if (dayType === 'Annual') return 'is-annual';
   if (dayType === 'Sick')   return 'is-sick';
@@ -481,39 +423,28 @@ function getSelectClass(dayType, shiftTypeId) {
   return 'is-off';
 }
 
-// ── On Shift Change ──
 function onShiftChange(sel) {
   const agentId = sel.dataset.agent;
   const date    = sel.dataset.date;
   const val     = sel.value;
   const key     = `${agentId}_${date}`;
-
-  // Parse value
   let dayType = val, shiftTypeId = null;
   if (val.startsWith('Work__')) {
     dayType     = 'Work';
     shiftTypeId = val.split('__')[1];
   }
-
-  // Update local state
   scheduleData[key] = { ...scheduleData[key], day_type: dayType, shift_type_id: shiftTypeId };
-
-  // Update style
-  sel.className = `shift-select ${getSelectClass(dayType, shiftTypeId)}`;
-
+  sel.className = `shift-select ${getSelectClass(dayType)}`;
   unsaved = true;
   document.getElementById('save-btn').innerHTML = '<i class="fas fa-save"></i> Save <span style="color:var(--warning);font-size:10px;">●</span>';
 }
 
-// ── Save Schedule ──
 async function saveSchedule() {
   const btn = document.getElementById('save-btn');
   btn.disabled = true;
   btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
-
   try {
     const upserts = [];
-
     Object.keys(scheduleData).forEach(key => {
       const [agentId, date] = key.split('_');
       const entry = scheduleData[key];
@@ -526,17 +457,13 @@ async function saveSchedule() {
         status:        'Approved',
       });
     });
-
     if (upserts.length) {
-      const { error } = await db.from('schedule')
-        .upsert(upserts, { onConflict: 'agent_id,shift_date' });
+      const { error } = await db.from('schedule').upsert(upserts, { onConflict: 'agent_id,shift_date' });
       if (error) throw error;
     }
-
     unsaved = false;
     showToast('Schedule saved!', 'success');
     btn.innerHTML = '<i class="fas fa-save"></i> Save';
-
   } catch(e) {
     showToast('Save failed: ' + e.message, 'error');
   } finally {
@@ -544,7 +471,6 @@ async function saveSchedule() {
   }
 }
 
-// ── Publish Week ──
 async function publishWeek() {
   const unpublished = allWeeks.filter(w =>
     w.id !== currentWeek.id &&
@@ -555,29 +481,24 @@ async function publishWeek() {
   const warningMsg = unpublished.length > 0
     ? `⚠️ Warning: ${unpublished.length} older week(s) are not published yet.\n\nPublishing will make this schedule visible to all agents and auto-generate breaks. Continue?`
     : 'Publishing will make this schedule visible to all agents and auto-generate breaks. Continue?';
-  openModal('Publish Week', warningMsg,
-    async () => {
-      try {
-        await saveSchedule();
-        const { error } = await db.from('schedule_weeks')
-          .update({ status: 'Published' })
-          .eq('id', currentWeek.id);
-        if (error) throw error;
-        currentWeek.status = 'Published';
-        showToast('Generating breaks...', 'info');
-        await autoGenerateBreaks();
-        showToast('Updating leave balance...', 'info');
-        await updateAnnualLeave();
-        showToast('Week published & breaks generated!', 'success');
-        await loadWeeks();
-        renderWeekTabs();
-        document.getElementById('sched-status-badge').innerHTML =
-          '<span class="badge badge-success">Published</span>';
-      } catch(e) {
-        showToast('Failed: ' + e.message, 'error');
-      }
+  openModal('Publish Week', warningMsg, async () => {
+    try {
+      await saveSchedule();
+      const { error } = await db.from('schedule_weeks').update({ status: 'Published' }).eq('id', currentWeek.id);
+      if (error) throw error;
+      currentWeek.status = 'Published';
+      showToast('Generating breaks...', 'info');
+      await autoGenerateBreaks();
+      showToast('Updating leave balance...', 'info');
+      await updateAnnualLeave();
+      showToast('Week published & breaks generated!', 'success');
+      await loadWeeks();
+      renderWeekTabs();
+      document.getElementById('sched-status-badge').innerHTML = '<span class="badge badge-success">Published</span>';
+    } catch(e) {
+      showToast('Failed: ' + e.message, 'error');
     }
-  );
+  });
 }
 
 async function updateAnnualLeave() {
@@ -585,7 +506,6 @@ async function updateAnnualLeave() {
   const yearStart = year + '-01-01';
   const weekEnd   = currentWeek.week_end;
 
-  // جيب كل الـ Annual days من أول السنة للأسبوع الحالي
   const { data: leaves } = await db.from('schedule')
     .select('agent_id, shift_date')
     .eq('day_type', 'Annual')
@@ -594,12 +514,8 @@ async function updateAnnualLeave() {
 
   const cols = ['jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec'];
 
-  // جيب كل الـ annual_leave records للسنة دي
-  const { data: annualRecords } = await db.from('annual_leave')
-    .select('*')
-    .eq('year', year);
+  const { data: annualRecords } = await db.from('annual_leave').select('*').eq('year', year);
 
-  // ابني map للـ Annual days لكل agent
   const map = {};
   (leaves || []).forEach(l => {
     const month = new Date(l.shift_date + 'T00:00:00').getMonth();
@@ -607,59 +523,46 @@ async function updateAnnualLeave() {
     map[l.agent_id][cols[month]] = (map[l.agent_id][cols[month]] || 0) + 1;
   });
 
-  // حدث كل agent — حتى لو ماخدش إجازة
   for (const agent of allAgents) {
     const agentMonths  = map[agent.id] || {};
     const annualRecord = (annualRecords || []).find(a => a.agent_id === agent.id);
-
     if (!annualRecord) { await db.from('annual_leave').insert({ agent_id: agent.id, agent_name: agent.formal_name, year, ...updates, created_at: new Date().toISOString() }); continue; }
-
     const updates = {};
     cols.forEach(m => { updates['used_' + m] = agentMonths[m] || 0; });
-
     updates.total_used = cols.reduce((s, m) => s + (agentMonths[m] || 0), 0);
     updates.remaining  = (annualRecord.entitlement + annualRecord.carry_over) - updates.total_used;
     updates.updated_at = new Date().toISOString();
-
-    await db.from('annual_leave')
-      .update(updates)
-      .eq('agent_id', agent.id)
-      .eq('year', year);
+    await db.from('annual_leave').update(updates).eq('agent_id', agent.id).eq('year', year);
   }
 
   showToast('Leave balance updated! ✅', 'success');
 }
+
 // ── AUTO GENERATE BREAKS ──
 async function autoGenerateBreaks() {
   const dates = getWeekDates(currentWeek.week_start, currentWeek.week_end);
 
   for (const d of dates) {
-    // Get all agents working this day
     const workingAgents = [];
 
     allAgents.forEach(agent => {
       const key   = agent.id + '_' + d.iso;
       const entry = scheduleData[key];
       if (!entry || entry.day_type !== 'Work') return;
-
-      // Get shift times
       const shiftType = allShiftTypes.find(st => st.id === entry.shift_type_id);
       if (!shiftType) return;
-
       workingAgents.push({
         agent_id:   agent.id,
         agent_name: agent.formal_name,
-        start_time: shiftType.start_time, // HH:MM:SS
+        start_time: shiftType.start_time,
         end_time:   shiftType.end_time,
       });
     });
 
     if (!workingAgents.length) continue;
 
-    // Sort by start time
     workingAgents.sort((a, b) => a.start_time.localeCompare(b.start_time));
 
-    // Group by shift
     const shiftGroups = {};
     workingAgents.forEach(a => {
       const key = a.start_time + '_' + a.end_time;
@@ -669,38 +572,25 @@ async function autoGenerateBreaks() {
 
     const upserts = [];
 
-    // For each shift group, distribute breaks
     Object.values(shiftGroups).forEach(group => {
       const shiftStartMins = timeToMins(group[0].start_time);
       const shiftEndMins   = timeToMins(group[0].end_time);
-
-      // No break zones: first hour and last hour
-      const noBreakStart = shiftStartMins + 60;
-      const noBreakEnd   = shiftEndMins   - 60;
-      const window       = noBreakEnd - noBreakStart; // available minutes
-
-      // 3 break windows
-      // Break1: first 1/3 of window
-      // Lunch:  middle 1/3
-      // Break2: last 1/3
-      const windowThird = Math.floor(window / 3);
+      const noBreakStart   = shiftStartMins + 60;
+      const noBreakEnd     = shiftEndMins   - 60;
+      const window         = noBreakEnd - noBreakStart;
+      const windowThird    = Math.floor(window / 3);
 
       const break1BaseMin = noBreakStart + Math.floor(windowThird * 0.3);
       const lunchBaseMin  = noBreakStart + windowThird + Math.floor(windowThird * 0.3);
       const break2BaseMin = noBreakStart + windowThird * 2 + Math.floor(windowThird * 0.3);
 
-    group.forEach((agent, idx) => {
-      const spread = group.length > 1 ? windowThird / group.length : 0;
-      const offset = Math.floor(idx * spread);     
-      
-      const b1 = break1BaseMin + offset;
-        const ln = lunchBaseMin  + offset;
-        const b2 = break2BaseMin + offset;
+      group.forEach((agent, idx) => {
+        const spread = group.length > 1 ? windowThird / group.length : 0;
+        const offset = Math.floor(idx * spread);
 
-        // Cap to window - never go outside no-break zones
-        const b1Final = Math.min(b1, noBreakEnd - 15);
-        const lnFinal = Math.min(ln, noBreakEnd - 30);
-        const b2Final = Math.min(b2, noBreakEnd - 15);
+        const b1Final = roundToQuarter(Math.min(break1BaseMin + offset, noBreakEnd - 15));
+        const lnFinal = roundToQuarter(Math.min(lunchBaseMin  + offset, noBreakEnd - 30));
+        const b2Final = roundToQuarter(Math.min(break2BaseMin + offset, noBreakEnd - 15));
 
         upserts.push({
           agent_id:   agent.agent_id,
@@ -714,49 +604,42 @@ async function autoGenerateBreaks() {
       });
     });
 
-    // Save breaks for this day
     if (upserts.length) {
-      const { error } = await db.from('breaks')
-        .upsert(upserts, { onConflict: 'agent_id,break_date' });
+      const { error } = await db.from('breaks').upsert(upserts, { onConflict: 'agent_id,break_date' });
       if (error) console.error('Break save error:', error);
     }
   }
 }
 
-// ── Time Helpers ──
+// ── TIME HELPERS ──
 function timeToMins(t) {
   if (!t) return 0;
   const p = t.substring(0,5).split(':');
   return (+p[0]) * 60 + (+p[1]);
 }
-
 function minsToTime(mins) {
   const h = Math.floor(mins / 60).toString().padStart(2,'0');
   const m = (mins % 60).toString().padStart(2,'0');
   return h + ':' + m + ':00';
 }
+function roundToQuarter(mins) { return Math.round(mins / 15) * 15; }
 
-// ── Delete Week ──
+// ── DELETE WEEK ──
 async function deleteWeek() {
   openModal('Delete Week',
     `Delete week "${formatDateShort(currentWeek.week_start)} → ${formatDateShort(currentWeek.week_end)}"? All schedule data will be lost.`,
     async () => {
       try {
-        // Get dates in this week to delete breaks
-        const dates = getWeekDates(currentWeek.week_start, currentWeek.week_end);
+        const dates    = getWeekDates(currentWeek.week_start, currentWeek.week_end);
         const dateList = dates.map(d => d.iso);
-
-        // Delete schedule and breaks
         await db.from('schedule').delete().eq('week_id', currentWeek.id);
         await db.from('schedule_weeks').delete().eq('id', currentWeek.id);
-
-        // Delete breaks for all days in this week
         for (const date of dateList) {
           await db.from('breaks').delete().eq('break_date', date);
         }
-        currentWeek = null;
+        currentWeek  = null;
         scheduleData = {};
-        document.getElementById('schedule-card').style.display = 'none';
+        document.getElementById('schedule-card').style.display    = 'none';
         document.getElementById('no-week-selected').style.display = 'block';
         showToast('Week deleted!', 'warning');
         loadWeeks();
@@ -767,7 +650,7 @@ async function deleteWeek() {
   );
 }
 
-// ── New Week Panel ──
+// ── NEW WEEK PANEL ──
 function openNewWeekPanel() {
   document.getElementById('panel-title').innerText = 'Create New Week';
   document.getElementById('panel-body').innerHTML = `
@@ -805,13 +688,9 @@ function openNewWeekPanel() {
   `;
   document.getElementById('panel-footer').innerHTML = `
     <button class="btn btn-ghost" onclick="closePanel()">Cancel</button>
-    <button class="btn btn-primary" onclick="createWeek()">
-      <i class="fas fa-plus"></i> Create Week
-    </button>
+    <button class="btn btn-primary" onclick="createWeek()"><i class="fas fa-plus"></i> Create Week</button>
   `;
   openPanel();
-
-  // Set default dates (next week)
   const nextMon = getNextSunday();
   document.getElementById('nw-start').value = nextMon;
   autoSetEnd();
@@ -830,16 +709,13 @@ async function createWeek() {
   const end    = document.getElementById('nw-end').value;
   const note   = document.getElementById('nw-note').value.trim();
   const status = document.getElementById('nw-status').value;
-
   if (!start || !end) { showToast('Please select start and end dates', 'error'); return; }
   if (start > end)    { showToast('Start date must be before end date', 'error'); return; }
-
   try {
     const { data, error } = await db.from('schedule_weeks')
       .insert({ week_start: start, week_end: end, note, status, created_at: new Date().toISOString() })
       .select().single();
     if (error) throw error;
-
     showToast('Week created!', 'success');
     closePanel();
     await loadWeeks();
@@ -849,7 +725,7 @@ async function createWeek() {
   }
 }
 
-// ── Shift Types Panel ──
+// ── SHIFT TYPES PANEL ──
 function openShiftTypesPanel() {
   document.getElementById('panel-title').innerText = 'Shift Types';
   renderShiftTypesPanel();
@@ -860,42 +736,25 @@ function renderShiftTypesPanel() {
   const body = document.getElementById('panel-body');
   body.innerHTML = `
     <div style="margin-bottom:16px;">
-      <button class="btn btn-primary btn-sm" onclick="addShiftTypeRow()">
-        <i class="fas fa-plus"></i> Add Shift Type
-      </button>
+      <button class="btn btn-primary btn-sm" onclick="addShiftTypeRow()"><i class="fas fa-plus"></i> Add Shift Type</button>
     </div>
-    <div id="shift-types-list">
-      ${allShiftTypes.map(st => renderShiftTypeRow(st)).join('')}
-    </div>
+    <div id="shift-types-list">${allShiftTypes.map(st => renderShiftTypeRow(st)).join('')}</div>
     <div id="new-shift-rows"></div>
   `;
   document.getElementById('panel-footer').innerHTML = `
     <button class="btn btn-ghost" onclick="closePanel()">Close</button>
-    <button class="btn btn-primary" onclick="saveShiftTypes()">
-      <i class="fas fa-save"></i> Save All
-    </button>
+    <button class="btn btn-primary" onclick="saveShiftTypes()"><i class="fas fa-save"></i> Save All</button>
   `;
 }
 
 function renderShiftTypeRow(st) {
   return `
     <div class="form-grid form-grid-3" style="margin-bottom:10px;align-items:end;" data-id="${st.id}">
-      <div class="form-group">
-        <label class="form-label">Name</label>
-        <input type="text" class="form-input st-name" value="${st.name}" placeholder="e.g. Morning">
-      </div>
-      <div class="form-group">
-        <label class="form-label">Start</label>
-        <input type="time" class="form-input st-start" value="${st.start_time}">
-      </div>
-      <div class="form-group">
-        <label class="form-label">End</label>
-        <input type="time" class="form-input st-end" value="${st.end_time}">
-      </div>
+      <div class="form-group"><label class="form-label">Name</label><input type="text" class="form-input st-name" value="${st.name}" placeholder="e.g. Morning"></div>
+      <div class="form-group"><label class="form-label">Start</label><input type="time" class="form-input st-start" value="${st.start_time}"></div>
+      <div class="form-group"><label class="form-label">End</label><input type="time" class="form-input st-end" value="${st.end_time}"></div>
       <div class="form-group" style="grid-column:1/-1;display:flex;justify-content:flex-end;">
-        <button class="btn btn-danger btn-sm" onclick="deleteShiftType('${st.id}',this)">
-          <i class="fas fa-trash"></i> Delete
-        </button>
+        <button class="btn btn-danger btn-sm" onclick="deleteShiftType('${st.id}',this)"><i class="fas fa-trash"></i> Delete</button>
       </div>
     </div>
     <div class="divider" style="margin:8px 0;"></div>
@@ -910,22 +769,11 @@ function addShiftTypeRow() {
   div.style.marginBottom = '10px';
   div.dataset.id = id;
   div.innerHTML = `
-    <div class="form-group">
-      <label class="form-label">Name</label>
-      <input type="text" class="form-input st-name" placeholder="e.g. Evening">
-    </div>
-    <div class="form-group">
-      <label class="form-label">Start</label>
-      <input type="time" class="form-input st-start">
-    </div>
-    <div class="form-group">
-      <label class="form-label">End</label>
-      <input type="time" class="form-input st-end">
-    </div>
+    <div class="form-group"><label class="form-label">Name</label><input type="text" class="form-input st-name" placeholder="e.g. Evening"></div>
+    <div class="form-group"><label class="form-label">Start</label><input type="time" class="form-input st-start"></div>
+    <div class="form-group"><label class="form-label">End</label><input type="time" class="form-input st-end"></div>
     <div class="form-group" style="grid-column:1/-1;display:flex;justify-content:flex-end;">
-      <button class="btn btn-danger btn-sm" onclick="this.closest('[data-id]').remove()">
-        <i class="fas fa-times"></i> Remove
-      </button>
+      <button class="btn btn-danger btn-sm" onclick="this.closest('[data-id]').remove()"><i class="fas fa-times"></i> Remove</button>
     </div>
   `;
   document.getElementById('new-shift-rows').appendChild(div);
@@ -945,7 +793,6 @@ async function deleteShiftType(id, btn) {
 
 async function saveShiftTypes() {
   try {
-    // Update existing
     const existing = document.querySelectorAll('#shift-types-list [data-id]');
     for (const row of existing) {
       const id    = row.dataset.id;
@@ -955,8 +802,6 @@ async function saveShiftTypes() {
       if (!name || !start || !end) continue;
       await db.from('shift_types').update({ name, start_time:start, end_time:end }).eq('id', id);
     }
-
-    // Insert new
     const newRows = document.querySelectorAll('#new-shift-rows [data-id]');
     const toInsert = [];
     for (const row of newRows) {
@@ -966,27 +811,21 @@ async function saveShiftTypes() {
       if (!name || !start || !end) continue;
       toInsert.push({ name, start_time:start, end_time:end, is_active:true });
     }
-    if (toInsert.length) {
-      await db.from('shift_types').insert(toInsert);
-    }
-
+    if (toInsert.length) await db.from('shift_types').insert(toInsert);
     await loadShiftTypes();
     showToast('Shift types saved!', 'success');
     renderShiftTypesPanel();
     if (currentWeek) loadScheduleGrid();
-
   } catch(e) {
     showToast('Failed: ' + e.message, 'error');
   }
 }
 
-// ── Summary ──
 function updateSummary(dates) {
-  const summary  = document.getElementById('shift-summary');
+  const summary    = document.getElementById('shift-summary');
   const totalWork  = Object.values(scheduleData).filter(s=>s.day_type==='Work').length;
   const totalOff   = Object.values(scheduleData).filter(s=>s.day_type==='Off').length;
   const totalLeave = Object.values(scheduleData).filter(s=>['Annual','Sick','Casual','PH'].includes(s.day_type)).length;
-
   summary.innerHTML = `
     <span style="font-size:12px;color:var(--muted);">Week Summary:</span>
     <span class="day-count-item" style="background:rgba(16,185,129,0.1);color:#10B981;">✅ Work: ${totalWork}</span>
@@ -996,22 +835,7 @@ function updateSummary(dates) {
   `;
 }
 
-// buildCountRow removed - count row now inline in table
-
-// ── Helpers ──
-function getWeekStart(isoDate) {
-  const [y, m, d] = isoDate.split('-').map(Number);
-  const dt = new Date(y, m - 1, d);
-  const day = dt.getDay(); // 0=Sun
-  dt.setDate(d - day); // يرجع لـ Sunday
-  return `${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,'0')}-${String(dt.getDate()).padStart(2,'0')}`;
-}
-function getWeekEnd(weekStart) {
-  const dt = new Date(weekStart + 'T00:00:00');
-  dt.setDate(dt.getDate() + 6);
-  return dt.toISOString().split('T')[0];
-}
-
+// ── HELPERS ──
 function getWeekDates(start, end) {
   const dates = [];
   const days  = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
@@ -1035,24 +859,17 @@ function getNextSunday() {
   d.setDate(d.getDate() + diff);
   return d.toISOString().split('T')[0];
 }
-
 function formatDateShort(d) {
   if (!d) return '—';
   const dt = new Date(d + 'T00:00:00');
   return `${String(dt.getDate()).padStart(2,'0')}/${String(dt.getMonth()+1).padStart(2,'0')}`;
 }
-
 function formatDateFull(d) {
   if (!d) return '—';
   const dt = new Date(d + 'T00:00:00');
   return dt.toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'});
 }
-
-function formatTime(t) {
-  if (!t) return '—';
-  return t.substring(0,5);
-}
-
+function formatTime(t) { if (!t) return '—'; return t.substring(0,5); }
 function openModal(title, msg, onConfirm) {
   document.getElementById('modal-title').innerText = title;
   document.getElementById('modal-msg').innerText   = msg;
@@ -1060,7 +877,6 @@ function openModal(title, msg, onConfirm) {
   document.getElementById('modal-confirm').onclick = () => { closeModal(); onConfirm(); };
 }
 function closeModal() { document.getElementById('modal-overlay').classList.remove('open'); }
-
 function openPanel() {
   document.getElementById('panel-overlay').classList.add('open');
   document.getElementById('slide-panel').classList.add('open');
@@ -1070,7 +886,7 @@ function closePanel() {
   document.getElementById('slide-panel').classList.remove('open');
 }
 
-// ── Export to Excel ──
+// ── EXPORT ──
 function exportToExcel() {
   if (!currentWeek) { showToast('Select a week first', 'error'); return; }
   const dates = getWeekDates(currentWeek.week_start, currentWeek.week_end);
@@ -1098,16 +914,14 @@ function exportToExcel() {
   URL.revokeObjectURL(url);
   showToast('Schedule exported!', 'success');
 }
-// ── Templates Panel ──
+
+// ── TEMPLATES PANEL ──
 function openTemplatePanel() {
   if (!currentWeek) { showToast('Select a week first', 'error'); return; }
   const dates = getWeekDates(currentWeek.week_start, currentWeek.week_end);
-
   document.getElementById('panel-title').innerText = 'Apply Shift Template';
   document.getElementById('panel-body').innerHTML = `
-    <div style="font-size:13px;color:var(--muted);margin-bottom:16px;">
-      اختار موظف ويوم وشيفت — وهيتطبق على الجدول.
-    </div>
+    <div style="font-size:13px;color:var(--muted);margin-bottom:16px;">اختار موظف ويوم وشيفت — وهيتطبق على الجدول.</div>
     <div class="form-grid form-grid-3" style="margin-bottom:16px;">
       <div class="form-group">
         <label class="form-label">Agent</label>
@@ -1142,47 +956,30 @@ function openTemplatePanel() {
   `;
   document.getElementById('panel-footer').innerHTML = `
     <button class="btn btn-ghost" onclick="closePanel()">Cancel</button>
-    <button class="btn btn-primary" onclick="applyTemplate()">
-      <i class="fas fa-magic"></i> Apply
-    </button>
+    <button class="btn btn-primary" onclick="applyTemplate()"><i class="fas fa-magic"></i> Apply</button>
   `;
   openPanel();
-}
-  function filterWeeks() {
-  const q = document.getElementById('week-search').value.toLowerCase();
-  document.querySelectorAll('.week-tab').forEach(tab => {
-    tab.style.display = tab.innerText.toLowerCase().includes(q) ? 'flex' : 'none';
-  });
 }
 
 function applyTemplate() {
   const agentFilter = document.getElementById('tmpl-agent').value;
   const dayFilter   = document.getElementById('tmpl-day').value;
   const shiftVal    = document.getElementById('tmpl-shift').value;
-
   const agents = agentFilter === 'all' ? allAgents : allAgents.filter(a => a.id === agentFilter);
   const dates  = getWeekDates(currentWeek.week_start, currentWeek.week_end);
   const days   = dayFilter === 'all' ? dates : dates.filter(d => d.iso === dayFilter);
-
   let count = 0;
   agents.forEach(agent => {
     days.forEach(d => {
       const sel = document.querySelector(`select[data-agent="${agent.id}"][data-date="${d.iso}"]`);
-      if (sel) {
-        sel.value = shiftVal;
-        onShiftChange(sel);
-        count++;
-      }
+      if (sel) { sel.value = shiftVal; onShiftChange(sel); count++; }
     });
   });
-
   closePanel();
   showToast(`Template applied to ${count} cell(s)! Press Save.`, 'success');
 }
 
-// ── Start ──
 loadAll();
 </script>
-
 </body>
 </html>
