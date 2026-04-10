@@ -581,47 +581,49 @@ async function publishWeek() {
 }
 
 async function updateAnnualLeave() {
-  const year = new Date(currentWeek.week_start).getFullYear();
+  const year      = new Date(currentWeek.week_start).getFullYear();
   const yearStart = year + '-01-01';
-  const weekEnd = currentWeek.week_end;
+  const weekEnd   = currentWeek.week_end;
 
+  // جيب كل الـ Annual days من أول السنة للأسبوع الحالي
   const { data: leaves } = await db.from('schedule')
     .select('agent_id, shift_date')
     .eq('day_type', 'Annual')
     .gte('shift_date', yearStart)
     .lte('shift_date', weekEnd);
 
-  if (!leaves) return;
+  const cols = ['jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec'];
 
+  // جيب كل الـ annual_leave records للسنة دي
+  const { data: annualRecords } = await db.from('annual_leave')
+    .select('*')
+    .eq('year', year);
+
+  // ابني map للـ Annual days لكل agent
   const map = {};
-  leaves.forEach(l => {
-    const month = new Date(l.shift_date).getMonth();
-    const cols = ['jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec'];
+  (leaves || []).forEach(l => {
+    const month = new Date(l.shift_date + 'T00:00:00').getMonth();
     if (!map[l.agent_id]) map[l.agent_id] = {};
     map[l.agent_id][cols[month]] = (map[l.agent_id][cols[month]] || 0) + 1;
   });
 
-  for (const [agent_id, months] of Object.entries(map)) {
-    const cols = ['jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec'];
+  // حدث كل agent — حتى لو ماخدش إجازة
+  for (const agent of allAgents) {
+    const agentMonths  = map[agent.id] || {};
+    const annualRecord = (annualRecords || []).find(a => a.agent_id === agent.id);
+
+    if (!annualRecord) continue; // لو مفيش record أصلاً skip
 
     const updates = {};
-    cols.forEach(m => { updates['used_' + m] = months[m] || 0; });
+    cols.forEach(m => { updates['used_' + m] = agentMonths[m] || 0; });
 
-    updates.total_used = cols.reduce((s, m) => s + (months[m] || 0), 0);
-
-    const { data: current } = await db.from('annual_leave')
-      .select('entitlement, carry_over')
-      .eq('agent_id', agent_id)
-      .eq('year', year)
-      .single();
-
-    if (current) {
-      updates.remaining = (current.entitlement + current.carry_over) - updates.total_used;
-    }
+    updates.total_used = cols.reduce((s, m) => s + (agentMonths[m] || 0), 0);
+    updates.remaining  = (annualRecord.entitlement + annualRecord.carry_over) - updates.total_used;
+    updates.updated_at = new Date().toISOString();
 
     await db.from('annual_leave')
       .update(updates)
-      .eq('agent_id', agent_id)
+      .eq('agent_id', agent.id)
       .eq('year', year);
   }
 
