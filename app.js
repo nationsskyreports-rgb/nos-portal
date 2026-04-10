@@ -757,8 +757,14 @@ async function loadTeamBreaksFromSB() {
         lunch:  b.lunch  ? b.lunch.substring(0,5)  : '-',
         break2: b.break2 ? b.break2.substring(0,5) : '-',
       }));
-
-    renderTeam(staff);
+     
+staff.sort((a, b) => {
+  const aTime = a.shift ? a.shift.split(' - ')[0] : '99:99';
+  const bTime = b.shift ? b.shift.split(' - ')[0] : '99:99';
+  return aTime.localeCompare(bTime);
+});
+renderTeam(staff);
+     
   } catch(e) { console.error('Team breaks error:', e); }
 }
 /* ─── 11. REQUESTS RENDER ─── */
