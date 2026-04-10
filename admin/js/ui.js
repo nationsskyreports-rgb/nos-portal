@@ -85,6 +85,7 @@ function renderSidebar() {
     { label: 'KPIs',          icon: 'fa-chart-line',     href: base + 'pages/kpis.html' },
     { label: 'Excuses',       icon: 'fa-clock',          href: base + 'pages/excuses.html' },
     { label: 'xCALLY Import', icon: 'fa-upload',         href: base + 'pages/xcally-import.html' },
+    { label: 'Quality',       icon: 'fa-star',            href: base + 'pages/quality.html' },
     { label: 'Call Log',      icon: 'fa-phone-alt',      href: base + 'pages/calllog.html' },
     { section: 'Config' },
     { label: 'Reference',     icon: 'fa-database',       href: base + 'pages/reference.html' },
