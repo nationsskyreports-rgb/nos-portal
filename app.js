@@ -1794,7 +1794,7 @@ function toggleSchAccordion(elementId) {
 }
 
 function selectWeekChip(weekId, weekLabel, chipElement) {
-document.querySelectorAll('.week-chip').forEach(c => c.classList.remove('active'));
+  document.querySelectorAll('.week-chip').forEach(c => c.classList.remove('active'));
   if(chipElement) chipElement.classList.add('active');
   const pubAccordion = document.getElementById('acc-published');
   if (pubAccordion && !pubAccordion.classList.contains('active')) {
@@ -1802,7 +1802,6 @@ document.querySelectorAll('.week-chip').forEach(c => c.classList.remove('active'
   }
   loadSchTable(weekId);
 }
-
 async function sbFetchSch(path) {
   const res = await fetch(`${SB_URL_SCH}/rest/v1/${path}`, {
     headers: { 'apikey': SB_KEY_SCH, 'Authorization': `Bearer ${SB_KEY_SCH}`, 'Content-Type': 'application/json' }
@@ -2197,15 +2196,6 @@ function filterSchWeeks() {
     // إعادة تعيين محتوى الجدول
     document.getElementById('sch-table-grid').innerHTML = '<div class="empty-state">Select a week to view schedule.</div>';
   }, 300);
-}
-function selectSchWeekTab(weekId) {
-  document.getElementById('sch-week-select').value = weekId;
-  document.querySelectorAll('[id^="sch-tab-"]').forEach(t => {
-    t.style.borderColor = 'var(--border)'; t.style.color = 'var(--muted)'; t.style.background = 'var(--surface2)';
-  });
-  const tab = document.getElementById('sch-tab-'+weekId);
-  if (tab) { tab.style.borderColor = 'var(--primary)'; tab.style.color = 'var(--primary)'; tab.style.background = 'rgba(212,175,55,0.08)'; }
-  loadSchTable();
 }
 
 if (!window._schTabHooked) {
