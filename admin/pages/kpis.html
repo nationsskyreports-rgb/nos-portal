@@ -26,7 +26,7 @@
 .kpi-full-table td.agent-col { text-align:left; }
 .kpi-full-table tr:last-child td { border-bottom:none; }
 .kpi-full-table tbody tr:hover td { background:rgba(212,175,55,0.03); }
-.th-group { background:rgba(212,175,55,0.1)!important; color:var(--gold)!important; border-bottom:2px solid var(--gold)!important; }
+.th-group  { background:rgba(212,175,55,0.1)!important; color:var(--gold)!important; border-bottom:2px solid var(--gold)!important; }
 .th-annual { background:rgba(139,92,246,0.1)!important; color:#8B5CF6!important; }
 .conf-high { color:#10B981; font-weight:800; }
 .conf-mid  { color:#F59E0B; font-weight:800; }
@@ -39,6 +39,23 @@
   outline:none; transition:all 0.2s;
 }
 .editable-cell:focus { border-color:var(--gold); box-shadow:0 0 0 2px rgba(212,175,55,0.15); }
+
+/* Annual Balance Table */
+.annual-bal-table { width:100%; border-collapse:collapse; font-size:12px; }
+.annual-bal-table th {
+  padding:10px 14px; background:var(--surface2);
+  color:var(--muted); font-size:10px; font-weight:700;
+  text-transform:uppercase; letter-spacing:1px;
+  border-bottom:1px solid var(--border); text-align:center;
+}
+.annual-bal-table th:first-child { text-align:left; }
+.annual-bal-table td {
+  padding:12px 14px; border-bottom:1px solid var(--border);
+  text-align:center; vertical-align:middle; font-size:13px;
+}
+.annual-bal-table td:first-child { text-align:left; }
+.annual-bal-table tr:last-child td { border-bottom:none; }
+.annual-bal-table tbody tr:hover td { background:rgba(212,175,55,0.02); }
 </style>
 </head>
 <body>
@@ -77,6 +94,7 @@
         <button class="tab-btn active" onclick="switchTab('kpi',this)">📊 KPI Table</button>
         <button class="tab-btn" onclick="switchTab('leaves',this)">🏖️ Leaves & Pay</button>
         <button class="tab-btn" onclick="switchTab('annual',this)">📅 Annual Leave</button>
+        <button class="tab-btn" onclick="switchTab('annualbal',this)">🏖️ Annual Balance</button>
       </div>
 
       <!-- KPI TABLE -->
@@ -98,12 +116,8 @@
                     <th class="th-annual" colspan="2">🏖️ Annual</th>
                   </tr>
                   <tr>
-                    <th>Conformance</th>
-                    <th>Missing Time</th>
-                    <th>AHT</th>
-                    <th>Calls</th>
-                    <th>Net Missing</th>
-                    <th>Excuses</th>
+                    <th>Conformance</th><th>Missing Time</th><th>AHT</th>
+                    <th>Calls</th><th>Net Missing</th><th>Excuses</th>
                     <th>Score</th>
                     <th class="th-annual">Remaining</th>
                     <th class="th-annual">Used MTD</th>
@@ -128,9 +142,7 @@
             <div class="form-grid form-grid-3">
               <div class="form-group">
                 <label class="form-label">Agent <span class="req">*</span></label>
-                <select id="l-agent" class="form-input" onchange="onAgentSelect()">
-                  <option value="">Select Agent...</option>
-                </select>
+                <select id="l-agent" class="form-input" onchange="onAgentSelect()"><option value="">Select Agent...</option></select>
               </div>
               <div class="form-group">
                 <label class="form-label">Leave Type <span class="req">*</span></label>
@@ -177,7 +189,6 @@
             </div>
           </div>
         </div>
-
         <div class="section-card fade-up">
           <div class="section-header">
             <div class="section-title"><i class="fas fa-list" style="color:var(--gold)"></i> Leaves & Pay</div>
@@ -187,10 +198,7 @@
             <div class="table-wrap">
               <table class="nos-table">
                 <thead>
-                  <tr>
-                    <th>Agent</th><th>Type</th><th>Date</th><th>Days</th>
-                    <th>Hours</th><th>Salary</th><th>Double Pay</th><th>Note</th><th>Del</th>
-                  </tr>
+                  <tr><th>Agent</th><th>Type</th><th>Date</th><th>Days</th><th>Hours</th><th>Salary</th><th>Double Pay</th><th>Note</th><th>Del</th></tr>
                 </thead>
                 <tbody id="leaves-tbody">
                   <tr><td colspan="9"><div class="loading-wrap"><div class="spinner"></div></div></td></tr>
@@ -206,9 +214,7 @@
         <div class="section-card fade-up">
           <div class="section-header">
             <div class="section-title"><i class="fas fa-calendar-alt" style="color:var(--gold)"></i> Annual Leave — <span id="annual-year-label"></span></div>
-            <button class="btn btn-success btn-sm" onclick="saveAllAnnual()">
-              <i class="fas fa-save"></i> Save All
-            </button>
+            <button class="btn btn-success btn-sm" onclick="saveAllAnnual()"><i class="fas fa-save"></i> Save All</button>
           </div>
           <div class="section-body no-pad">
             <div class="table-wrap">
@@ -223,6 +229,34 @@
                 </thead>
                 <tbody id="annual-tbody">
                   <tr><td colspan="18"><div class="loading-wrap"><div class="spinner"></div></div></td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ANNUAL BALANCE -->
+      <div id="tab-annualbal" style="display:none;">
+        <div class="section-card fade-up">
+          <div class="section-header">
+            <div class="section-title"><i class="fas fa-umbrella-beach" style="color:var(--gold)"></i> Annual Balance — <span id="annualbal-year-label"></span></div>
+            <button class="btn btn-ghost btn-sm" onclick="loadAnnualBalance()"><i class="fas fa-sync-alt"></i> Refresh</button>
+          </div>
+          <div class="section-body no-pad">
+            <div class="table-wrap">
+              <table class="annual-bal-table">
+                <thead>
+                  <tr>
+                    <th>Agent</th>
+                    <th>Entitlement</th>
+                    <th>Carry Over</th>
+                    <th>Total Used</th>
+                    <th>Remaining</th>
+                  </tr>
+                </thead>
+                <tbody id="annualbal-tbody">
+                  <tr><td colspan="5"><div class="loading-wrap"><div class="spinner"></div></div></td></tr>
                 </tbody>
               </table>
             </div>
@@ -261,7 +295,6 @@
 </div>
 
 <div id="toast-container"></div>
-
 <script src="../js/supabase.js"></script>
 <script src="../js/auth.js"></script>
 <script src="../js/ui.js"></script>
@@ -269,21 +302,22 @@
 renderSidebar();
 const session = checkAuth();
 if (session) {
-  document.getElementById('admin-name').innerText = session.username||'Admin';
+  document.getElementById('admin-name').innerText  = session.username||'Admin';
   document.getElementById('admin-avatar').innerText = initials(session.username||'Admin');
 }
 const now = new Date();
 document.getElementById('month-filter').value = String(now.getMonth()+1).padStart(2,'0');
 
-const MONTH_NAMES = ['','January','February','March','April','May','June','July','August','September','October','November','December'];
+const MONTH_NAMES  = ['','January','February','March','April','May','June','July','August','September','October','November','December'];
 const MONTHS_SHORT = ['jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec'];
 
-let allAgents  = [];
-let kpiData    = [];
-let leavesData = [];
-let annualData = [];
-let editedKPIs = {};
+let allAgents   = [];
+let kpiData     = [];
+let leavesData  = [];
+let annualData  = [];
+let editedKPIs  = {};
 let annualEdits = {};
+let currentTab  = 'kpi';
 
 async function init() {
   const { data } = await db.from('agents').select('id,formal_name,email').eq('status','Active').order('formal_name');
@@ -293,17 +327,18 @@ async function init() {
   await loadAll();
 }
 
-let currentTab = 'kpi';
-
 function switchTab(tab, btn) {
   currentTab = tab;
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
-  document.getElementById('tab-kpi').style.display    = tab==='kpi'    ? 'block' : 'none';
-  document.getElementById('tab-leaves').style.display = tab==='leaves' ? 'block' : 'none';
-  document.getElementById('tab-annual').style.display = tab==='annual' ? 'block' : 'none';
-  if (tab==='leaves') loadLeaves();
-  if (tab==='annual') loadAnnual();
+  ['kpi','leaves','annual','annualbal'].forEach(t => {
+    document.getElementById('tab-'+t).style.display = t===tab ? 'block' : 'none';
+  });
+  // Save All button — بيظهر بس في KPI و Annual
+  document.getElementById('save-all-btn').style.display = ['kpi','annual'].includes(tab) ? 'flex' : 'none';
+  if (tab==='leaves')     loadLeaves();
+  if (tab==='annual')     loadAnnual();
+  if (tab==='annualbal')  loadAnnualBalance();
 }
 
 function handleSaveAll() {
@@ -314,8 +349,9 @@ function handleSaveAll() {
 async function loadAll() {
   const month = document.getElementById('month-filter').value;
   const year  = parseInt(document.getElementById('year-filter').value);
-  document.getElementById('kpi-title').innerText = 'KPI Report — '+MONTH_NAMES[parseInt(month)]+' '+year;
-  document.getElementById('annual-year-label').innerText = year;
+  document.getElementById('kpi-title').innerText          = 'KPI Report — '+MONTH_NAMES[parseInt(month)]+' '+year;
+  document.getElementById('annual-year-label').innerText   = year;
+  document.getElementById('annualbal-year-label').innerText= year;
   editedKPIs = {};
   await loadKPIs(MONTH_NAMES[parseInt(month)], year);
 }
@@ -323,96 +359,77 @@ async function loadAll() {
 async function loadKPIs(monthName, year) {
   const tbody = document.getElementById('kpi-tbody');
   tbody.innerHTML = '<tr><td colspan="10"><div class="loading-wrap"><div class="spinner"></div></div></td></tr>';
-
   try {
     const month    = document.getElementById('month-filter').value;
-    const dateFrom = year + '-' + month + '-01';
+    const dateFrom = year+'-'+month+'-01';
     const lastDay  = new Date(year, parseInt(month), 0).getDate();
-    const dateTo   = year + '-' + month + '-' + String(lastDay).padStart(2, '0');
+    const dateTo   = year+'-'+month+'-'+String(lastDay).padStart(2,'0');
 
     const [perfRes, excusesRes, annualRes, qualityRes] = await Promise.all([
-      db.from('daily_performance')
-        .select('agent_id,agent_name,conformance,missing_sec,avg_aht,calls')
-        .gte('perf_date', dateFrom)
-        .lte('perf_date', dateTo),
-      db.from('excuses').select('*')
-        .eq('status','Approved')
-        .gte('excuse_date', dateFrom)
-        .lte('excuse_date', dateTo),
-      db.from('annual_leave').select('*').eq('year', year),
-      db.from('quality_scores').select('*')
-        .eq('month', monthName).eq('year', year),
+      db.from('daily_performance').select('agent_id,agent_name,conformance,missing_sec,avg_aht,calls').gte('perf_date',dateFrom).lte('perf_date',dateTo),
+      db.from('excuses').select('*').eq('status','Approved').gte('excuse_date',dateFrom).lte('excuse_date',dateTo),
+      db.from('annual_leave').select('*').eq('year',year),
+      db.from('quality_scores').select('*').eq('month',monthName).eq('year',year),
     ]);
 
     const perfData    = perfRes.data    || [];
     const excusesData = excusesRes.data || [];
-    const annualData  = annualRes.data  || [];
+    const annData     = annualRes.data  || [];
     const qualityData = qualityRes.data || [];
-
     kpiData = qualityData;
 
     tbody.innerHTML = allAgents.map(agent => {
       const agentPerf = perfData.filter(p => p.agent_id === agent.id);
-
       let conformance = '—', missingTime = '—', avgAHT = '—', totalCalls = 0;
 
       if (agentPerf.length) {
-        const avgConf = agentPerf.reduce((s,p) => s + parseFloat(p.conformance||0), 0) / agentPerf.length;
-        conformance   = avgConf.toFixed(1) + '%';
-
-        const totalMissingSec = agentPerf.reduce((s,p) => s + (p.missing_sec||0), 0);
-        missingTime = totalMissingSec <= 300 ? 'Full Time' : secToTime(totalMissingSec);
-
-        const ahtArr = agentPerf.filter(p => p.avg_aht > 0);
-        if (ahtArr.length) {
-          avgAHT = secToTime(Math.round(ahtArr.reduce((s,p) => s + p.avg_aht, 0) / ahtArr.length));
-        }
-
-        totalCalls = agentPerf.reduce((s,p) => s + (p.calls||0), 0);
+        const avgConf = agentPerf.reduce((s,p)=>s+parseFloat(p.conformance||0),0)/agentPerf.length;
+        conformance   = avgConf.toFixed(1)+'%';
+        const totalMissingSec = agentPerf.reduce((s,p)=>s+(p.missing_sec||0),0);
+        missingTime = totalMissingSec<=300 ? 'Full Time' : secToTime(totalMissingSec);
+        const ahtArr = agentPerf.filter(p=>p.avg_aht>0);
+        if (ahtArr.length) avgAHT = secToTime(Math.round(ahtArr.reduce((s,p)=>s+p.avg_aht,0)/ahtArr.length));
+        totalCalls = agentPerf.reduce((s,p)=>s+(p.calls||0),0);
       }
 
-      const agentExcuses = excusesData.filter(e => e.agent_id === agent.id);
+      const agentExcuses = excusesData.filter(e=>e.agent_id===agent.id);
       const excHours     = agentExcuses.length * 2;
-      const excStr       = excHours > 0 ? excHours + ' Hours' : 'None';
+      const excStr       = excHours > 0 ? excHours+' Hours' : 'None';
 
       let netMissing = '—';
-      if (missingTime === 'Full Time') {
-        netMissing = 'Full Time';
-      } else if (missingTime !== '—') {
-        const missingSec = timeToSec(missingTime);
-        const netSec     = Math.max(0, missingSec - excHours * 3600);
-        netMissing = netSec <= 300 ? 'Full Time' : secToTime(netSec);
+      if (missingTime==='Full Time') { netMissing='Full Time'; }
+      else if (missingTime!=='—') {
+        const netSec = Math.max(0, timeToSec(missingTime) - excHours*3600);
+        netMissing = netSec<=300 ? 'Full Time' : secToTime(netSec);
       }
 
-      const ann        = annualData.find(a => a.agent_id === agent.id) || {};
+      const ann        = annData.find(a=>a.agent_id===agent.id)||{};
       const annLeft    = ann.remaining !== undefined ? ann.remaining : '—';
-      const monthKey   = 'used_' + ['jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec'][parseInt(month)-1];
-      const annUsedMTD = ann[monthKey] || 0;
+      const monthKey   = 'used_'+MONTHS_SHORT[parseInt(month)-1];
+      const annUsedMTD = ann[monthKey]||0;
+      const quality    = qualityData.find(q=>q.agent_id===agent.id);
+      const confNum    = parseFloat(conformance)||0;
+      const confColor  = confNum>=98?'#10B981':confNum>=90?'#F59E0B':'#EF4444';
 
-      const quality  = qualityData.find(q => q.agent_id === agent.id);
-      const confNum  = parseFloat(conformance) || 0;
-      const confColor= confNum>=98 ? '#10B981' : confNum>=90 ? '#F59E0B' : '#EF4444';
-
-      return '<tr>' +
-        '<td class="agent-col"><div style="display:flex;align-items:center;gap:8px;"><div class="agent-avatar" style="width:28px;height:28px;font-size:10px;">' + initials(agent.formal_name) + '</div><span style="font-weight:700;">' + agent.formal_name + '</span></div></td>' +
-        '<td style="font-weight:800;color:' + confColor + ';">' + conformance + '</td>' +
-        '<td style="font-family:monospace;font-size:11px;color:' + (missingTime==='Full Time'?'#10B981':'#EF4444') + ';font-weight:700;">' + missingTime + '</td>' +
-        '<td style="font-family:monospace;font-size:11px;">' + avgAHT + '</td>' +
-        '<td style="font-weight:700;">' + totalCalls + '</td>' +
-        '<td style="font-size:11px;color:' + (netMissing==='Full Time'?'#10B981':'#EF4444') + ';font-weight:700;">' + netMissing + '</td>' +
-        '<td style="color:#F59E0B;font-weight:700;">' + excStr + '</td>' +
-        '<td><input class="editable-cell" type="text" value="' + (quality?.score||'') + '" placeholder="—" onchange="markEdit(\'' + agent.id + '\',\'score\',this.value)" style="color:var(--gold);font-weight:700;"></td>' +
-        '<td><span class="badge ' + (typeof annLeft==='number'&&annLeft<=3?'badge-danger':'badge-success') + '">' + (typeof annLeft==='number' ? annLeft+' days' : annLeft) + '</span></td>' +
-        '<td style="font-weight:700;">' + annUsedMTD + ' days</td>' +
+      return '<tr>'+
+        '<td class="agent-col"><div style="display:flex;align-items:center;gap:8px;"><div class="agent-avatar" style="width:28px;height:28px;font-size:10px;">'+initials(agent.formal_name)+'</div><span style="font-weight:700;">'+agent.formal_name+'</span></div></td>'+
+        '<td style="font-weight:800;color:'+confColor+';">'+conformance+'</td>'+
+        '<td style="font-family:monospace;font-size:11px;color:'+(missingTime==='Full Time'?'#10B981':'#EF4444')+';font-weight:700;">'+missingTime+'</td>'+
+        '<td style="font-family:monospace;font-size:11px;">'+avgAHT+'</td>'+
+        '<td style="font-weight:700;">'+totalCalls+'</td>'+
+        '<td style="font-size:11px;color:'+(netMissing==='Full Time'?'#10B981':'#EF4444')+';font-weight:700;">'+netMissing+'</td>'+
+        '<td style="color:#F59E0B;font-weight:700;">'+excStr+'</td>'+
+        '<td><input class="editable-cell" type="text" value="'+(quality?.score||'')+'" placeholder="—" onchange="markEdit(\''+agent.id+'\',\'score\',this.value)" style="color:var(--gold);font-weight:700;"></td>'+
+        '<td><span class="badge '+(typeof annLeft==='number'&&annLeft<=3?'badge-danger':'badge-success')+'">'+(typeof annLeft==='number'?annLeft+' days':annLeft)+'</span></td>'+
+        '<td style="font-weight:700;">'+annUsedMTD+' days</td>'+
         '</tr>';
     }).join('');
-
   } catch(e) {
-    tbody.innerHTML = '<tr><td colspan="10"><div class="empty-state"><span class="empty-icon">❌</span>Failed: ' + e.message + '</div></td></tr>';
-    showToast('Failed: ' + e.message, 'error');
+    tbody.innerHTML = '<tr><td colspan="10"><div class="empty-state"><span class="empty-icon">❌</span>Failed: '+e.message+'</div></td></tr>';
+    showToast('Failed: '+e.message,'error');
   }
 }
-  
+
 function markEdit(agentId, field, value) {
   if (!editedKPIs[agentId]) editedKPIs[agentId] = {};
   editedKPIs[agentId][field] = value;
@@ -424,28 +441,24 @@ async function saveAll() {
   if (!Object.keys(editedKPIs).length) { showToast('No changes to save','info'); return; }
   try {
     for (const agentId of Object.keys(editedKPIs)) {
-      const agent    = allAgents.find(a => a.id === agentId);
+      const agent    = allAgents.find(a=>a.id===agentId);
       const fields   = editedKPIs[agentId];
-      const existing = kpiData.find(k => k.agent_id === agentId);
+      const existing = kpiData.find(k=>k.agent_id===agentId);
       const payload  = { agent_id:agentId, agent_name:agent?.formal_name||'', month, year, ...fields, updated_at:new Date().toISOString() };
-      if (existing) {
-        await db.from('quality_scores').update(payload).eq('id', existing.id);
-      } else {
-        payload.created_at = new Date().toISOString();
-        await db.from('quality_scores').insert(payload);
-      }
+      if (existing) { await db.from('quality_scores').update(payload).eq('id',existing.id); }
+      else { payload.created_at=new Date().toISOString(); await db.from('quality_scores').insert(payload); }
     }
     showToast('Quality scores saved!','success');
     editedKPIs = {};
     loadAll();
-  } catch(e) { showToast('Failed: ' + e.message,'error'); }
+  } catch(e) { showToast('Failed: '+e.message,'error'); }
 }
-  
+
 async function loadLeaves() {
   const month    = document.getElementById('month-filter').value;
   const year     = parseInt(document.getElementById('year-filter').value);
   const dateFrom = year+'-'+month+'-01';
-  const lastDay  = new Date(year, parseInt(month), 0).getDate();
+  const lastDay  = new Date(year,parseInt(month),0).getDate();
   const dateTo   = year+'-'+month+'-'+String(lastDay).padStart(2,'0');
   document.getElementById('leaves-period').innerText = MONTH_NAMES[parseInt(month)]+' '+year;
   const tbody = document.getElementById('leaves-tbody');
@@ -460,8 +473,7 @@ async function loadLeaves() {
       '<td style="font-weight:700;">'+l.agent_name+'</td>'+
       '<td><span class="badge '+(tc[l.leave_type]||'badge-muted')+'">'+l.leave_type+'</span></td>'+
       '<td style="font-size:12px;">'+formatDate(l.leave_date)+'</td>'+
-      '<td>'+(l.days||0)+'</td>'+
-      '<td>'+(l.hours||0)+'</td>'+
+      '<td>'+(l.days||0)+'</td><td>'+(l.hours||0)+'</td>'+
       '<td style="font-family:monospace;">'+(l.salary?'EGP '+Number(l.salary).toLocaleString():'—')+'</td>'+
       '<td style="color:#10B981;font-weight:700;">'+(l.double_pay_amount?'EGP '+Number(l.double_pay_amount).toLocaleString():'—')+'</td>'+
       '<td style="font-size:11px;color:var(--muted);">'+(l.note||'—')+'</td>'+
@@ -473,14 +485,11 @@ async function loadLeaves() {
 
 function onTypeSelect() {
   const type = document.getElementById('l-type').value;
-  const showSal = ['PH','Double Pay','Overtime'].includes(type);
-  document.getElementById('salary-group').style.display    = showSal ? 'block' : 'none';
+  document.getElementById('salary-group').style.display    = ['PH','Double Pay','Overtime'].includes(type) ? 'block' : 'none';
   document.getElementById('double-pay-calc').style.display = ['PH','Double Pay'].includes(type) ? 'block' : 'none';
   calcDoublePay();
 }
-
 function onAgentSelect() { calcDoublePay(); }
-
 function calcDoublePay() {
   const salary = parseFloat(document.getElementById('l-salary').value)||0;
   const days   = parseFloat(document.getElementById('l-days').value)||1;
@@ -499,10 +508,10 @@ async function addLeave() {
   const salary  = parseFloat(document.getElementById('l-salary').value)||0;
   const note    = document.getElementById('l-note').value.trim();
   if (!agentId||!type||!date) { showToast('Please fill Agent, Type and Date','error'); return; }
-  const agent   = allAgents.find(a=>a.id===agentId);
-  const month   = document.getElementById('month-filter').value;
-  const year    = parseInt(document.getElementById('year-filter').value);
-  const dp      = ['PH','Double Pay'].includes(type) && salary>0 ? (salary/30)*2*days : 0;
+  const agent = allAgents.find(a=>a.id===agentId);
+  const month = document.getElementById('month-filter').value;
+  const year  = parseInt(document.getElementById('year-filter').value);
+  const dp    = ['PH','Double Pay'].includes(type)&&salary>0 ? (salary/30)*2*days : 0;
   try {
     const { error } = await db.from('leaves').insert({
       agent_id:agentId, agent_name:agent?.formal_name||'', leave_type:type,
@@ -537,18 +546,17 @@ async function loadAnnual() {
       const remaining = ((a.entitlement||21)+(a.carry_over||0))-totalUsed;
       return '<tr>'+
         '<td><div style="display:flex;align-items:center;gap:8px;"><div class="agent-avatar" style="width:24px;height:24px;font-size:9px;">'+initials(agent.formal_name)+'</div><span style="font-weight:700;font-size:12px;">'+agent.formal_name+'</span></div></td>'+
-        '<td><input class="editable-cell" type="number" value="'+(a.entitlement||21)+'" style="width:50px;" onchange="markAnnual(\''+agent.id+'\',\'entitlement\',this.value,\''+( a.id||'')+'\','+year+')"></td>'+
-        '<td><input class="editable-cell" type="number" value="'+(a.carry_over||0)+'" style="width:50px;" onchange="markAnnual(\''+agent.id+'\',\'carry_over\',this.value,\''+( a.id||'')+'\','+year+')"></td>'+
-        MONTHS_SHORT.map(m=>'<td><input class="editable-cell" type="number" value="'+(a['used_'+m]||0)+'" style="width:40px;" onchange="markAnnual(\''+agent.id+'\',\'used_'+m+'\',this.value,\''+( a.id||'')+'\','+year+')"></td>').join('')+
+        '<td><input class="editable-cell" type="number" value="'+(a.entitlement||21)+'" style="width:50px;" onchange="markAnnual(\''+agent.id+'\',\'entitlement\',this.value,\''+(a.id||'')+'\','+year+')"></td>'+
+        '<td><input class="editable-cell" type="number" value="'+(a.carry_over||0)+'" style="width:50px;" onchange="markAnnual(\''+agent.id+'\',\'carry_over\',this.value,\''+(a.id||'')+'\','+year+')"></td>'+
+        MONTHS_SHORT.map(m=>'<td><input class="editable-cell" type="number" value="'+(a['used_'+m]||0)+'" style="width:40px;" onchange="markAnnual(\''+agent.id+'\',\'used_'+m+'\',this.value,\''+(a.id||'')+'\','+year+')"></td>').join('')+
         '<td style="font-weight:700;color:'+(totalUsed>0?'#F59E0B':'var(--muted)')+';">'+totalUsed+'</td>'+
         '<td><span class="badge '+(remaining<=3?'badge-danger':remaining<=7?'badge-warning':'badge-success')+'">'+remaining+' days</span></td>'+
-        '<td><button class="btn btn-ghost btn-sm btn-icon" onclick="saveAnnual(\''+agent.id+'\',\''+( a.id||'')+'\','+year+')" title="Save"><i class="fas fa-save"></i></button></td>'+
+        '<td><button class="btn btn-ghost btn-sm btn-icon" onclick="saveAnnual(\''+agent.id+'\',\''+(a.id||'')+'\','+year+')" title="Save"><i class="fas fa-save"></i></button></td>'+
         '</tr>';
     }).join('');
   } catch(e) { tbody.innerHTML='<tr><td colspan="18"><div class="empty-state"><span class="empty-icon">❌</span>Failed</div></td></tr>'; }
 }
 
-// Store all row values per agent (not just changed ones)
 function markAnnual(agentId, field, value, recordId, year) {
   if (!annualEdits[agentId]) annualEdits[agentId] = { _id:recordId, _year:year };
   annualEdits[agentId][field] = parseFloat(value)||0;
@@ -556,75 +564,81 @@ function markAnnual(agentId, field, value, recordId, year) {
 
 async function saveAnnual(agentId, recordId, year) {
   const agent = allAgents.find(a=>a.id===agentId);
-
-  // Read all inputs from the row directly from DOM
-  const rows = document.querySelectorAll('#annual-tbody tr');
+  const rows  = document.querySelectorAll('#annual-tbody tr');
   let rowEl = null;
-  rows.forEach(r => {
-    if (r.innerHTML.includes(agent.formal_name)) rowEl = r;
-  });
-
+  rows.forEach(r => { if (r.innerHTML.includes(agent.formal_name)) rowEl = r; });
   const inputs = rowEl ? rowEl.querySelectorAll('input.editable-cell') : [];
-  const MONTHS_S = ['jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec'];
-
   const entitlement = parseFloat(inputs[0]?.value)||21;
   const carry_over  = parseFloat(inputs[1]?.value)||0;
-  const monthVals = {};
-  MONTHS_S.forEach((m,i) => { monthVals['used_'+m] = parseFloat(inputs[i+2]?.value)||0; });
-  const totalUsed = Object.values(monthVals).reduce((s,v) => s+v, 0);
-  const remaining = (entitlement + carry_over) - totalUsed;
-  const payload = { entitlement, carry_over, ...monthVals, total_used: totalUsed, remaining: remaining, updated_at:new Date().toISOString() };
-
+  const monthVals   = {};
+  MONTHS_SHORT.forEach((m,i) => { monthVals['used_'+m] = parseFloat(inputs[i+2]?.value)||0; });
+  const totalUsed = Object.values(monthVals).reduce((s,v)=>s+v,0);
+  const remaining = (entitlement+carry_over)-totalUsed;
+  const payload = { entitlement, carry_over, ...monthVals, total_used:totalUsed, remaining, updated_at:new Date().toISOString() };
   try {
-    if (recordId) {
-      const { error } = await db.from('annual_leave').update(payload).eq('id', recordId);
-      if (error) throw error;
-    } else {
-      const { error } = await db.from('annual_leave').insert({
-        agent_id:agentId, agent_name:agent?.formal_name||'', year, ...payload,
-        created_at:new Date().toISOString()
-      });
-      if (error) throw error;
-    }
-    showToast(agent?.formal_name+' — Annual saved! Remaining: '+remaining+' days','success');
+    if (recordId) { await db.from('annual_leave').update(payload).eq('id',recordId); }
+    else { await db.from('annual_leave').insert({ agent_id:agentId, agent_name:agent?.formal_name||'', year, ...payload, created_at:new Date().toISOString() }); }
+    showToast(agent?.formal_name+' — Remaining: '+remaining+' days','success');
     loadAnnual();
   } catch(e) { showToast('Failed: '+e.message,'error'); }
 }
 
-// Save All Annual at once
 async function saveAllAnnual() {
   const year = parseInt(document.getElementById('year-filter').value);
   const rows = document.querySelectorAll('#annual-tbody tr');
-  let saved = 0;
+  let saved  = 0;
   for (const agent of allAgents) {
     let rowEl = null;
     rows.forEach(r => { if (r.innerHTML.includes(agent.formal_name)) rowEl = r; });
     if (!rowEl) continue;
     const inputs = rowEl.querySelectorAll('input.editable-cell');
-    const MONTHS_S = ['jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec'];
     const entitlement = parseFloat(inputs[0]?.value)||21;
     const carry_over  = parseFloat(inputs[1]?.value)||0;
-    const monthVals = {};
-    MONTHS_S.forEach((m,i) => { monthVals['used_'+m] = parseFloat(inputs[i+2]?.value)||0; });
-    const existing = annualData.find(a=>a.agent_id===agent.id);
-    const totalUsed = Object.values(monthVals).reduce((s,v) => s+v, 0);
-    const remaining = (entitlement + carry_over) - totalUsed;
-    const payload = { entitlement, carry_over, ...monthVals, total_used: totalUsed, remaining: remaining, updated_at:new Date().toISOString() };
-    
+    const monthVals   = {};
+    MONTHS_SHORT.forEach((m,i) => { monthVals['used_'+m] = parseFloat(inputs[i+2]?.value)||0; });
+    const existing  = annualData.find(a=>a.agent_id===agent.id);
+    const totalUsed = Object.values(monthVals).reduce((s,v)=>s+v,0);
+    const remaining = (entitlement+carry_over)-totalUsed;
+    const payload   = { entitlement, carry_over, ...monthVals, total_used:totalUsed, remaining, updated_at:new Date().toISOString() };
     try {
-      if (existing) {
-        await db.from('annual_leave').update(payload).eq('id', existing.id);
-      } else {
-        await db.from('annual_leave').insert({
-          agent_id:agent.id, agent_name:agent.formal_name, year, ...payload,
-          created_at:new Date().toISOString()
-        });
-      }
+      if (existing) { await db.from('annual_leave').update(payload).eq('id',existing.id); }
+      else { await db.from('annual_leave').insert({ agent_id:agent.id, agent_name:agent.formal_name, year, ...payload, created_at:new Date().toISOString() }); }
       saved++;
     } catch(e) { console.error(e); }
   }
-  showToast('Saved '+saved+' agents annual leave!','success');
+  showToast('Saved '+saved+' agents!','success');
   loadAnnual();
+}
+
+// ── ANNUAL BALANCE TAB ──
+async function loadAnnualBalance() {
+  const year  = parseInt(document.getElementById('year-filter').value);
+  const tbody = document.getElementById('annualbal-tbody');
+  document.getElementById('annualbal-year-label').innerText = year;
+  tbody.innerHTML = '<tr><td colspan="5"><div class="loading-wrap"><div class="spinner"></div></div></td></tr>';
+  try {
+    const { data } = await db.from('annual_leave').select('*').eq('year',year);
+    if (!data || !data.length) {
+      tbody.innerHTML = '<tr><td colspan="5"><div class="empty-state"><span class="empty-icon">📭</span>No data found</div></td></tr>';
+      return;
+    }
+    tbody.innerHTML = allAgents.map(agent => {
+      const a         = data.find(x=>x.agent_id===agent.id)||{};
+      const totalUsed = a.total_used !== undefined ? a.total_used : MONTHS_SHORT.reduce((s,m)=>s+(a['used_'+m]||0),0);
+      const remaining = a.remaining  !== undefined ? a.remaining  : ((a.entitlement||21)+(a.carry_over||0)-totalUsed);
+      const remClass  = remaining<=3?'badge-danger':remaining<=7?'badge-warning':'badge-success';
+      return '<tr>'+
+        '<td><div style="display:flex;align-items:center;gap:8px;"><div class="agent-avatar" style="width:28px;height:28px;font-size:10px;">'+initials(agent.formal_name)+'</div><span style="font-weight:700;">'+agent.formal_name+'</span></div></td>'+
+        '<td style="font-weight:700;">'+(a.entitlement||21)+' days</td>'+
+        '<td style="font-weight:700;">'+(a.carry_over||0)+' days</td>'+
+        '<td style="font-weight:800;color:var(--gold);">'+totalUsed+' days</td>'+
+        '<td><span class="badge '+remClass+'">'+remaining+' days</span></td>'+
+        '</tr>';
+    }).join('');
+  } catch(e) {
+    tbody.innerHTML = '<tr><td colspan="5"><div class="empty-state"><span class="empty-icon">❌</span>Failed</div></td></tr>';
+    showToast('Failed: '+e.message,'error');
+  }
 }
 
 function openSendPanel() {
@@ -653,24 +667,15 @@ function openSendPanel() {
 function buildReportData() {
   return allAgents.map(a => {
     const kpi = kpiData.find(k=>k.agent_id===a.id)||{};
-    return { agentId:a.id, agentName:a.formal_name, email:a.email,
-      conformance:kpi.conformance||'—', missing:kpi.missing_time||'—',
-      aht:kpi.avg_aht||'—', calls:kpi.total_calls||0, quality:kpi.quality||'—' };
+    return { agentId:a.id, agentName:a.formal_name, email:a.email, conformance:kpi.conformance||'—', missing:kpi.missing_time||'—', aht:kpi.avg_aht||'—', calls:kpi.total_calls||0, quality:kpi.quality||'—' };
   });
 }
-
-async function sendToAll() {
-  showToast('Sending...','info');
-  console.log('Report data to send:', buildReportData());
-  showToast('Report data logged to console — connect GAS endpoint','warning');
-}
-
+async function sendToAll() { showToast('Sending...','info'); console.log('Report data:', buildReportData()); showToast('Connect GAS endpoint','warning'); }
 async function sendToOne() {
   const agentId = document.getElementById('send-agent-sel').value;
   if (!agentId) { showToast('Select an agent','error'); return; }
-  const report = buildReportData().find(r=>r.agentId===agentId);
-  console.log('Sending to:', report);
-  showToast('Report data logged — connect GAS endpoint','warning');
+  console.log('Sending to:', buildReportData().find(r=>r.agentId===agentId));
+  showToast('Connect GAS endpoint','warning');
 }
 
 function timeToSec(val) {
@@ -680,19 +685,9 @@ function timeToSec(val) {
   if (p.length===2) return (+p[0])*60+(+p[1]);
   return 0;
 }
-function secToTime(s) {
-  return Math.floor(s/3600).toString().padStart(2,'0')+':'+Math.floor((s%3600)/60).toString().padStart(2,'0')+':'+Math.floor(s%60).toString().padStart(2,'0');
-}
-function formatDate(d) {
-  if (!d) return '—';
-  return new Date(d+'T00:00:00').toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'});
-}
-function openModal(title,msg,onConfirm) {
-  document.getElementById('modal-title').innerText=title;
-  document.getElementById('modal-msg').innerText=msg;
-  document.getElementById('modal-overlay').classList.add('open');
-  document.getElementById('modal-confirm').onclick=()=>{closeModal();onConfirm();};
-}
+function secToTime(s) { return Math.floor(s/3600).toString().padStart(2,'0')+':'+Math.floor((s%3600)/60).toString().padStart(2,'0')+':'+Math.floor(s%60).toString().padStart(2,'0'); }
+function formatDate(d) { if (!d) return '—'; return new Date(d+'T00:00:00').toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'}); }
+function openModal(title,msg,onConfirm) { document.getElementById('modal-title').innerText=title; document.getElementById('modal-msg').innerText=msg; document.getElementById('modal-overlay').classList.add('open'); document.getElementById('modal-confirm').onclick=()=>{closeModal();onConfirm();}; }
 function closeModal() { document.getElementById('modal-overlay').classList.remove('open'); }
 function openPanel()  { document.getElementById('panel-overlay').classList.add('open'); document.getElementById('slide-panel').classList.add('open'); }
 function closePanel() { document.getElementById('panel-overlay').classList.remove('open'); document.getElementById('slide-panel').classList.remove('open'); }
