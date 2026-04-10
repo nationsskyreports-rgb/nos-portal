@@ -446,7 +446,6 @@ function showDashboard(res) {
   }
 
   schShiftTypes = [];
-  schMyAgentId  = null;
   loadAgentSchedule();
   renderRequests(res.userRequests || []);
   globalScheduleData = res.schedule      || [];
