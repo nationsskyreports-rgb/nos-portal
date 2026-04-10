@@ -689,16 +689,11 @@ async function autoGenerateBreaks() {
       const lunchBaseMin  = noBreakStart + windowThird + Math.floor(windowThird * 0.3);
       const break2BaseMin = noBreakStart + windowThird * 2 + Math.floor(windowThird * 0.3);
 
-      // Max agents out at same time = total - 1 (keep at least 1 on queue)
-      const maxOut = Math.max(1, group.length - 1);
-
-      // Distribute with 15 min gap between agents
-      const gapMins = 15;
-
-      group.forEach((agent, idx) => {
-        // Slot index (cycle through maxOut slots)
-        const offset = idx * gapMins;
-        const b1 = break1BaseMin + offset;
+    group.forEach((agent, idx) => {
+      const spread = group.length > 1 ? windowThird / group.length : 0;
+      const offset = Math.floor(idx * spread);     
+      
+      const b1 = break1BaseMin + offset;
         const ln = lunchBaseMin  + offset;
         const b2 = break2BaseMin + offset;
 
