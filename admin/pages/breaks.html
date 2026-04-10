@@ -203,8 +203,7 @@ async function loadBreaks() {
       return;
     }
 
-    const { data: breaks } = await db.from('breaks')
-      .select('*').eq('break_date', date);
+    const { data: breaks } = await db.from('breaks').select('*').eq('break_date', date);
 
     breaksData = {};
     (breaks || []).forEach(b => { breaksData[b.agent_id] = b; });
@@ -215,7 +214,6 @@ async function loadBreaks() {
       const shiftStr = sch?.shift_types
         ? formatTime(sch.shift_types.start_time) + ' - ' + formatTime(sch.shift_types.end_time)
         : '—';
-
       editRows[agent.id] = {
         shift:  shiftStr,
         break1: b.break1 ? b.break1.substring(0,5) : '',
@@ -261,7 +259,6 @@ async function saveAllBreaks() {
   const date = document.getElementById('date-picker').value;
   const btn  = document.querySelector('.btn-primary[onclick="saveAllBreaks()"]');
   if (btn) { btn.disabled=true; btn.innerHTML='<i class="fas fa-spinner fa-spin"></i> Saving...'; }
-
   try {
     const toSave = workingAgents
       .filter(a => editRows[a.id]?.break1 || editRows[a.id]?.lunch || editRows[a.id]?.break2)
@@ -274,7 +271,6 @@ async function saveAllBreaks() {
         break2:     editRows[a.id]?.break2 ? editRows[a.id].break2+':00' : null,
         updated_at: new Date().toISOString(),
       }));
-
     if (toSave.length) {
       const { error } = await db.from('breaks').upsert(toSave, { onConflict: 'agent_id,break_date' });
       if (error) throw error;
@@ -293,11 +289,9 @@ async function copyFromYesterday() {
   const yesterday = new Date(date + 'T00:00:00');
   yesterday.setDate(yesterday.getDate() - 1);
   const yStr = yesterday.toISOString().split('T')[0];
-
   try {
     const { data } = await db.from('breaks').select('*').eq('break_date', yStr);
     if (!data || !data.length) { showToast('No breaks found for yesterday', 'warning'); return; }
-
     let copied = 0;
     data.forEach(b => {
       if (editRows[b.agent_id]) {
@@ -307,7 +301,6 @@ async function copyFromYesterday() {
         copied++;
       }
     });
-
     const rows = document.querySelectorAll('#breaks-tbody tr');
     workingAgents.forEach((agent, idx) => {
       const row = rows[idx];
@@ -319,7 +312,6 @@ async function copyFromYesterday() {
         inputs[2].value = editRows[agent.id].break2;
       }
     });
-
     showToast('Copied breaks for ' + copied + ' working agent(s)!', 'success');
   } catch(e) {
     showToast('Failed: ' + e.message, 'error');
@@ -329,7 +321,6 @@ async function copyFromYesterday() {
 // ── REGENERATE BREAKS ──
 async function regenerateBreaks() {
   const date = document.getElementById('date-picker').value;
-
   openModal('Regenerate Breaks',
     'This will recalculate breaks based on current schedule for ' + formatDate(date) + '. Existing breaks will be overwritten. Continue?',
     async () => {
@@ -346,52 +337,12 @@ async function regenerateBreaks() {
           return;
         }
 
-        const shiftGroups = {};
-        schedules.forEach(s => {
-          if (!s.shift_types) return;
-          const key = s.shift_types.start_time + '_' + s.shift_types.end_time;
-          if (!shiftGroups[key]) shiftGroups[key] = [];
-          shiftGroups[key].push({ agent_id: s.agent_id, ...s.shift_types });
-        });
-
-        const upserts = [];
-        Object.values(shiftGroups).forEach(group => {
-          const shiftStartMins = timeToMins(group[0].start_time);
-          const shiftEndMins   = timeToMins(group[0].end_time);
-          const noBreakStart   = shiftStartMins + 60;
-          const noBreakEnd     = shiftEndMins   - 60;
-          const window         = noBreakEnd - noBreakStart;
-          const windowThird    = Math.floor(window / 3);
-
-          group.forEach((agent, idx) => {
-            const spread = group.length > 1 ? windowThird / group.length : 0;
-            const offset = Math.floor(idx * spread);
-
-            const break1BaseMin = noBreakStart + Math.floor(windowThird * 0.3);
-            const lunchBaseMin  = noBreakStart + windowThird + Math.floor(windowThird * 0.3);
-            const break2BaseMin = noBreakStart + windowThird * 2 + Math.floor(windowThird * 0.3);
-
-            const b1Final = roundToQuarter(Math.min(break1BaseMin + offset, noBreakEnd - 15));
-            const lnFinal = roundToQuarter(Math.min(lunchBaseMin  + offset, noBreakEnd - 30));
-            const b2Final = roundToQuarter(Math.min(break2BaseMin + offset, noBreakEnd - 15));
-
-            upserts.push({
-              agent_id:   agent.agent_id,
-              break_date: date,
-              shift_time: group[0].start_time.substring(0,5)+' - '+group[0].end_time.substring(0,5),
-              break1:     minsToTime(b1Final),
-              lunch:      minsToTime(lnFinal),
-              break2:     minsToTime(b2Final),
-              updated_at: new Date().toISOString(),
-            });
-          });
-        });
+        const upserts = calculateBreaks(schedules, date);
 
         if (upserts.length) {
           const { error } = await db.from('breaks').upsert(upserts, { onConflict: 'agent_id,break_date' });
           if (error) throw error;
         }
-
         showToast('Breaks regenerated for ' + upserts.length + ' agent(s)!', 'success');
         await loadBreaks();
       } catch(e) {
@@ -401,6 +352,63 @@ async function regenerateBreaks() {
       }
     }
   );
+}
+
+// ── CORE BREAK CALCULATION ──
+function calculateBreaks(schedules, date) {
+  const agents = schedules
+    .filter(s => s.shift_types)
+    .map(s => ({
+      agent_id:   s.agent_id,
+      start_time: s.shift_types.start_time,
+      end_time:   s.shift_types.end_time,
+      startMins:  timeToMins(s.shift_types.start_time),
+      endMins:    timeToMins(s.shift_types.end_time),
+    }));
+
+  // رتب بوقت البداية
+  agents.sort((a, b) => a.startMins - b.startMins);
+
+  // global used slots لكل نوع بريك
+  const usedBreak1 = new Set();
+  const usedLunch  = new Set();
+  const usedBreak2 = new Set();
+
+  const upserts = [];
+
+  agents.forEach(agent => {
+    const noBreakStart = agent.startMins + 60;
+    const noBreakEnd   = agent.endMins   - 60;
+    const window       = noBreakEnd - noBreakStart;
+    const windowThird  = Math.floor(window / 3);
+
+    // الأوقات المثالية بناءً على شيفت الـ agent
+    const idealBreak1 = roundToQuarter(noBreakStart + Math.floor(windowThird * 0.3));
+    const idealLunch  = roundToQuarter(noBreakStart + windowThird + Math.floor(windowThird * 0.3));
+    const idealBreak2 = roundToQuarter(noBreakStart + windowThird * 2 + Math.floor(windowThird * 0.3));
+
+    // دور على أقرب slot متاح جوه window الشيفت
+    const b1 = findSlot(idealBreak1, noBreakStart, noBreakEnd - 15, usedBreak1);
+    const ln = findSlot(idealLunch,  noBreakStart, noBreakEnd - 30, usedLunch);
+    const b2 = findSlot(idealBreak2, noBreakStart, noBreakEnd - 15, usedBreak2);
+
+    // احجز الـ slots
+    usedBreak1.add(b1);
+    usedLunch.add(ln);
+    usedBreak2.add(b2);
+
+    upserts.push({
+      agent_id:   agent.agent_id,
+      break_date: date,
+      shift_time: agent.start_time.substring(0,5) + ' - ' + agent.end_time.substring(0,5),
+      break1:     minsToTime(b1),
+      lunch:      minsToTime(ln),
+      break2:     minsToTime(b2),
+      updated_at: new Date().toISOString(),
+    });
+  });
+
+  return upserts;
 }
 
 // ── WEEKLY VIEW ──
@@ -448,7 +456,10 @@ async function loadWeeklyBreaks() {
 
     const workingIds = new Set((schedules||[]).map(s=>s.agent_id));
     const wAgents    = allAgents.filter(a=>workingIds.has(a.id));
-    if (!wAgents.length) { gridEl.innerHTML='<div class="empty-state" style="padding:40px;"><span class="empty-icon">📭</span>No working agents this week</div>'; return; }
+    if (!wAgents.length) {
+      gridEl.innerHTML='<div class="empty-state" style="padding:40px;"><span class="empty-icon">📭</span>No working agents this week</div>';
+      return;
+    }
 
     const breaksMap = {};
     (breaks||[]).forEach(b => { breaksMap[b.agent_id+'_'+b.break_date]=b; });
@@ -456,7 +467,9 @@ async function loadWeeklyBreaks() {
     (schedules||[]).forEach(s => { schedMap[s.agent_id+'_'+s.shift_date]=s; });
 
     let html = '<table class="week-grid"><thead><tr><th class="agent-col">Agent</th>';
-    dates.forEach(d => { html+='<th><div style="display:flex;flex-direction:column;align-items:center;gap:2px;"><span style="font-size:10px;font-weight:700;">'+d.dayName+'</span><span style="font-size:9px;color:var(--muted);">'+d.display+'</span></div></th>'; });
+    dates.forEach(d => {
+      html+='<th><div style="display:flex;flex-direction:column;align-items:center;gap:2px;"><span style="font-size:10px;font-weight:700;">'+d.dayName+'</span><span style="font-size:9px;color:var(--muted);">'+d.display+'</span></div></th>';
+    });
     html += '</tr></thead><tbody>';
 
     wAgents.forEach(agent => {
@@ -486,6 +499,16 @@ async function loadWeeklyBreaks() {
 function timeToMins(t) { if(!t)return 0; const p=t.substring(0,5).split(':'); return (+p[0])*60+(+p[1]); }
 function minsToTime(m) { const h=Math.floor(m/60).toString().padStart(2,'0'); const mn=(m%60).toString().padStart(2,'0'); return h+':'+mn+':00'; }
 function roundToQuarter(mins) { return Math.round(mins / 15) * 15; }
+function findSlot(ideal, min, max, usedSet) {
+  if (!usedSet.has(ideal) && ideal >= min && ideal <= max) return ideal;
+  for (let i = 15; i <= 120; i += 15) {
+    const fwd = ideal + i;
+    const bwd = ideal - i;
+    if (fwd <= max && !usedSet.has(fwd)) return fwd;
+    if (bwd >= min && !usedSet.has(bwd)) return bwd;
+  }
+  return Math.min(Math.max(ideal, min), max);
+}
 function fmtTime(val) { if(!val)return ''; const m=val.match(/^(\d{1,2}):(\d{2})/); if(!m)return val; return String(parseInt(m[1])).padStart(2,'0')+':'+m[2]; }
 function formatDate(d) { if(!d)return '—'; return new Date(d+'T00:00:00').toLocaleDateString('en-GB',{weekday:'long',day:'2-digit',month:'long',year:'numeric'}); }
 function formatTime(t) { return t?t.substring(0,5):'—'; }
