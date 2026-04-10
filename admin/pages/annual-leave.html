@@ -84,9 +84,6 @@
         <button class="btn btn-ghost btn-sm" onclick="loadData()">
           <i class="fas fa-sync-alt"></i> Refresh
         </button>
-        <button class="btn btn-success btn-sm" id="save-all-btn" onclick="saveAll()">
-          <i class="fas fa-save"></i> Save All
-        </button>
         <div class="admin-chip">
           <div class="admin-avatar" id="admin-avatar">AD</div>
           <span class="admin-name" id="admin-name">Admin</span>
@@ -104,34 +101,17 @@
 
       <!-- TAB: Leave Balance -->
       <div id="tab-balance">
-        <div class="summary-bar fade-up" id="summary-bar">
-          <div class="summary-chip">
-            <span class="sc-label">Total Agents</span>
-            <span class="sc-val" id="s-agents">—</span>
-          </div>
-          <div class="summary-chip">
-            <span class="sc-label">Total Entitlement</span>
-            <span class="sc-val" id="s-entitlement">—</span>
-          </div>
-          <div class="summary-chip">
-            <span class="sc-label">Total Used</span>
-            <span class="sc-val" id="s-used" style="color:var(--gold)">—</span>
-          </div>
-          <div class="summary-chip">
-            <span class="sc-label">Total Remaining</span>
-            <span class="sc-val" id="s-remaining" style="color:#10B981">—</span>
-          </div>
-          <div class="summary-chip">
-            <span class="sc-label">Low Balance (≤3)</span>
-            <span class="sc-val" id="s-low" style="color:#EF4444">—</span>
-          </div>
+        <div class="summary-bar fade-up">
+          <div class="summary-chip"><span class="sc-label">Total Agents</span><span class="sc-val" id="s-agents">—</span></div>
+          <div class="summary-chip"><span class="sc-label">Total Entitlement</span><span class="sc-val" id="s-entitlement">—</span></div>
+          <div class="summary-chip"><span class="sc-label">Total Used</span><span class="sc-val" id="s-used" style="color:var(--gold)">—</span></div>
+          <div class="summary-chip"><span class="sc-label">Total Remaining</span><span class="sc-val" id="s-remaining" style="color:#10B981">—</span></div>
+          <div class="summary-chip"><span class="sc-label">Low Balance (≤3)</span><span class="sc-val" id="s-low" style="color:#EF4444">—</span></div>
         </div>
 
         <div class="section-card fade-up">
           <div class="section-header">
-            <div class="section-title">
-              <i class="fas fa-umbrella-beach" style="color:var(--gold)"></i> Leave Balance
-            </div>
+            <div class="section-title"><i class="fas fa-umbrella-beach" style="color:var(--gold)"></i> Leave Balance</div>
             <span id="last-updated" style="font-size:11px;color:var(--muted);"></span>
           </div>
           <div class="section-body no-pad">
@@ -166,20 +146,15 @@
       <div id="tab-summary" style="display:none;">
         <div class="section-card fade-up">
           <div class="section-header">
-            <div class="section-title">
-              <i class="fas fa-umbrella-beach" style="color:var(--gold)"></i> Annual Balance
-            </div>
+            <div class="section-title"><i class="fas fa-umbrella-beach" style="color:var(--gold)"></i> Annual Balance</div>
           </div>
           <div class="section-body no-pad">
             <div class="table-wrap">
               <table class="nos-table">
                 <thead>
                   <tr>
-                    <th>Agent</th>
-                    <th>Entitlement</th>
-                    <th>Carry Over</th>
-                    <th>Total Used</th>
-                    <th>Remaining</th>
+                    <th>Agent</th><th>Entitlement</th><th>Carry Over</th>
+                    <th>Total Used</th><th>Remaining</th>
                   </tr>
                 </thead>
                 <tbody id="summary-tbody">
@@ -208,21 +183,18 @@ if (session) {
 }
 
 const MONTHS = ['jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec'];
-let leaveData   = [];
-let currentTab  = 'balance';
+let leaveData  = [];
+let currentTab = 'balance';
 
-// ── SWITCH TAB ──
 function switchTab(tab, btn) {
   currentTab = tab;
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
-  document.getElementById('tab-balance').style.display = tab === 'balance' ? 'block' : 'none';
-  document.getElementById('tab-summary').style.display = tab === 'summary' ? 'block' : 'none';
-  document.getElementById('save-all-btn').style.display = tab === 'balance' ? 'flex' : 'none';
-  if (tab === 'summary') renderAnnualSummary();
+  document.getElementById('tab-balance').style.display = tab==='balance' ? 'block' : 'none';
+  document.getElementById('tab-summary').style.display = tab==='summary' ? 'block' : 'none';
+  if (tab==='summary') renderAnnualSummary();
 }
 
-// ── LOAD DATA ──
 async function loadData() {
   const year  = document.getElementById('year-select').value;
   const tbody = document.getElementById('leave-tbody');
@@ -230,7 +202,6 @@ async function loadData() {
   try {
     const { data: agents } = await db.from('agents')
       .select('id, formal_name').eq('status','Active').order('formal_name');
-
     const { data: leaves } = await db.from('annual_leave')
       .select('*').eq('year', parseInt(year));
 
@@ -238,6 +209,9 @@ async function loadData() {
       const leave = (leaves || []).find(l => l.agent_id === a.id) || {};
       return { ...leave, agent_id: a.id, formal_name: a.formal_name, year: parseInt(year) };
     });
+
+    // حسب وحفظ total_used و remaining تلقائي
+    await autoSync();
 
     renderTable();
     renderSummary();
@@ -249,7 +223,24 @@ async function loadData() {
   }
 }
 
-// ── RENDER BALANCE TABLE ──
+// حسب وحفظ تلقائي من غير ما المستخدم يضغط حاجة
+async function autoSync() {
+  for (const r of leaveData) {
+    if (!r.id) continue;
+    const total_used = MONTHS.reduce((s, m) => s + (r['used_' + m] || 0), 0);
+    const remaining  = (r.entitlement || 0) + (r.carry_over || 0) - total_used;
+    // حفظ في Supabase
+    await db.from('annual_leave').update({
+      total_used,
+      remaining,
+      updated_at: new Date().toISOString()
+    }).eq('id', r.id);
+    // حدث الـ local data
+    r.total_used = total_used;
+    r.remaining  = remaining;
+  }
+}
+
 function renderTable() {
   const tbody = document.getElementById('leave-tbody');
   if (!leaveData.length) {
@@ -261,27 +252,58 @@ function renderTable() {
     const carry_over  = r.carry_over  || 0;
     const total_used  = MONTHS.reduce((s, m) => s + (r['used_' + m] || 0), 0);
     const remaining   = entitlement + carry_over - total_used;
-    const remClass    = remaining <= 3 ? 'remaining-low' : remaining <= 7 ? 'remaining-warn' : 'remaining-ok';
+    const remClass    = remaining<=3?'remaining-low':remaining<=7?'remaining-warn':'remaining-ok';
     const monthCells  = MONTHS.map(m => {
       const val = r['used_' + m] || 0;
-      return '<td><span class="month-val ' + (val === 0 ? 'zero' : '') + '">' + (val === 0 ? '—' : val) + '</span></td>';
+      return '<td><span class="month-val '+(val===0?'zero':'')+'">'+( val===0?'—':val)+'</span></td>';
     }).join('');
-    return '<tr id="row-' + i + '">' +
+    return '<tr id="row-'+i+'">' +
       '<td><div style="display:flex;align-items:center;gap:8px;">' +
-        '<div class="agent-avatar" style="width:28px;height:28px;font-size:10px;">' + initials(r.formal_name) + '</div>' +
-        '<span style="font-weight:700;">' + r.formal_name + '</span>' +
+        '<div class="agent-avatar" style="width:28px;height:28px;font-size:10px;">'+initials(r.formal_name)+'</div>' +
+        '<span style="font-weight:700;">'+r.formal_name+'</span>' +
       '</div></td>' +
-      '<td><input class="editable-input" type="number" id="ent-' + i + '" value="' + entitlement + '" min="0" max="60" onchange="recalcRow(' + i + ')"></td>' +
-      '<td><input class="editable-input" type="number" id="co-' + i + '" value="' + carry_over + '" min="0" max="60" onchange="recalcRow(' + i + ')"></td>' +
+      '<td><input class="editable-input" type="number" id="ent-'+i+'" value="'+entitlement+'" min="0" max="60" onchange="saveEntCo('+i+')"></td>' +
+      '<td><input class="editable-input" type="number" id="co-'+i+'" value="'+carry_over+'" min="0" max="60" onchange="saveEntCo('+i+')"></td>' +
       monthCells +
-      '<td><span class="total-used-val" id="total-' + i + '">' + total_used + '</span></td>' +
-      '<td><span class="remaining-badge ' + remClass + '" id="rem-' + i + '">' + remaining + '</span></td>' +
-      '<td><button class="save-row-btn" id="savebtn-' + i + '" onclick="saveRow(' + i + ')"><i class="fas fa-save"></i> Save</button></td>' +
+      '<td><span class="total-used-val" id="total-'+i+'">'+total_used+'</span></td>' +
+      '<td><span class="remaining-badge '+remClass+'" id="rem-'+i+'">'+remaining+'</span></td>' +
+      '<td></td>' +
     '</tr>';
   }).join('');
 }
 
-// ── RENDER ANNUAL BALANCE TAB ──
+// لما يغير Entitlement أو Carry Over — يحفظ تلقائي
+async function saveEntCo(i) {
+  const r   = leaveData[i];
+  if (!r.id) return;
+  const ent        = parseInt(document.getElementById('ent-'+i).value)||0;
+  const co         = parseInt(document.getElementById('co-'+i).value)||0;
+  const total_used = MONTHS.reduce((s,m) => s+(r['used_'+m]||0), 0);
+  const remaining  = ent + co - total_used;
+  const remClass   = remaining<=3?'remaining-low':remaining<=7?'remaining-warn':'remaining-ok';
+
+  const remEl = document.getElementById('rem-'+i);
+  if (remEl) { remEl.className='remaining-badge '+remClass; remEl.innerText=remaining; }
+
+  try {
+    await db.from('annual_leave').update({
+      entitlement: ent, carry_over: co,
+      total_used, remaining,
+      updated_at: new Date().toISOString()
+    }).eq('id', r.id);
+
+    leaveData[i].entitlement = ent;
+    leaveData[i].carry_over  = co;
+    leaveData[i].total_used  = total_used;
+    leaveData[i].remaining   = remaining;
+
+    renderSummary();
+    showToast(r.formal_name+' updated ✅','success');
+  } catch(e) {
+    showToast('Failed: '+e.message,'error');
+  }
+}
+
 function renderAnnualSummary() {
   const tbody = document.getElementById('summary-tbody');
   if (!leaveData.length) {
@@ -289,112 +311,30 @@ function renderAnnualSummary() {
     return;
   }
   tbody.innerHTML = leaveData.map(r => {
-    const totalUsed = r.total_used !== undefined ? r.total_used : MONTHS.reduce((s,m) => s+(r['used_'+m]||0), 0);
-    const remaining = r.remaining  !== undefined ? r.remaining  : ((r.entitlement||0)+(r.carry_over||0)-totalUsed);
-    const remClass  = remaining <= 3 ? 'badge-danger' : remaining <= 7 ? 'badge-warning' : 'badge-success';
+    const totalUsed = MONTHS.reduce((s,m) => s+(r['used_'+m]||0), 0);
+    const remaining = (r.entitlement||0) + (r.carry_over||0) - totalUsed;
+    const remClass  = remaining<=3?'badge-danger':remaining<=7?'badge-warning':'badge-success';
     return '<tr>' +
-      '<td><div style="display:flex;align-items:center;gap:8px;"><div class="agent-avatar" style="width:26px;height:26px;font-size:9px;">' + initials(r.formal_name) + '</div><span style="font-weight:700;">' + r.formal_name + '</span></div></td>' +
-      '<td style="font-weight:700;">' + (r.entitlement||0) + ' days</td>' +
-      '<td style="font-weight:700;">' + (r.carry_over||0)  + ' days</td>' +
-      '<td style="font-weight:800;color:var(--gold);">' + totalUsed + ' days</td>' +
-      '<td><span class="badge ' + remClass + '">' + remaining + ' days</span></td>' +
+      '<td><div style="display:flex;align-items:center;gap:8px;"><div class="agent-avatar" style="width:26px;height:26px;font-size:9px;">'+initials(r.formal_name)+'</div><span style="font-weight:700;">'+r.formal_name+'</span></div></td>' +
+      '<td style="font-weight:700;">'+(r.entitlement||0)+' days</td>' +
+      '<td style="font-weight:700;">'+(r.carry_over||0)+' days</td>' +
+      '<td style="font-weight:800;color:var(--gold);">'+totalUsed+' days</td>' +
+      '<td><span class="badge '+remClass+'">'+remaining+' days</span></td>' +
       '</tr>';
   }).join('');
 }
 
-// ── RECALC ROW ──
-function recalcRow(i) {
-  const r          = leaveData[i];
-  const ent        = parseInt(document.getElementById('ent-' + i).value) || 0;
-  const co         = parseInt(document.getElementById('co-'  + i).value) || 0;
-  const total_used = MONTHS.reduce((s, m) => s + (r['used_' + m] || 0), 0);
-  const remaining  = ent + co - total_used;
-  const remClass   = remaining <= 3 ? 'remaining-low' : remaining <= 7 ? 'remaining-warn' : 'remaining-ok';
-  const remSpan    = document.getElementById('rem-' + i);
-  if (remSpan) { remSpan.className = 'remaining-badge ' + remClass; remSpan.innerText = remaining; }
-}
-
-// ── SAVE ROW ──
-async function saveRow(i) {
-  const r          = leaveData[i];
-  const btn        = document.getElementById('savebtn-' + i);
-  const ent        = parseInt(document.getElementById('ent-' + i).value) || 0;
-  const co         = parseInt(document.getElementById('co-'  + i).value) || 0;
-  const total_used = MONTHS.reduce((s, m) => s + (r['used_' + m] || 0), 0);
-  const remaining  = ent + co - total_used;
-
-  btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
-  btn.disabled  = true;
-
-  try {
-    if (r.id) {
-      await db.from('annual_leave').update({
-        entitlement: ent, carry_over: co,
-        total_used, remaining,
-        updated_at: new Date().toISOString()
-      }).eq('id', r.id);
-    } else {
-      const { data } = await db.from('annual_leave').insert({
-        agent_id: r.agent_id, year: r.year,
-        entitlement: ent, carry_over: co,
-        total_used, remaining,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      }).select().single();
-      leaveData[i].id = data?.id;
-    }
-
-    leaveData[i].entitlement = ent;
-    leaveData[i].carry_over  = co;
-    leaveData[i].total_used  = total_used;
-    leaveData[i].remaining   = remaining;
-
-    const totalEl = document.getElementById('total-' + i);
-    if (totalEl) totalEl.innerText = total_used;
-
-    btn.innerHTML = '<i class="fas fa-check"></i> Saved';
-    btn.className = 'save-row-btn saved';
-    setTimeout(() => {
-      btn.innerHTML = '<i class="fas fa-save"></i> Save';
-      btn.className = 'save-row-btn';
-      btn.disabled  = false;
-    }, 2000);
-
-    renderSummary();
-    showToast(r.formal_name + ' updated ✅', 'success');
-
-  } catch(e) {
-    showToast('Failed: ' + e.message, 'error');
-    btn.innerHTML = '<i class="fas fa-save"></i> Save';
-    btn.disabled  = false;
-  }
-}
-
-// ── SAVE ALL ──
-async function saveAll() {
-  const btn = document.getElementById('save-all-btn');
-  btn.disabled  = true;
-  btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
-  for (let i = 0; i < leaveData.length; i++) {
-    await saveRow(i);
-  }
-  btn.disabled  = false;
-  btn.innerHTML = '<i class="fas fa-save"></i> Save All';
-  showToast('All agents saved! ✅', 'success');
-}
-
-// ── SUMMARY BAR ──
 function renderSummary() {
   const totalAgents      = leaveData.length;
-  const totalEntitlement = leaveData.reduce((s, r) => s + (r.entitlement||0) + (r.carry_over||0), 0);
-  const totalUsed        = leaveData.reduce((s, r) => s + (r.total_used||0), 0);
-  const totalRemaining   = leaveData.reduce((s, r) => {
-    const rem = r.remaining !== undefined ? r.remaining : ((r.entitlement||0)+(r.carry_over||0)-(r.total_used||0));
-    return s + rem;
+  const totalEntitlement = leaveData.reduce((s,r) => s+(r.entitlement||0)+(r.carry_over||0), 0);
+  const totalUsed        = leaveData.reduce((s,r) => s+MONTHS.reduce((ms,m) => ms+(r['used_'+m]||0), 0), 0);
+  const totalRemaining   = leaveData.reduce((s,r) => {
+    const used = MONTHS.reduce((ms,m) => ms+(r['used_'+m]||0), 0);
+    return s + ((r.entitlement||0)+(r.carry_over||0)-used);
   }, 0);
   const lowBalance = leaveData.filter(r => {
-    const rem = r.remaining !== undefined ? r.remaining : ((r.entitlement||0)+(r.carry_over||0)-(r.total_used||0));
-    return rem <= 3;
+    const used = MONTHS.reduce((ms,m) => ms+(r['used_'+m]||0), 0);
+    return ((r.entitlement||0)+(r.carry_over||0)-used) <= 3;
   }).length;
 
   document.getElementById('s-agents').innerText      = totalAgents;
