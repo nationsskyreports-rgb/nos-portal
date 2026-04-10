@@ -2276,3 +2276,12 @@ function closeResultPopup() {
   if (window._popupAutoClose) { clearTimeout(window._popupAutoClose); window._popupAutoClose = null; }
   if (window._popupOnClose)   { window._popupOnClose(); window._popupOnClose = null; }
 }
+function copySummary() {
+  const name   = document.getElementById('cs-name').innerText;
+  const mobile = document.getElementById('cs-mobile').innerText;
+  const reason = document.getElementById('cs-reason').innerText;
+  const text   = `Name: ${name}\nMobile: ${mobile}\nReason: ${reason}`;
+  navigator.clipboard.writeText(text).then(() => {
+    showToast('📋', 'Copied!', 'Customer info copied to clipboard', 'success', 3000);
+  });
+}
