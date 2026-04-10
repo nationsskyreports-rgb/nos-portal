@@ -384,9 +384,9 @@ async function regenerateBreaks() {
               agent_id:   agent.agent_id,
               break_date: date,
               shift_time: group[0].start_time.substring(0,5)+' - '+group[0].end_time.substring(0,5),
-              break1:     minsToTime(b1),
-              lunch:      minsToTime(ln),
-              break2:     minsToTime(b2),
+              break1: minsToTime(b1Final),
+              lunch:  minsToTime(lnFinal),
+              break2: minsToTime(b2Final),
               updated_at: new Date().toISOString(),
             });
           });
