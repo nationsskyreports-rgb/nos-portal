@@ -52,6 +52,7 @@ let globalTeamData     = [];
 let knownSwapStatuses  = {};
 let swapPollTimer      = null;
 let currentAnnualData  = { used: 0, left: 0 };
+let schMyAgentId       = null;  // ← ضيف دي هنا
 
 /* Break notification fire-once flags */
 let _notifFired = {
@@ -1732,7 +1733,6 @@ let schAgents      = [];
 let schShiftTypes  = [];
 let schMyDraft     = {};
 let schAllDrafts   = {};
-let schMyAgentId   = null;
 let schCurrentWeek = null;
 
 async function sbFetchSch(path) {
