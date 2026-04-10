@@ -401,7 +401,7 @@ async function loadKPIs(monthName, year) {
         '<td style="font-weight:700;">' + totalCalls + '</td>' +
         '<td style="font-size:11px;color:' + (netMissing==='Full Time'?'#10B981':'#EF4444') + ';font-weight:700;">' + netMissing + '</td>' +
         '<td style="color:#F59E0B;font-weight:700;">' + excStr + '</td>' +
-        '<td><input class="editable-cell" type="text" value="' + (quality?.score||'') + '" placeholder="95%" onchange="markEdit(\'' + agent.id + '\',\'score\',this.value)" style="color:var(--gold);font-weight:700;"></td>' +
+        '<td><input class="editable-cell" type="text" value="' + (quality?.score||'') + '" placeholder="—" onchange="markEdit(\'' + agent.id + '\',\'score\',this.value)" style="color:var(--gold);font-weight:700;"></td>' +
         '<td><span class="badge ' + (typeof annLeft==='number'&&annLeft<=3?'badge-danger':'badge-success') + '">' + (typeof annLeft==='number' ? annLeft+' days' : annLeft) + '</span></td>' +
         '<td style="font-weight:700;">' + annUsedMTD + ' days</td>' +
         '</tr>';
