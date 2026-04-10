@@ -322,98 +322,199 @@
         </div>
       </div>
 
-      <!-- Call/WhatsApp Form (hidden by default) -->
-      <div id="calllog-form-area" style="display:none;">
-        <!-- Channel Header -->
-        <div id="calllog-channel-header" style="
-          display:flex;align-items:center;gap:14px;
-          padding:16px 20px;margin:0 16px 16px;
-          border-radius:16px;border:2px solid var(--border);
-          background:var(--surface2);
-        ">
-          <div id="calllog-channel-icon" style="font-size:28px;">📞</div>
-          <div style="flex:1;">
-            <div id="calllog-channel-title" style="font-family:'Syne',sans-serif;font-size:16px;font-weight:800;color:var(--text);">Call Log</div>
-            <div style="font-size:12px;color:var(--muted);">Tap to switch channel</div>
-          </div>
-          <div style="display:flex;gap:8px;">
-            <button id="switch-call-btn" onclick="selectChannel('call')" style="
-              padding:8px 14px;border-radius:10px;border:2px solid var(--border);
-              background:var(--surface);color:var(--muted);font-size:12px;font-weight:700;
-              cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;transition:all 0.2s;
-            ">📞 Call</button>
-            <button id="switch-wa-btn" onclick="selectChannel('whatsapp')" style="
-              padding:8px 14px;border-radius:10px;border:2px solid var(--border);
-              background:var(--surface);color:var(--muted);font-size:12px;font-weight:700;
-              cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;transition:all 0.2s;
-            "><i class="fab fa-whatsapp" style="color:#25d366;margin-right:4px;"></i> WhatsApp</button>
-          </div>
-        </div>
+<div id="calllog-form-area" style="display:none;">
+  <!-- Channel Header -->
+  <div id="calllog-channel-header" style="display:flex;align-items:center;gap:14px;padding:16px 20px;margin:0 16px 16px;border-radius:16px;border:2px solid var(--border);background:var(--surface2);">
+    <div id="calllog-channel-icon" style="font-size:28px;">📞</div>
+    <div style="flex:1;">
+      <div id="calllog-channel-title" style="font-family:'Syne',sans-serif;font-size:16px;font-weight:800;color:var(--text);">Call Log</div>
+      <div style="font-size:12px;color:var(--muted);">Tap to switch channel</div>
+    </div>
+    <div style="display:flex;gap:8px;">
+      <button id="switch-call-btn" onclick="selectChannel('call')" style="padding:8px 14px;border-radius:10px;border:2px solid var(--border);background:var(--surface);color:var(--muted);font-size:12px;font-weight:700;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;transition:all 0.2s;">📞 Call</button>
+      <button id="switch-wa-btn" onclick="selectChannel('whatsapp')" style="padding:8px 14px;border-radius:10px;border:2px solid var(--border);background:var(--surface);color:var(--muted);font-size:12px;font-weight:700;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;transition:all 0.2s;"><i class="fab fa-whatsapp" style="color:#25d366;margin-right:4px;"></i> WhatsApp</button>
+    </div>
+  </div>
 
-      <div class="mobile-calllog-warning">
-        <div class="warn-icon">🖥️</div>
-        <h3>Desktop Only</h3>
-        <p>Call Log data entry requires a desktop browser for the best experience.</p>
+  <div class="mobile-calllog-warning">
+    <div class="warn-icon">🖥️</div>
+    <h3>Desktop Only</h3>
+    <p>Call Log data entry requires a desktop browser for the best experience.</p>
+  </div>
+
+  <div class="form-card">
+    <!-- Step Indicator -->
+    <div class="step-indicator">
+      <div class="step-dot active" id="sdot-1">1</div>
+      <div class="step-line" id="sline-1"></div>
+      <div class="step-dot" id="sdot-2">2</div>
+      <div class="step-line" id="sline-2"></div>
+      <div class="step-dot" id="sdot-3">3</div>
+      <div class="step-line" id="sline-3"></div>
+      <div class="step-dot" id="sdot-4">4</div>
+    </div>
+
+    <!-- STEP 1: Agent + Reason -->
+    <div class="step-panel active" id="step-1">
+      <div class="step-title">🎯 Step 1 — Basic Info</div>
+      <div class="step-sub">Select agent and call reason</div>
+      <div class="form-group">
+        <label class="form-label">Agent Name <span class="req">*</span></label>
+        <select id="f-agent" class="form-input" onchange="onAgentSelect()">
+          <option value="">Select agent...</option>
+        </select>
       </div>
-      <div class="form-card" style="margin-bottom:16px;">
-        <div class="section-label"><i class="fas fa-search"></i> Customer Search</div>
-        <div style="display:flex;gap:10px;align-items:center;margin-bottom:12px;">
-          <input type="text" id="search-query" class="form-input" placeholder="Search by name or mobile..." style="flex:1;margin:0;">
-          <button class="action-btn c-accent" onclick="searchCustomer()"><i class="fas fa-search"></i> Search</button>
-          <button class="action-btn" onclick="clearSearch()"><i class="fas fa-times"></i> Clear</button>
-        </div>
-        <div id="search-results"></div>
+      <div class="form-group">
+        <label class="form-label">Call Reason <span class="req">*</span></label>
+        <select id="f-reason" class="form-input" onchange="toggleFormSections()">
+          <option value="">Select reason...</option>
+          <option>Wrong Number</option><option>Call Dropped</option>
+          <option>Asking about the projects</option><option>Jirian campaign</option>
+          <option>Jirian Island campaign</option><option>Sky Ridge Elite</option>
+          <option>Sky Ridge Executives</option><option>Zomra</option>
+          <option>ISLA</option><option>Upviews</option><option>Broker</option>
+          <option>Delayed sales call</option><option>EOI Refund</option>
+          <option>Collaboration request</option><option>Non-Business General Inquiry</option>
+          <option>Business General Inquiry</option><option>Complaint</option>
+          <option>Shakira's Event</option>
+        </select>
       </div>
-      <div class="call-log-header-card">
-        <div class="call-log-icon"><i class="fas fa-phone-volume"></i></div>
-        <div><div class="call-log-title">Call Data Entry</div><div class="call-log-sub">Log customer interactions to the database</div></div>
-      </div>
-      <div class="section-label"><i class="fas fa-bolt"></i> Quick Log</div>
+      <!-- Quick Log -->
+      <div class="section-label" style="margin-top:8px;"><i class="fas fa-bolt"></i> Quick Log</div>
       <div class="quick-log-grid">
         <div class="quick-log-btn" onclick="quickLogCall('Wrong Number')"><i class="fas fa-phone-slash"></i><span>Wrong Number</span></div>
         <div class="quick-log-btn" onclick="quickLogCall('Call Dropped')"><i class="fas fa-phone-slash"></i><span>Call Dropped</span></div>
       </div>
-      <div class="form-card">
-        <div class="section-label"><i class="fas fa-user-check"></i> Agent & Call Reason</div>
-        <div class="form-grid-2">
-          <div class="form-group"><label>Agent Name <span class="req">*</span></label><select id="f-agent" class="form-input"><option value="">Select agent...</option></select></div>
-          <div class="form-group"><label>Call Reason <span class="req">*</span></label>
-            <select id="f-reason" class="form-input" onchange="toggleFormSections()">
-              <option value="">Select reason...</option>
-              <option>Wrong Number</option><option>Call Dropped</option>
-              <option>Asking about the projects</option><option>Jirian campaign</option>
-              <option>Jirian Island campaign</option><option>Sky Ridge Elite</option>
-              <option>Sky Ridge Executives</option><option>Zomra</option>
-              <option>ISLA</option><option>Upviews</option><option>Broker</option>
-              <option>Delayed sales call</option><option>EOI Refund</option><option>Collaboration request</option><option>Non-Business General Inquiry</option><option>Business General Inquiry</option><option>Complaint</option><option>Shakira's Event</option>
-            </select>
-          </div>
-        </div>
-        <div class="form-group" id="mobile-section">
+      <div class="step-nav">
+        <button class="step-nav-btn next" onclick="goStep(2)">Next <i class="fas fa-arrow-right"></i></button>
+      </div>
+    </div>
+
+    <!-- STEP 2: Customer Info -->
+    <div class="step-panel" id="step-2">
+      <div class="step-title">👤 Step 2 — Customer Info</div>
+      <div class="step-sub">Enter customer details</div>
+      <!-- Customer Search -->
+      <div class="section-label"><i class="fas fa-search"></i> Customer Search</div>
+      <div style="display:flex;gap:10px;align-items:center;margin-bottom:16px;">
+        <input type="text" id="search-query" class="form-input" placeholder="Search by name or mobile..." style="flex:1;margin:0;">
+        <button class="action-btn c-accent" onclick="searchCustomer()"><i class="fas fa-search"></i></button>
+        <button class="action-btn" onclick="clearSearch()"><i class="fas fa-times"></i></button>
+      </div>
+      <div id="search-results" style="margin-bottom:12px;"></div>
+      <div id="mobile-section">
+        <div class="form-group">
           <label class="form-label">Customer Name</label>
           <input type="text" id="f-cname" class="form-input" placeholder="Enter customer name...">
-          <label>Customer Mobile <span class="req">*</span></label>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Customer Mobile <span class="req">*</span></label>
           <input type="tel" id="f-mobile" class="form-input" placeholder="01xxxxxxxxx">
         </div>
-        <div class="section-label"><i class="fas fa-briefcase"></i> Business Details</div>
-        <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px;">
-          <div class="form-group"><label>Business Relativity <span class="req">*</span></label><div class="radio-group" id="f-bizrel"><label class="radio-opt" onclick="selectRadio('f-bizrel',this,'Business Related')"><input type="radio"> Business Related</label><label class="radio-opt" onclick="selectRadio('f-bizrel',this,'Non-Business Related')"><input type="radio"> Non-Business Related</label></div></div>
-          <div class="form-group"><label>Sales Call Requested <span class="req">*</span></label><div class="radio-group" id="f-salescall"><label class="radio-opt" onclick="selectRadio('f-salescall',this,'Yes')"><input type="radio"> Yes</label><label class="radio-opt" onclick="selectRadio('f-salescall',this,'No')"><input type="radio"> No</label><label class="radio-opt" onclick="selectRadio('f-salescall',this,'N/A')"><input type="radio"> N/A</label></div></div>
-          <div class="form-group"><label>Communication Channel <span class="req">*</span></label><div class="radio-group" id="f-channel"><label class="radio-opt" onclick="selectRadio('f-channel',this,'Whatsapp')"><input type="radio"><i class="fab fa-whatsapp" style="color:#25d366;margin-right:4px"></i>WhatsApp</label><label class="radio-opt" onclick="selectRadio('f-channel',this,'Mobile')"><input type="radio"><i class="fas fa-mobile-alt" style="margin-right:4px"></i>Mobile</label><label class="radio-opt" onclick="selectRadio('f-channel',this,'Email')"><input type="radio"><i class="fas fa-envelope" style="margin-right:4px"></i>Email</label><label class="radio-opt" onclick="selectRadio('f-channel',this,'Alternative Mobile')"><input type="radio">Alt. Mobile</label><label class="radio-opt" onclick="selectRadio('f-channel',this,'SMS')"><input type="radio"> SMS</label><label class="radio-opt" onclick="selectRadio('f-channel',this,'N/A')"><input type="radio"> N/A</label></div></div>
-          <div class="form-group"><label>Media Source <span class="req">*</span></label><div class="radio-group" id="f-media"><label class="radio-opt" onclick="selectRadio('f-media',this,'Billboards')"><input type="radio">Billboards</label><label class="radio-opt" onclick="selectRadio('f-media',this,'Saw site')"><input type="radio">Saw Site</label><label class="radio-opt" onclick="selectRadio('f-media',this,'Facebook')"><input type="radio"><i class="fab fa-facebook" style="color:#1877f2;margin-right:4px"></i>Facebook</label><label class="radio-opt" onclick="selectRadio('f-media',this,'Instagram')"><input type="radio"><i class="fab fa-instagram" style="color:#e1306c;margin-right:4px"></i>Instagram</label><label class="radio-opt" onclick="selectRadio('f-media',this,'Linkedin')"><input type="radio"><i class="fab fa-linkedin" style="color:#0077b5;margin-right:4px"></i>LinkedIn</label><label class="radio-opt" onclick="selectRadio('f-media',this,'Word of mouth')"><input type="radio">Word of Mouth</label><label class="radio-opt" onclick="selectRadio('f-media',this,'TV ad.')"><input type="radio">TV Ad.</label><label class="radio-opt" onclick="selectRadio('f-media',this,'Youtube')"><input type="radio"><i class="fab fa-youtube" style="color:#ff0000;margin-right:4px"></i>YouTube</label><label class="radio-opt" onclick="selectRadio('f-media',this,'N/A')"><input type="radio"> N/A</label></div></div>
-        </div>
-        <div class="budget-unit-grid">
-          <div class="form-group"><label>Budget (Millions) <span class="req">*</span></label><div class="radio-group" id="f-budget" style="flex-direction:column"><label class="radio-opt" onclick="selectRadio('f-budget',this,'0 - 10')"><input type="radio"> 0 - 10M</label><label class="radio-opt" onclick="selectRadio('f-budget',this,'10 - 20')"><input type="radio"> 10 - 20M</label><label class="radio-opt" onclick="selectRadio('f-budget',this,'20 +')"><input type="radio"> 20M+</label><label class="radio-opt" onclick="selectRadio('f-budget',this,'N/A')"><input type="radio"> N/A</label></div></div>
-          <div class="form-group"><label>Unit Type <span class="req">*</span></label><div class="radio-group" id="f-unit" style="flex-direction:column"><label class="radio-opt" onclick="selectRadio('f-unit',this,'Apartment')"><input type="radio"> Apartment</label><label class="radio-opt" onclick="selectRadio('f-unit',this,'Villa')"><input type="radio"> Villa</label><label class="radio-opt" onclick="selectRadio('f-unit',this,'Commercial')"><input type="radio"> Commercial</label><label class="radio-opt" onclick="selectRadio('f-unit',this,'Admin')"><input type="radio"> Admin</label><label class="radio-opt" onclick="selectRadio('f-unit',this,'Twin House')"><input type="radio"> Twin House</label><label class="radio-opt" onclick="selectRadio('f-unit',this,'Stand Alone House')"><input type="radio"> Stand Alone</label><label class="radio-opt" onclick="selectRadio('f-unit',this,'Town House')"><input type="radio"> Town House</label><label class="radio-opt" onclick="selectRadio('f-unit',this,'N/A')"><input type="radio"> N/A</label></div></div>
-        </div>
-        <div class="form-group"><label>Extra Notes</label><textarea id="f-extra" class="form-input" placeholder="Any additional notes..."></textarea></div>
-        <button class="submit-btn" id="formSubmitBtn" onclick="submitCallLogForm()"><i class="fas fa-paper-plane"></i> Submit to Database</button>
-        <div id="form-success" class="form-feedback form-success">✅ Call logged successfully!</div>
-        <div id="form-error" class="form-feedback form-error"></div>
       </div>
-      </div><!-- end calllog-form-area -->
-    </div><!-- end tab-form -->
+      <div class="step-nav">
+        <button class="step-nav-btn back" onclick="goStep(1)"><i class="fas fa-arrow-left"></i> Back</button>
+        <button class="step-nav-btn next" onclick="goStep(3)">Next <i class="fas fa-arrow-right"></i></button>
+      </div>
+    </div>
 
+    <!-- STEP 3: Business Details -->
+    <div class="step-panel" id="step-3">
+      <div class="step-title">💼 Step 3 — Business Details</div>
+      <div class="step-sub">Fill in business information</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+        <div class="form-group">
+          <label class="form-label">Business Relativity <span class="req">*</span></label>
+          <div class="radio-group" id="f-bizrel">
+            <label class="radio-opt" onclick="selectRadio('f-bizrel',this,'Business Related')"><input type="radio"> Business Related</label>
+            <label class="radio-opt" onclick="selectRadio('f-bizrel',this,'Non-Business Related')"><input type="radio"> Non-Business Related</label>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Sales Call Requested <span class="req">*</span></label>
+          <div class="radio-group" id="f-salescall">
+            <label class="radio-opt" onclick="selectRadio('f-salescall',this,'Yes')"><input type="radio"> Yes</label>
+            <label class="radio-opt" onclick="selectRadio('f-salescall',this,'No')"><input type="radio"> No</label>
+            <label class="radio-opt" onclick="selectRadio('f-salescall',this,'N/A')"><input type="radio"> N/A</label>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Communication Channel <span class="req">*</span></label>
+          <div class="radio-group" id="f-channel">
+            <label class="radio-opt" onclick="selectRadio('f-channel',this,'Whatsapp')"><input type="radio"><i class="fab fa-whatsapp" style="color:#25d366;margin-right:4px"></i>WhatsApp</label>
+            <label class="radio-opt" onclick="selectRadio('f-channel',this,'Mobile')"><input type="radio"><i class="fas fa-mobile-alt" style="margin-right:4px"></i>Mobile</label>
+            <label class="radio-opt" onclick="selectRadio('f-channel',this,'Email')"><input type="radio"><i class="fas fa-envelope" style="margin-right:4px"></i>Email</label>
+            <label class="radio-opt" onclick="selectRadio('f-channel',this,'Alternative Mobile')"><input type="radio">Alt. Mobile</label>
+            <label class="radio-opt" onclick="selectRadio('f-channel',this,'SMS')"><input type="radio"> SMS</label>
+            <label class="radio-opt" onclick="selectRadio('f-channel',this,'N/A')"><input type="radio"> N/A</label>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Media Source <span class="req">*</span></label>
+          <div class="radio-group" id="f-media">
+            <label class="radio-opt" onclick="selectRadio('f-media',this,'Billboards')"><input type="radio">Billboards</label>
+            <label class="radio-opt" onclick="selectRadio('f-media',this,'Saw site')"><input type="radio">Saw Site</label>
+            <label class="radio-opt" onclick="selectRadio('f-media',this,'Facebook')"><input type="radio"><i class="fab fa-facebook" style="color:#1877f2;margin-right:4px"></i>Facebook</label>
+            <label class="radio-opt" onclick="selectRadio('f-media',this,'Instagram')"><input type="radio"><i class="fab fa-instagram" style="color:#e1306c;margin-right:4px"></i>Instagram</label>
+            <label class="radio-opt" onclick="selectRadio('f-media',this,'Linkedin')"><input type="radio"><i class="fab fa-linkedin" style="color:#0077b5;margin-right:4px"></i>LinkedIn</label>
+            <label class="radio-opt" onclick="selectRadio('f-media',this,'Word of mouth')"><input type="radio">Word of Mouth</label>
+            <label class="radio-opt" onclick="selectRadio('f-media',this,'TV ad.')"><input type="radio">TV Ad.</label>
+            <label class="radio-opt" onclick="selectRadio('f-media',this,'Youtube')"><input type="radio"><i class="fab fa-youtube" style="color:#ff0000;margin-right:4px"></i>YouTube</label>
+            <label class="radio-opt" onclick="selectRadio('f-media',this,'N/A')"><input type="radio"> N/A</label>
+          </div>
+        </div>
+      </div>
+      <div class="budget-unit-grid">
+        <div class="form-group">
+          <label class="form-label">Budget (Millions) <span class="req">*</span></label>
+          <div class="radio-group" id="f-budget" style="flex-direction:column">
+            <label class="radio-opt" onclick="selectRadio('f-budget',this,'0 - 10')"><input type="radio"> 0 - 10M</label>
+            <label class="radio-opt" onclick="selectRadio('f-budget',this,'10 - 20')"><input type="radio"> 10 - 20M</label>
+            <label class="radio-opt" onclick="selectRadio('f-budget',this,'20 +')"><input type="radio"> 20M+</label>
+            <label class="radio-opt" onclick="selectRadio('f-budget',this,'N/A')"><input type="radio"> N/A</label>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Unit Type <span class="req">*</span></label>
+          <div class="radio-group" id="f-unit" style="flex-direction:column">
+            <label class="radio-opt" onclick="selectRadio('f-unit',this,'Apartment')"><input type="radio"> Apartment</label>
+            <label class="radio-opt" onclick="selectRadio('f-unit',this,'Villa')"><input type="radio"> Villa</label>
+            <label class="radio-opt" onclick="selectRadio('f-unit',this,'Commercial')"><input type="radio"> Commercial</label>
+            <label class="radio-opt" onclick="selectRadio('f-unit',this,'Admin')"><input type="radio"> Admin</label>
+            <label class="radio-opt" onclick="selectRadio('f-unit',this,'Twin House')"><input type="radio"> Twin House</label>
+            <label class="radio-opt" onclick="selectRadio('f-unit',this,'Stand Alone House')"><input type="radio"> Stand Alone</label>
+            <label class="radio-opt" onclick="selectRadio('f-unit',this,'Town House')"><input type="radio"> Town House</label>
+            <label class="radio-opt" onclick="selectRadio('f-unit',this,'N/A')"><input type="radio"> N/A</label>
+          </div>
+        </div>
+      </div>
+      <div class="step-nav">
+        <button class="step-nav-btn back" onclick="goStep(2)"><i class="fas fa-arrow-left"></i> Back</button>
+        <button class="step-nav-btn next" onclick="goStep(4)">Next <i class="fas fa-arrow-right"></i></button>
+      </div>
+    </div>
+
+    <!-- STEP 4: Notes + Submit -->
+    <div class="step-panel" id="step-4">
+      <div class="step-title">📝 Step 4 — Notes & Submit</div>
+      <div class="step-sub">Add any extra notes and submit</div>
+      <div class="form-group">
+        <label class="form-label">Extra Notes</label>
+        <textarea id="f-extra" class="form-input" placeholder="Any additional notes..." rows="4"></textarea>
+      </div>
+      <button class="submit-btn" id="formSubmitBtn" onclick="submitCallLogForm()">
+        <i class="fas fa-paper-plane"></i> Submit to Database
+      </button>
+      <div id="form-success" class="form-feedback form-success">✅ Call logged successfully!</div>
+      <div id="form-error" class="form-feedback form-error"></div>
+      <div class="step-nav" style="margin-top:12px;">
+        <button class="step-nav-btn back" onclick="goStep(3)"><i class="fas fa-arrow-left"></i> Back</button>
+      </div>
+    </div>
+
+  </div>
+</div><!-- end calllog-form-area -->
+    </div><!-- end tab-form -->
     <!-- TAB: KNOWLEDGE BASE -->
     <div class="tab-content" id="tab-kb">
       <div class="kb-shell">
