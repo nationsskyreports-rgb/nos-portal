@@ -374,10 +374,12 @@ async function regenerateBreaks() {
          group.forEach((agent, idx) => {
             const spread = group.length > 1 ? windowThird / group.length : 0;
             const offset = Math.floor(idx * spread);
-            const b1 = Math.min(noBreakStart + Math.floor(windowThird*0.3) + offset, noBreakEnd-15);
-            const ln = Math.min(noBreakStart + windowThird + Math.floor(windowThird*0.3) + offset, noBreakEnd-30);
-            const b2 = Math.min(noBreakStart + windowThird*2 + Math.floor(windowThird*0.3) + offset, noBreakEnd-15);
-
+            const break1BaseMin = noBreakStart + Math.floor(windowThird * 0.3);
+            const lunchBaseMin  = noBreakStart + windowThird + Math.floor(windowThird * 0.3);
+            const break2BaseMin = noBreakStart + windowThird * 2 + Math.floor(windowThird * 0.3);
+            const b1Final = Math.min(break1BaseMin + offset, noBreakEnd - 15);
+            const lnFinal = Math.min(lunchBaseMin  + offset, noBreakEnd - 30);
+            const b2Final = Math.min(break2BaseMin + offset, noBreakEnd - 15);  
             upserts.push({
               agent_id:   agent.agent_id,
               break_date: date,
