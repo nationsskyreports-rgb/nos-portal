@@ -541,8 +541,10 @@ async function saveAll() {
       const date = dayEntry[0]; const dayData = dayEntry[1];
       Object.entries(dayData).forEach(function(agentEntry) {
         const name = agentEntry[0]; const d = agentEntry[1];
-        const agent = allAgents.find(a => (a.xcally_name||'').toLowerCase() === name.toLowerCase());
-
+       const agent = allAgents.find(a => 
+  (a.xcally_name||'').toLowerCase() === name.toLowerCase() ||
+  (a.formal_name||'').toLowerCase() === name.toLowerCase()
+);      
         const excKey     = name.toLowerCase()+'_'+date;
         const hasExcuse  = !!excusesMap[excKey];
         const EXC_SEC    = 2 * 3600;
