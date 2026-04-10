@@ -178,9 +178,7 @@
           <option value="Jan">January</option><option value="Feb">February</option>
           <option value="Mar">March</option><option value="Apr">April</option>
           <option value="May">May</option><option value="Jun">June</option>
-          <option value="Jul">July</option><option value="Aug">August</option>
-          <option value="Sep">September</option><option value="Oct">October</option>
-          <option value="Nov">November</option><option value="Dec">December</option>
+          <option value="Jul">July</option><option value="Aug">August</option><option value="Sep">September</option><option value="Oct">October</option><option value="Nov">November</option><option value="Dec">December</option>
         </select>
         <i class="fas fa-spinner spinner hidden" id="filter-loader" style="color:var(--primary)"></i>
       </div>
@@ -387,10 +385,7 @@
               <option>Jirian Island campaign</option><option>Sky Ridge Elite</option>
               <option>Sky Ridge Executives</option><option>Zomra</option>
               <option>ISLA</option><option>Upviews</option><option>Broker</option>
-              <option>Delayed sales call</option><option>EOI Refund</option>
-              <option>Collaboration request</option><option>Non-Business General Inquiry</option>
-              <option>Business General Inquiry</option><option>Complaint</option>
-              <option>Shakira's Event</option>
+              <option>Delayed sales call</option><option>EOI Refund</option><option>Collaboration request</option><option>Non-Business General Inquiry</option><option>Business General Inquiry</option><option>Complaint</option><option>Shakira's Event</option>
             </select>
           </div>
         </div>
@@ -467,50 +462,94 @@
       </div>
       <div id="requests-list"><div class="empty-state">No requests found.</div></div>
     </div>
-<!-- TAB: SCH TABLE -->
+
+<!-- TAB: SCH TABLE (UPDATED) -->
 <div class="tab-content" id="tab-sch-table">
   <div style="padding:16px;">
 
-<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:12px;">
-  <select id="sch-filter-year" class="form-input" style="width:90px;font-size:12px;" onchange="filterSchWeeks()">
-    <option value="">All Years</option>
-  </select>
-  <select id="sch-filter-month" class="form-input" style="width:110px;font-size:12px;" onchange="filterSchWeeks()">
-    <option value="">All Months</option>
-    <option value="01">January</option><option value="02">February</option>
-    <option value="03">March</option><option value="04">April</option>
-    <option value="05">May</option><option value="06">June</option>
-    <option value="07">July</option><option value="08">August</option>
-    <option value="09">September</option><option value="10">October</option>
-    <option value="11">November</option><option value="12">December</option>
-  </select>
-  <select id="sch-week-select" class="form-input" style="flex:1;font-size:12px;" onchange="loadSchTable()">
-    <option value="">— Select a week —</option>
-  </select>
-</div>
-<div id="sch-week-tabs" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;"></div>
-    
-    <!-- Schedule Grid (read-only) -->
-    <div class="section-label"><i class="fas fa-calendar-alt"></i> Published Schedule</div>
-    <div id="sch-table-grid" style="overflow-x:auto;margin-bottom:24px;">
-      <div class="empty-state">Select a week to view schedule</div>
+    <!-- Improved Filters -->
+    <div class="sch-filters-wrap">
+      <select id="sch-filter-year" class="form-input" style="width:100px;font-size:13px;font-weight:600;" onchange="filterSchWeeks()">
+        <option value="">Year</option>
+        <option value="2023">2023</option>
+        <option value="2024">2024</option>
+        <option value="2025">2025</option>
+      </select>
+      
+      <select id="sch-filter-month" class="form-input" style="width:130px;font-size:13px;font-weight:600;" onchange="filterSchWeeks()">
+        <option value="">Month</option>
+        <option value="01">January</option><option value="02">February</option>
+        <option value="03">March</option><option value="04">April</option>
+        <option value="05">May</option><option value="06">June</option>
+        <option value="07">July</option><option value="08">August</option>
+        <option value="09">September</option><option value="10">October</option><option value="11">November</option><option value="12">December</option>
+      </select>
+
+      <!-- Loader for weeks -->
+      <div id="weeks-loader" style="display:none; color:var(--primary); font-size:14px;">
+        <i class="fas fa-circle-notch fa-spin"></i> Loading weeks...
+      </div>
     </div>
 
-    <!-- Draft Request -->
-    <div class="section-label"><i class="fas fa-edit"></i> My Schedule Request</div>
-    <div style="font-size:12px;color:var(--muted);margin-bottom:12px;">Request the shift that suits you for next week</div>
-    <div id="sch-draft-grid" style="overflow-x:auto;margin-bottom:16px;">
-      <div class="empty-state">Select a week first</div>
+    <!-- New UX: Week Chips List (Appears after filtering) -->
+    <div id="weeks-chips-wrapper" style="display:none; margin-bottom: 20px;">
+      <div style="font-size:12px; font-weight:700; color:var(--muted); margin-bottom:8px; text-transform:uppercase; letter-spacing:0.5px;">Select a Week</div>
+      <div class="weeks-chips-container" id="weeks-list">
+        <!-- Chips will be injected here via JS -->
+      </div>
     </div>
-    <div style="display:flex;gap:10px;">
-      <button class="action-btn c-accent" style="flex:1;justify-content:center;" onclick="submitSchRequest()">
-        <i class="fas fa-paper-plane"></i> Submit Request
-      </button>
-      <button class="action-btn" onclick="resetSchDraft()">
-        <i class="fas fa-undo"></i> Reset
-      </button>
+
+    <!-- ACCORDION 1: Published Schedule -->
+    <div class="sch-accordion active" id="acc-published">
+      <div class="sch-acc-header" onclick="toggleSchAccordion('acc-published')">
+        <div class="sch-acc-header-left">
+          <div class="sch-acc-icon"><i class="fas fa-calendar-alt"></i></div>
+          <div class="sch-acc-title">Published Schedule</div>
+        </div>
+        <i class="fas fa-chevron-down sch-acc-chevron"></i>
+      </div>
+      <div class="sch-acc-body">
+        <div style="font-size:13px; color:var(--muted); margin-bottom:12px;">
+          This is the official schedule approved by management.
+        </div>
+        <!-- Schedule Grid Container -->
+        <div id="sch-table-grid" style="overflow-x:auto;">
+          <div class="empty-state">Please select Year, Month, and a Week to view schedule.</div>
+        </div>
+      </div>
     </div>
-    <div id="sch-request-msg" style="font-size:13px;font-weight:600;margin-top:8px;"></div>
+
+    <!-- ACCORDION 2: My Schedule Request -->
+    <div class="sch-accordion" id="acc-request">
+      <div class="sch-acc-header" onclick="toggleSchAccordion('acc-request')">
+        <div class="sch-acc-header-left">
+          <div class="sch-acc-icon" style="color:var(--accent); background:rgba(20, 184, 166, 0.1);"><i class="fas fa-edit"></i></div>
+          <div class="sch-acc-title">My Schedule Request</div>
+        </div>
+        <i class="fas fa-chevron-down sch-acc-chevron"></i>
+      </div>
+      <div class="sch-acc-body">
+        <div style="font-size:13px; color:var(--muted); margin-bottom:12px;">
+          Draft your preferred shifts for the selected week and submit for approval.
+        </div>
+        
+        <!-- Draft Request Grid -->
+        <div id="sch-draft-grid" style="overflow-x:auto; margin-bottom:16px;">
+          <div class="empty-state">Select a week first to start drafting.</div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div style="display:flex;gap:10px;">
+          <button class="action-btn c-accent" style="flex:1;justify-content:center;" onclick="submitSchRequest()">
+            <i class="fas fa-paper-plane"></i> Submit Request
+          </button>
+          <button class="action-btn" onclick="resetSchDraft()">
+            <i class="fas fa-undo"></i> Reset
+          </button>
+        </div>
+        <div id="sch-request-msg" style="font-size:13px;font-weight:600;margin-top:8px;"></div>
+      </div>
+    </div>
 
   </div>
 </div>
