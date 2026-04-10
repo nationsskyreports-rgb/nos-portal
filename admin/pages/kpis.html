@@ -665,12 +665,23 @@ function openSendPanel() {
 }
 
 function buildReportData() {
-  return allAgents.map(a => {
-    const kpi = kpiData.find(k=>k.agent_id===a.id)||{};
-    return { agentId:a.id, agentName:a.formal_name, email:a.email, conformance:kpi.conformance||'—', missing:kpi.missing_time||'—', aht:kpi.avg_aht||'—', calls:kpi.total_calls||0, quality:kpi.quality||'—' };
+  const rows = document.querySelectorAll('#kpi-tbody tr');
+  return allAgents.map((agent, i) => {
+    const row = rows[i];
+    if (!row) return { agentId: agent.id, agentName: agent.formal_name, email: agent.email, conformance:'—', missing:'—', aht:'—', calls:'—', quality:'—' };
+    const cells = row.querySelectorAll('td');
+    return {
+      agentId:     agent.id,
+      agentName:   agent.formal_name,
+      email:       agent.email,
+      conformance: cells[1]?.innerText?.trim() || '—',
+      missing:     cells[2]?.innerText?.trim() || '—',
+      aht:         cells[3]?.innerText?.trim() || '—',
+      calls:       cells[4]?.innerText?.trim() || '—',
+      quality:     cells[7]?.querySelector('input')?.value || '—',
+    };
   });
 }
-
 async function sendToAll() {
   const month = MONTH_NAMES[parseInt(document.getElementById('month-filter').value)];
   const year  = document.getElementById('year-filter').value;
