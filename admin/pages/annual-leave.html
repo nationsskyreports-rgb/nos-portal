@@ -251,7 +251,7 @@ async function saveRow(i) {
   try {
     if (r.id) {
       await db.from('annual_leave').update({
-        entitlement, carry_over: co, total_used, remaining,
+        entitlement: ent, carry_over: co, total_used, remaining,
         updated_at: new Date().toISOString()
       }).eq('id', r.id);
     } else {
