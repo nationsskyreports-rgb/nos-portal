@@ -191,6 +191,9 @@
   #nos-toast-container { bottom: 24px; }
 }
 
+.schedule-bottom-grid { grid-template-columns: 1fr; gap: 0; }
+.schedule-right-col { margin-top: 12px; }
+
 @keyframes shake {
   0%, 100% { transform: translateX(0); }
   20% { transform: translateX(-5px); }
