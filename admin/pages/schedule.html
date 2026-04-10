@@ -612,7 +612,7 @@ async function updateAnnualLeave() {
     const agentMonths  = map[agent.id] || {};
     const annualRecord = (annualRecords || []).find(a => a.agent_id === agent.id);
 
-    if (!annualRecord) continue; // لو مفيش record أصلاً skip
+    if (!annualRecord) { await db.from('annual_leave').insert({ agent_id: agent.id, agent_name: agent.formal_name, year, ...updates, created_at: new Date().toISOString() }); continue; }
 
     const updates = {};
     cols.forEach(m => { updates['used_' + m] = agentMonths[m] || 0; });
