@@ -729,25 +729,50 @@ function renderTeam(staff) {
 async function loadTeamBreaksFromSB() {
   const today = new Date().toISOString().split('T')[0];
   try {
-    const res = await fetch(
-      `${SB_URL_SCH}/rest/v1/breaks?break_date=eq.${today}&select=*,agents(formal_name)`,
+    // جيب البريكات مع بيانات الـ agent
+    const breaksRes = await fetch(
+      `${SB_URL_SCH}/rest/v1/breaks?break_date=eq.${today}&select=*,agents(id,formal_name)`,
       { headers: { 'apikey': SB_KEY_SCH, 'Authorization': `Bearer ${SB_KEY_SCH}` } }
     );
-    const data = await res.json();
-    if (!data || !data.length) return;
-    
-    const staff = data.map(b => ({
-      name:   b.agents?.formal_name || 'Unknown',
-      shift:  b.shift_time ? b.shift_time.substring(0,11) : 'N/A',
-      break1: b.break1 ? b.break1.substring(0,5) : '-',
-      lunch:  b.lunch  ? b.lunch.substring(0,5)  : '-',
-      break2: b.break2 ? b.break2.substring(0,5) : '-',
-    }));
-    
+    const breaksData = await breaksRes.json();
+    if (!breaksData || !breaksData.length) return;
+
+    // جيب الـ schedule لليوم ده
+    const schedRes = await fetch(
+      `${SB_URL_SCH}/rest/v1/schedule?shift_date=eq.${today}&select=agent_id,day_type`,
+      { headers: { 'apikey': SB_KEY_SCH, 'Authorization': `Bearer ${SB_KEY_SCH}` } }
+    );
+    const schedData = await schedRes.json();
+
+    // عمل map من agent_id → day_type
+    const dayTypeMap = {};
+    (schedData || []).forEach(s => { dayTypeMap[s.agent_id] = s.day_type; });
+
+    const staff = breaksData.map(b => {
+      const agentId = b.agents?.id || b.agent_id;
+      const dayType = dayTypeMap[agentId] || 'Work';
+
+      // لو مش Working، بين الـ status بدل الشيفت
+      let shiftDisplay = b.shift_time ? b.shift_time.substring(0,11) : 'N/A';
+      if (dayType === 'Annual')  shiftDisplay = '🏖️ Annual';
+      else if (dayType === 'Sick')    shiftDisplay = '❤️‍🩹 Sick';
+      else if (dayType === 'Casual')  shiftDisplay = '☕ Casual';
+      else if (dayType === 'PH')      shiftDisplay = '🎉 Holiday';
+      else if (dayType === 'Off')     shiftDisplay = '😴 Off';
+      else if (dayType === 'Task')    shiftDisplay = '📋 Task';
+
+      return {
+        name:   b.agents?.formal_name || 'Unknown',
+        shift:  shiftDisplay,
+        break1: dayType === 'Work' ? (b.break1 ? b.break1.substring(0,5) : '-') : '-',
+        lunch:  dayType === 'Work' ? (b.lunch  ? b.lunch.substring(0,5)  : '-') : '-',
+        break2: dayType === 'Work' ? (b.break2 ? b.break2.substring(0,5) : '-') : '-',
+      };
+    });
+
     renderTeam(staff);
   } catch(e) { console.error('Team breaks error:', e); }
 }
-
 /* ─── 11. REQUESTS RENDER ─── */
 function renderRequests(requests) {
   const container = document.getElementById('requests-list');
