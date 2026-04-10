@@ -323,63 +323,96 @@ async function loadAll() {
 async function loadKPIs(monthName, year) {
   const tbody = document.getElementById('kpi-tbody');
   tbody.innerHTML = '<tr><td colspan="10"><div class="loading-wrap"><div class="spinner"></div></div></td></tr>';
+
   try {
     const month    = document.getElementById('month-filter').value;
-    const dateFrom = year+'-'+month+'-01';
+    const dateFrom = year + '-' + month + '-01';
     const lastDay  = new Date(year, parseInt(month), 0).getDate();
-    const dateTo   = year+'-'+month+'-'+String(lastDay).padStart(2,'0');
+    const dateTo   = year + '-' + month + '-' + String(lastDay).padStart(2, '0');
 
-    const [kpisRes, excusesRes, annualRes, leavesRes] = await Promise.all([
-      db.from('kpis').select('*').eq('month',monthName).eq('year',year),
-      db.from('excuses').select('*').eq('status','Approved').gte('excuse_date',dateFrom).lte('excuse_date',dateTo),
-      db.from('annual_leave').select('*').eq('year',year),
-      db.from('leaves').select('*').eq('leave_type','Annual').gte('leave_date',dateFrom).lte('leave_date',dateTo),
+    const [perfRes, excusesRes, annualRes, qualityRes] = await Promise.all([
+      db.from('daily_performance')
+        .select('agent_id,agent_name,conformance,missing_sec,avg_aht,calls')
+        .gte('perf_date', dateFrom)
+        .lte('perf_date', dateTo),
+      db.from('excuses').select('*')
+        .eq('status','Approved')
+        .gte('excuse_date', dateFrom)
+        .lte('excuse_date', dateTo),
+      db.from('annual_leave').select('*').eq('year', year),
+      db.from('quality_scores').select('*')
+        .eq('month', monthName).eq('year', year),
     ]);
 
-    kpiData = kpisRes.data || [];
+    const perfData    = perfRes.data    || [];
+    const excusesData = excusesRes.data || [];
+    const annualData  = annualRes.data  || [];
+    const qualityData = qualityRes.data || [];
+
+    kpiData = qualityData;
 
     tbody.innerHTML = allAgents.map(agent => {
-      const kpi = kpiData.find(k => k.agent_id===agent.id) || {};
-      const agentExcuses = (excusesRes.data||[]).filter(e => e.agent_id===agent.id);
-      const excHours = agentExcuses.length * 2;
-      const excStr   = excHours > 0 ? excHours+' Hours' : 'None';
+      const agentPerf = perfData.filter(p => p.agent_id === agent.id);
 
-      let netMissing = '—';
-      if (kpi.missing_time === 'Full Time') {
-        netMissing = 'Full Time';
-      } else if (kpi.missing_time) {
-        const missingSec = timeToSec(kpi.missing_time);
-        const netSec     = Math.max(0, missingSec - excHours*3600);
-        netMissing = netSec<=300 ? 'Full Time' : secToTime(netSec);
+      let conformance = '—', missingTime = '—', avgAHT = '—', totalCalls = 0;
+
+      if (agentPerf.length) {
+        const avgConf = agentPerf.reduce((s,p) => s + parseFloat(p.conformance||0), 0) / agentPerf.length;
+        conformance   = avgConf.toFixed(1) + '%';
+
+        const totalMissingSec = agentPerf.reduce((s,p) => s + (p.missing_sec||0), 0);
+        missingTime = totalMissingSec <= 300 ? 'Full Time' : secToTime(totalMissingSec);
+
+        const ahtArr = agentPerf.filter(p => p.avg_aht > 0);
+        if (ahtArr.length) {
+          avgAHT = secToTime(Math.round(ahtArr.reduce((s,p) => s + p.avg_aht, 0) / ahtArr.length));
+        }
+
+        totalCalls = agentPerf.reduce((s,p) => s + (p.calls||0), 0);
       }
 
-      const ann     = (annualRes.data||[]).find(a => a.agent_id===agent.id) || {};
-      const annLeft    = ann.remaining  !== undefined ? ann.remaining  : '—';
-      const totalUsed  = ann.total_used !== undefined ? ann.total_used : 0;
-      const monthKey   = 'used_' + MONTHS_SHORT[parseInt(document.getElementById('month-filter').value)-1];
+      const agentExcuses = excusesData.filter(e => e.agent_id === agent.id);
+      const excHours     = agentExcuses.length * 2;
+      const excStr       = excHours > 0 ? excHours + ' Hours' : 'None';
+
+      let netMissing = '—';
+      if (missingTime === 'Full Time') {
+        netMissing = 'Full Time';
+      } else if (missingTime !== '—') {
+        const missingSec = timeToSec(missingTime);
+        const netSec     = Math.max(0, missingSec - excHours * 3600);
+        netMissing = netSec <= 300 ? 'Full Time' : secToTime(netSec);
+      }
+
+      const ann        = annualData.find(a => a.agent_id === agent.id) || {};
+      const annLeft    = ann.remaining !== undefined ? ann.remaining : '—';
+      const monthKey   = 'used_' + ['jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec'][parseInt(month)-1];
       const annUsedMTD = ann[monthKey] || 0;
 
-      const conf = parseFloat(kpi.conformance)||0;
-      return '<tr>'+
-        '<td class="agent-col"><div style="display:flex;align-items:center;gap:8px;"><div class="agent-avatar" style="width:28px;height:28px;font-size:10px;">'+initials(agent.formal_name)+'</div><span style="font-weight:700;">'+agent.formal_name+'</span></div></td>'+
-        '<td><input class="editable-cell" type="text" value="'+(kpi.conformance||'')+'" placeholder="98%" onchange="markEdit(\''+agent.id+'\',\'conformance\',this.value)" style="color:'+(conf>=98?'#10B981':conf>=90?'#F59E0B':'#EF4444')+';font-weight:800;"></td>'+
-        '<td style="font-family:monospace;font-size:11px;color:var(--muted);">'+(kpi.missing_time||'—')+'</td>'+
-        '<td><input class="editable-cell" type="text" value="'+(kpi.avg_aht||'')+'" placeholder="0:03:45" onchange="markEdit(\''+agent.id+'\',\'avg_aht\',this.value)" style="font-family:monospace;"></td>'+
-        '<td><input class="editable-cell" type="number" value="'+(kpi.total_calls||'')+'" placeholder="0" onchange="markEdit(\''+agent.id+'\',\'total_calls\',this.value)"></td>'+
-        '<td style="font-size:11px;color:'+(netMissing==='Full Time'?'#10B981':'#EF4444')+';font-weight:700;">'+netMissing+'</td>'+
-        '<td style="color:#F59E0B;font-weight:700;">'+excStr+'</td>'+
-        '<td><input class="editable-cell" type="text" value="'+(kpi.quality||'')+'" placeholder="95%" onchange="markEdit(\''+agent.id+'\',\'quality\',this.value)" style="color:var(--gold);font-weight:700;"></td>'+
-        '<td><span class="badge '+(typeof annLeft==='number'&&annLeft<=3?'badge-danger':'badge-success')+'">'+(typeof annLeft==='number'?annLeft+' days':annLeft)+'</span></td>'+
-        '<td style="font-weight:700;">'+(annUsedMTD||0)+' days</td>'+
+      const quality  = qualityData.find(q => q.agent_id === agent.id);
+      const confNum  = parseFloat(conformance) || 0;
+      const confColor= confNum>=98 ? '#10B981' : confNum>=90 ? '#F59E0B' : '#EF4444';
+
+      return '<tr>' +
+        '<td class="agent-col"><div style="display:flex;align-items:center;gap:8px;"><div class="agent-avatar" style="width:28px;height:28px;font-size:10px;">' + initials(agent.formal_name) + '</div><span style="font-weight:700;">' + agent.formal_name + '</span></div></td>' +
+        '<td style="font-weight:800;color:' + confColor + ';">' + conformance + '</td>' +
+        '<td style="font-family:monospace;font-size:11px;color:' + (missingTime==='Full Time'?'#10B981':'#EF4444') + ';font-weight:700;">' + missingTime + '</td>' +
+        '<td style="font-family:monospace;font-size:11px;">' + avgAHT + '</td>' +
+        '<td style="font-weight:700;">' + totalCalls + '</td>' +
+        '<td style="font-size:11px;color:' + (netMissing==='Full Time'?'#10B981':'#EF4444') + ';font-weight:700;">' + netMissing + '</td>' +
+        '<td style="color:#F59E0B;font-weight:700;">' + excStr + '</td>' +
+        '<td><input class="editable-cell" type="text" value="' + (quality?.score||'') + '" placeholder="95%" onchange="markEdit(\'' + agent.id + '\',\'score\',this.value)" style="color:var(--gold);font-weight:700;"></td>' +
+        '<td><span class="badge ' + (typeof annLeft==='number'&&annLeft<=3?'badge-danger':'badge-success') + '">' + (typeof annLeft==='number' ? annLeft+' days' : annLeft) + '</span></td>' +
+        '<td style="font-weight:700;">' + annUsedMTD + ' days</td>' +
         '</tr>';
     }).join('');
 
   } catch(e) {
-    tbody.innerHTML = '<tr><td colspan="10"><div class="empty-state"><span class="empty-icon">❌</span>Failed: '+e.message+'</div></td></tr>';
-    showToast('Failed: '+e.message, 'error');
+    tbody.innerHTML = '<tr><td colspan="10"><div class="empty-state"><span class="empty-icon">❌</span>Failed: ' + e.message + '</div></td></tr>';
+    showToast('Failed: ' + e.message, 'error');
   }
 }
-
+  
 function markEdit(agentId, field, value) {
   if (!editedKPIs[agentId]) editedKPIs[agentId] = {};
   editedKPIs[agentId][field] = value;
@@ -391,19 +424,23 @@ async function saveAll() {
   if (!Object.keys(editedKPIs).length) { showToast('No changes to save','info'); return; }
   try {
     for (const agentId of Object.keys(editedKPIs)) {
-      const agent    = allAgents.find(a=>a.id===agentId);
+      const agent    = allAgents.find(a => a.id === agentId);
       const fields   = editedKPIs[agentId];
-      const existing = kpiData.find(k=>k.agent_id===agentId);
+      const existing = kpiData.find(k => k.agent_id === agentId);
       const payload  = { agent_id:agentId, agent_name:agent?.formal_name||'', month, year, ...fields, updated_at:new Date().toISOString() };
-      if (existing) { await db.from('kpis').update(payload).eq('id',existing.id); }
-      else { payload.created_at=new Date().toISOString(); await db.from('kpis').insert(payload); }
+      if (existing) {
+        await db.from('quality_scores').update(payload).eq('id', existing.id);
+      } else {
+        payload.created_at = new Date().toISOString();
+        await db.from('quality_scores').insert(payload);
+      }
     }
-    showToast('KPIs saved!','success');
+    showToast('Quality scores saved!','success');
     editedKPIs = {};
     loadAll();
-  } catch(e) { showToast('Failed: '+e.message,'error'); }
+  } catch(e) { showToast('Failed: ' + e.message,'error'); }
 }
-
+  
 async function loadLeaves() {
   const month    = document.getElementById('month-filter').value;
   const year     = parseInt(document.getElementById('year-filter').value);
