@@ -670,12 +670,68 @@ function buildReportData() {
     return { agentId:a.id, agentName:a.formal_name, email:a.email, conformance:kpi.conformance||'—', missing:kpi.missing_time||'—', aht:kpi.avg_aht||'—', calls:kpi.total_calls||0, quality:kpi.quality||'—' };
   });
 }
-async function sendToAll() { showToast('Sending...','info'); console.log('Report data:', buildReportData()); showToast('Connect GAS endpoint','warning'); }
+
+async function sendToAll() {
+  const month = MONTH_NAMES[parseInt(document.getElementById('month-filter').value)];
+  const year  = document.getElementById('year-filter').value;
+  const reports = buildReportData();
+
+  reports.forEach(r => {
+    if (!r.email) return;
+    const subject = `KPI Report — ${month} ${year}`;
+    const body = 
+`Hi ${r.agentName},
+
+Here is your KPI Report for ${month} ${year}:
+
+📊 Conformance:  ${r.conformance}
+⏱ Missing Time: ${r.missing}
+🎧 AHT:         ${r.aht}
+📞 Calls:       ${r.calls}
+⭐ Quality:     ${r.quality}
+
+Nations of Sky`;
+    window.open(`mailto:${r.email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`);
+  });
+
+  showToast('Emails opened!', 'success');
+  closePanel();
+}
+
 async function sendToOne() {
   const agentId = document.getElementById('send-agent-sel').value;
-  if (!agentId) { showToast('Select an agent','error'); return; }
-  console.log('Sending to:', buildReportData().find(r=>r.agentId===agentId));
-  showToast('Connect GAS endpoint','warning');
+  if (!agentId) { showToast('Select an agent', 'error'); return; }
+
+  const month  = MONTH_NAMES[parseInt(document.getElementById('month-filter').value)];
+  const year   = document.getElementById('year-filter').value;
+  const r      = buildReportData().find(x => x.agentId === agentId);
+  if (!r) return;
+
+  const subject = `KPI Report — ${month} ${year}`;
+  const body =
+`Hi ${r.agentName},
+
+Here is your KPI Report for ${month} ${year}:
+
+📊 Conformance:  ${r.conformance}
+⏱ Missing Time: ${r.missing}
+🎧 AHT:         ${r.aht}
+📞 Calls:       ${r.calls}
+⭐ Quality:     ${r.quality}
+
+Nations of Sky`;
+
+  const waText = `Hi ${r.agentName}! 👋\n\nYour KPI Report for *${month} ${year}*:\n\n📊 *Conformance:* ${r.conformance}\n⏱ *Missing Time:* ${r.missing}\n🎧 *AHT:* ${r.aht}\n📞 *Calls:* ${r.calls}\n⭐ *Quality:* ${r.quality}\n\n_Nations of Sky_`;
+
+  document.getElementById('panel-body').innerHTML += `
+    <div style="margin-top:16px;display:flex;flex-direction:column;gap:10px;">
+      <button class="btn btn-success" onclick="window.open('mailto:${r.email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}')">
+        <i class="fas fa-envelope"></i> Send via Email
+      </button>
+      <button class="btn btn-primary" onclick="window.open('https://wa.me/?text=${encodeURIComponent(waText)}')">
+        <i class="fab fa-whatsapp"></i> Send via WhatsApp
+      </button>
+    </div>`;
 }
 
 function timeToSec(val) {
