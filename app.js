@@ -382,7 +382,7 @@ function showDashboard(res) {
   const breaksArea   = document.getElementById('today-breaks-area');
 
   renderTeam(res.allStaffBreaks || []);
-
+  loadTeamBreaksFromSB();
   if (isWorking) {
     statusBanner.style.display = 'block';
     breaksArea.style.display   = 'block';
@@ -726,7 +726,27 @@ function renderTeam(staff) {
     grid.appendChild(card);
   });
 }
-
+async function loadTeamBreaksFromSB() {
+  const today = new Date().toISOString().split('T')[0];
+  try {
+    const res = await fetch(
+      `${SB_URL_SCH}/rest/v1/breaks?break_date=eq.${today}&select=*,agents(formal_name)`,
+      { headers: { 'apikey': SB_KEY_SCH, 'Authorization': `Bearer ${SB_KEY_SCH}` } }
+    );
+    const data = await res.json();
+    if (!data || !data.length) return;
+    
+    const staff = data.map(b => ({
+      name:   b.agents?.formal_name || 'Unknown',
+      shift:  b.shift_time ? b.shift_time.substring(0,11) : 'N/A',
+      break1: b.break1 ? b.break1.substring(0,5) : '-',
+      lunch:  b.lunch  ? b.lunch.substring(0,5)  : '-',
+      break2: b.break2 ? b.break2.substring(0,5) : '-',
+    }));
+    
+    renderTeam(staff);
+  } catch(e) { console.error('Team breaks error:', e); }
+}
 
 /* ─── 11. REQUESTS RENDER ─── */
 function renderRequests(requests) {
@@ -1741,7 +1761,6 @@ async function sbFetchSch(path) {
   });
   return res.json();
 }
-
 // ── جيب بريكات اليوم من Supabase ──
 async function loadTodayBreaksFromSB(agentId) {
   const today = new Date().toISOString().split('T')[0];
@@ -1754,19 +1773,23 @@ async function loadTodayBreaksFromSB(agentId) {
     if (!data || !data.length) return null;
     const b = data[0];
     return {
-      break1: b.break1 ? b.break1.substring(0,5) : null,
-      lunch:  b.lunch  ? b.lunch.substring(0,5)  : null,
-      break2: b.break2 ? b.break2.substring(0,5) : null,
+      break1:     b.break1     ? b.break1.substring(0,5)     : null,
+      lunch:      b.lunch      ? b.lunch.substring(0,5)      : null,
+      break2:     b.break2     ? b.break2.substring(0,5)     : null,
+      shift_time: b.shift_time ? b.shift_time.substring(0,11): null,  // ← جديد
     };
   } catch(e) { return null; }
 }
-
 // ── حدّث الـ UI بالبريكات ──
 function applyBreaksToUI(breaks) {
   if (!breaks) return;
   document.getElementById('br-break1').innerText = breaks.break1 || 'N/A';
   document.getElementById('br-lunch').innerText  = breaks.lunch  || 'N/A';
   document.getElementById('br-break2').innerText = breaks.break2 || 'N/A';
+if (breaks.shift_time) {
+  document.getElementById('br-shift').innerText      = 'SHIFT: ' + breaks.shift_time;
+  document.getElementById('status-text').innerText   = breaks.shift_time;
+  }
   currentBreaks = breaks;
   startBreakChecker(breaks);
 }
