@@ -533,10 +533,6 @@ async function saveAnnual(agentId, recordId, year) {
   const carry_over  = parseFloat(inputs[1]?.value)||0;
   const monthVals = {};
   MONTHS_S.forEach((m,i) => { monthVals['used_'+m] = parseFloat(inputs[i+2]?.value)||0; });
-
-  const totalUsed = Object.values(monthVals).reduce((s,v)=>s+v, 0);
-  const remaining = (entitlement + carry_over) - totalUsed;
-
   const totalUsed = Object.values(monthVals).reduce((s,v) => s+v, 0);
   const remaining = (entitlement + carry_over) - totalUsed;
   const payload = { entitlement, carry_over, ...monthVals, total_used: totalUsed, remaining: remaining, updated_at:new Date().toISOString() };
