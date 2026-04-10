@@ -491,48 +491,47 @@
       </div>
     </div>
 
-    <!-- New UX: Week Chips List (Appears after filtering) -->
-    <div id="weeks-chips-wrapper" style="display:none; margin-bottom: 20px;">
+<!-- ACCORDION 1: Published Schedule -->
+<div class="sch-accordion active" id="acc-published">
+  <div class="sch-acc-header" onclick="toggleSchAccordion('acc-published')">
+    <div class="sch-acc-header-left">
+      <div class="sch-acc-icon"><i class="fas fa-calendar-alt"></i></div>
+      <div class="sch-acc-title">Published Schedule</div>
+    </div>
+    <i class="fas fa-chevron-down sch-acc-chevron"></i>
+  </div>
+  <div class="sch-acc-body">
+    <div style="font-size:13px; color:var(--muted); margin-bottom:12px;">
+      This is the official schedule approved by management.
+    </div>
+
+    <!-- Week Chips هنا جوا -->
+    <div id="weeks-chips-wrapper" style="display:none; margin-bottom:20px;">
       <div style="font-size:12px; font-weight:700; color:var(--muted); margin-bottom:8px; text-transform:uppercase; letter-spacing:0.5px;">Select a Week</div>
-      <div class="weeks-chips-container" id="weeks-list">
-        <!-- Chips will be injected here via JS -->
-      </div>
+      <div class="weeks-chips-container" id="weeks-list"></div>
     </div>
 
-    <!-- ACCORDION 1: Published Schedule -->
-    <div class="sch-accordion active" id="acc-published">
-      <div class="sch-acc-header" onclick="toggleSchAccordion('acc-published')">
-        <div class="sch-acc-header-left">
-          <div class="sch-acc-icon"><i class="fas fa-calendar-alt"></i></div>
-          <div class="sch-acc-title">Published Schedule</div>
-        </div>
-        <i class="fas fa-chevron-down sch-acc-chevron"></i>
-      </div>
-      <div class="sch-acc-body">
-        <div style="font-size:13px; color:var(--muted); margin-bottom:12px;">
-          This is the official schedule approved by management.
-        </div>
-        <!-- Schedule Grid Container -->
-        <div id="sch-table-grid" style="overflow-x:auto;">
-          <div class="empty-state">Please select Year, Month, and a Week to view schedule.</div>
-        </div>
-      </div>
+    <!-- Schedule Grid -->
+    <div id="sch-table-grid" style="overflow-x:auto;">
+      <div class="empty-state">Please select Year, Month, and a Week to view schedule.</div>
     </div>
+  </div>
+</div>
 
-    <!-- ACCORDION 2: My Schedule Request -->
-    <div class="sch-accordion" id="acc-request">
-      <div class="sch-acc-header" onclick="toggleSchAccordion('acc-request')">
-        <div class="sch-acc-header-left">
-          <div class="sch-acc-icon" style="color:var(--accent); background:rgba(20, 184, 166, 0.1);"><i class="fas fa-edit"></i></div>
-          <div class="sch-acc-title">My Schedule Request</div>
-        </div>
-        <i class="fas fa-chevron-down sch-acc-chevron"></i>
-      </div>
-      <div class="sch-acc-body">
-        <div style="font-size:13px; color:var(--muted); margin-bottom:12px;">
-          Draft your preferred shifts for the selected week and submit for approval.
-        </div>
-        
+<!-- ACCORDION 2: My Schedule Request -->
+<div class="sch-accordion" id="acc-request">
+  <div class="sch-acc-header" onclick="toggleSchAccordion('acc-request')">
+    <div class="sch-acc-header-left">
+      <div class="sch-acc-icon" style="color:var(--accent); background:rgba(20, 184, 166, 0.1);"><i class="fas fa-edit"></i></div>
+      <div class="sch-acc-title">My Schedule Request</div>
+    </div>
+    <i class="fas fa-chevron-down sch-acc-chevron"></i>
+  </div>
+  <div class="sch-acc-body">
+    <div style="font-size:13px; color:var(--muted); margin-bottom:12px;">
+      Draft your preferred shifts for the selected week and submit for approval.
+    </div>
+    
         <!-- Draft Request Grid -->
         <div id="sch-draft-grid" style="overflow-x:auto; margin-bottom:16px;">
           <div class="empty-state">Select a week first to start drafting.</div>
