@@ -674,7 +674,6 @@ function renderSummaryTable(data) {
     return;
   }
 
-  // Group by agent
   const agentMap = {};
   data.forEach(r => {
     const name = r.agent_name;
@@ -694,7 +693,7 @@ function renderSummaryTable(data) {
 
   const rows = Object.values(agentMap).sort((a,b) => b.confSum/b.days - a.confSum/a.days);
 
-tbody.innerHTML = rows.map(a => {
+  tbody.innerHTML = rows.map(a => {
     const avgConf    = a.days > 0 ? a.confSum/a.days : 0;
     const avgAHT     = a.totalCalls > 0 ? Math.round(a.totalTalk/a.totalCalls) : 0;
     const avgMissing = a.days > 0 ? Math.round(a.totalMissing / a.days) : 0;
@@ -711,7 +710,8 @@ tbody.innerHTML = rows.map(a => {
       '<td><span class="badge ' + (a.below98>0?'badge-danger':'badge-success') + '">' + a.below98 + ' day(s)</span></td>' +
       '</tr>';
   }).join('');
-  
+}
+
 function updateHistoryKPIs(data) {
   if (!data.length) {
     ['h-conf','h-calls','h-aht','h-below','h-days'].forEach(id => document.getElementById(id).innerText='—');
