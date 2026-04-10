@@ -215,83 +215,94 @@
     </div>
 
     <!-- TAB: SCHEDULE -->
-    <div class="tab-content" id="tab-schedule">
+<div class="tab-content" id="tab-schedule">
       <div class="schedule-wrap">
         <div class="section-label"><i class="fas fa-calendar-alt"></i> Work Schedule</div>
         <div id="schedule-content"><div class="empty-state">Loading schedule...</div></div>
 
         <div class="divider"></div>
-        <div class="section-label"><i class="fas fa-paper-plane"></i> Quick Excuse Request</div>
-        <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
-          <input type="date" id="excuseDate" class="form-input" style="width:auto;flex:1;min-width:140px;">
-          <select id="excuseType" class="form-input" style="width:auto;flex:1;min-width:140px;">
-            <option value="" disabled selected>Choose Type</option>
-            <option value="Arrive Late">Arrive Late</option>
-            <option value="Leave Early">Leave Early</option>
-          </select>
-          <button class="action-btn c-accent" id="excuseBtn" onclick="sendExcuse()"><i class="fas fa-check"></i> Submit</button>
-          <button class="action-btn c-warn" id="undoBtn" onclick="undoLastExcuse()"><i class="fas fa-undo"></i> Undo</button>
-        </div>
-        <div id="excuse-msg" style="font-size:13px;font-weight:600;margin-top:8px;"></div>
 
-        <div class="divider"></div>
-        <div class="section-label"><i class="fas fa-calendar-check"></i> Time Off Request</div>
-        <div class="action-row">
-          <button class="action-btn" onclick="selectTimeOffType('Annual')" style="color:#a142f4;border-color:rgba(161,66,244,.3)"><i class="fas fa-umbrella-beach"></i> Annual</button>
-          <button class="action-btn c-danger" onclick="selectTimeOffType('Sick')"><i class="fas fa-heartbeat"></i> Sick</button>
-          <button class="action-btn c-warn" onclick="selectTimeOffType('Casual')"><i class="fas fa-coffee"></i> Casual</button>
-          <button class="action-btn c-accent" onclick="selectTimeOffType('PH')"><i class="fas fa-calendar-alt"></i> PH</button>
-          <button class="action-btn c-blue" onclick="selectTimeOffType('Task')"><i class="fas fa-tasks"></i> Task</button>
-        </div>
-        <div class="mini-form" id="time-off-form">
-          <div class="mini-form-grid">
-            <div><label class="form-label">From Date</label><input type="date" id="timeOffFromDate" class="form-input"></div>
-            <div><label class="form-label">To Date</label><input type="date" id="timeOffToDate" class="form-input"></div>
-          </div>
-          <label class="form-label">Notes</label>
-          <textarea id="timeOffNotes" class="form-input" style="margin-bottom:10px;" rows="2" placeholder="Optional..."></textarea>
-          <div style="display:flex;gap:10px;">
-            <button class="action-btn c-accent" style="flex:1" id="submitTimeOffBtn" onclick="submitTimeOffRequest()"><i class="fas fa-paper-plane"></i> Submit</button>
-            <button class="action-btn" style="flex:1" onclick="cancelTimeOffForm()">Cancel</button>
-          </div>
-          <div id="time-off-msg" style="font-size:13px;font-weight:600;margin-top:8px;"></div>
-        </div>
+        <div class="schedule-bottom-grid">
 
-        <div class="divider"></div>
-        <div class="section-label"><i class="fas fa-exchange-alt"></i> Shift Swap Request</div>
-        <div class="swap-form-card">
-          <div class="swap-step">
-            <div class="swap-step-num">1</div>
-            <div class="swap-step-body">
-              <div class="swap-step-label">Select Your Working Day</div>
-              <select id="swap-day-select" class="form-input" onchange="onSwapDayChange()"><option value="">Choose a day...</option></select>
+          <!-- LEFT COLUMN -->
+          <div class="schedule-left-col">
+            <div class="section-label"><i class="fas fa-paper-plane"></i> Quick Excuse Request</div>
+            <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
+              <input type="date" id="excuseDate" class="form-input" style="width:auto;flex:1;min-width:140px;">
+              <select id="excuseType" class="form-input" style="width:auto;flex:1;min-width:140px;">
+                <option value="" disabled selected>Choose Type</option>
+                <option value="Arrive Late">Arrive Late</option>
+                <option value="Leave Early">Leave Early</option>
+              </select>
+              <button class="action-btn c-accent" id="excuseBtn" onclick="sendExcuse()"><i class="fas fa-check"></i> Submit</button>
+              <button class="action-btn c-warn" id="undoBtn" onclick="undoLastExcuse()"><i class="fas fa-undo"></i> Undo</button>
+            </div>
+            <div id="excuse-msg" style="font-size:13px;font-weight:600;margin-top:8px;"></div>
+
+            <div class="divider"></div>
+
+            <div class="section-label"><i class="fas fa-calendar-check"></i> Time Off Request</div>
+            <div class="action-row">
+              <button class="action-btn" onclick="selectTimeOffType('Annual')" style="color:#a142f4;border-color:rgba(161,66,244,.3)"><i class="fas fa-umbrella-beach"></i> Annual</button>
+              <button class="action-btn c-danger" onclick="selectTimeOffType('Sick')"><i class="fas fa-heartbeat"></i> Sick</button>
+              <button class="action-btn c-warn" onclick="selectTimeOffType('Casual')"><i class="fas fa-coffee"></i> Casual</button>
+              <button class="action-btn c-accent" onclick="selectTimeOffType('PH')"><i class="fas fa-calendar-alt"></i> PH</button>
+              <button class="action-btn c-blue" onclick="selectTimeOffType('Task')"><i class="fas fa-tasks"></i> Task</button>
+            </div>
+            <div class="mini-form" id="time-off-form">
+              <div class="mini-form-grid">
+                <div><label class="form-label">From Date</label><input type="date" id="timeOffFromDate" class="form-input"></div>
+                <div><label class="form-label">To Date</label><input type="date" id="timeOffToDate" class="form-input"></div>
+              </div>
+              <label class="form-label">Notes</label>
+              <textarea id="timeOffNotes" class="form-input" style="margin-bottom:10px;" rows="2" placeholder="Optional..."></textarea>
+              <div style="display:flex;gap:10px;">
+                <button class="action-btn c-accent" style="flex:1" id="submitTimeOffBtn" onclick="submitTimeOffRequest()"><i class="fas fa-paper-plane"></i> Submit</button>
+                <button class="action-btn" style="flex:1" onclick="cancelTimeOffForm()">Cancel</button>
+              </div>
+              <div id="time-off-msg" style="font-size:13px;font-weight:600;margin-top:8px;"></div>
             </div>
           </div>
-          <div class="swap-compare">
-            <div class="swap-compare-box" id="swap-your-box"><div class="swap-compare-who">Your Shift</div><div class="swap-compare-value swap-empty" id="swap-your-shift">Select a day</div></div>
-            <div class="swap-compare-arrow"><i class="fas fa-exchange-alt"></i></div>
-            <div class="swap-compare-box" id="swap-colleague-box"><div class="swap-compare-who">Colleague's Shift</div><div class="swap-compare-value swap-empty" id="swap-colleague-shift">Select a colleague</div></div>
-          </div>
-          <div class="swap-step">
-            <div class="swap-step-num">2</div>
-            <div class="swap-step-body">
-              <div class="swap-step-label">Select Colleague</div>
-              <select id="swap-colleague-select" class="form-input" onchange="onSwapColleagueChange()"><option value="">Choose a colleague...</option></select>
+
+          <!-- RIGHT COLUMN -->
+          <div class="schedule-right-col">
+            <div class="section-label"><i class="fas fa-exchange-alt"></i> Shift Swap Request</div>
+            <div class="swap-form-card">
+              <div class="swap-step">
+                <div class="swap-step-num">1</div>
+                <div class="swap-step-body">
+                  <div class="swap-step-label">Select Your Working Day</div>
+                  <select id="swap-day-select" class="form-input" onchange="onSwapDayChange()"><option value="">Choose a day...</option></select>
+                </div>
+              </div>
+              <div class="swap-compare">
+                <div class="swap-compare-box" id="swap-your-box"><div class="swap-compare-who">Your Shift</div><div class="swap-compare-value swap-empty" id="swap-your-shift">Select a day</div></div>
+                <div class="swap-compare-arrow"><i class="fas fa-exchange-alt"></i></div>
+                <div class="swap-compare-box" id="swap-colleague-box"><div class="swap-compare-who">Colleague's Shift</div><div class="swap-compare-value swap-empty" id="swap-colleague-shift">Select a colleague</div></div>
+              </div>
+              <div class="swap-step">
+                <div class="swap-step-num">2</div>
+                <div class="swap-step-body">
+                  <div class="swap-step-label">Select Colleague</div>
+                  <select id="swap-colleague-select" class="form-input" onchange="onSwapColleagueChange()"><option value="">Choose a colleague...</option></select>
+                </div>
+              </div>
+              <div id="swap-warning" class="swap-warning" style="display:none;"><i class="fas fa-exclamation-triangle"></i><span id="swap-warning-text"></span></div>
+              <div class="swap-note-row form-group">
+                <label class="form-label">Notes (Optional)</label>
+                <textarea id="swap-notes" class="form-input" rows="2" placeholder="Any additional notes..."></textarea>
+              </div>
+              <button class="action-btn c-accent" id="swap-submit-btn" onclick="submitShiftSwap()" style="width:100%;justify-content:center;padding:12px;font-size:14px;">
+                <i class="fas fa-paper-plane"></i> Submit Shift Swap Request
+              </button>
+              <div id="swap-request-msg" style="font-size:13px;font-weight:600;margin-top:8px;"></div>
             </div>
           </div>
-          <div id="swap-warning" class="swap-warning" style="display:none;"><i class="fas fa-exclamation-triangle"></i><span id="swap-warning-text"></span></div>
-          <div class="swap-note-row form-group">
-            <label class="form-label">Notes (Optional)</label>
-            <textarea id="swap-notes" class="form-input" rows="2" placeholder="Any additional notes..."></textarea>
-          </div>
-          <button class="action-btn c-accent" id="swap-submit-btn" onclick="submitShiftSwap()" style="width:100%;justify-content:center;padding:12px;font-size:14px;">
-            <i class="fas fa-paper-plane"></i> Submit Shift Swap Request
-          </button>
-          <div id="swap-request-msg" style="font-size:13px;font-weight:600;margin-top:8px;"></div>
+
         </div>
       </div>
     </div>
-
+    
     <!-- TAB: CALL LOG -->
     <div class="tab-content" id="tab-form">
 
