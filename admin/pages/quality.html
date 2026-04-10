@@ -605,68 +605,96 @@ async function updateQualityScore(agentId, agentName, month, year, pct) {
 
 // ── LOAD REVIEWS ──
 async function loadReviews() {
-  const month   = document.getElementById('month-filter').value;
-  const year    = parseInt(document.getElementById('year-filter').value);
-  const agentF  = document.getElementById('h-agent')?.value || '';
-  const tbody   = document.getElementById('reviews-tbody');
+  const month  = document.getElementById('month-filter').value;
+  const year   = parseInt(document.getElementById('year-filter').value);
+  const agentF = document.getElementById('h-agent')?.value || '';
+  const tbody  = document.getElementById('reviews-tbody');
   if (!tbody) return;
 
   tbody.innerHTML = '<tr><td colspan="7"><div class="loading-wrap"><div class="spinner"></div></div></td></tr>';
 
-  let query = db.from('quality_reviews').select('*')
-    .eq('month', MONTH_NAMES[parseInt(month)])
-    .eq('year', year)
-    .order('review_date', { ascending: false });
+  const monthName = MONTH_NAMES[parseInt(month)];
 
-  if (agentF) query = query.eq('agent_id', agentF);
+  // جيب من الاتنين
+  let [reviewsRes, scoresRes] = await Promise.all([
+    db.from('quality_reviews').select('*')
+      .eq('month', monthName).eq('year', year)
+      .order('review_date', { ascending: false }),
+    db.from('quality_scores').select('*')
+      .eq('month', monthName).eq('year', year),
+  ]);
 
-  const { data } = await query;
-  reviews = data || [];
+  let reviewsData = reviewsRes.data || [];
+  let scoresData  = scoresRes.data  || [];
+
+  // filter by agent
+  if (agentF) {
+    reviewsData = reviewsData.filter(r => r.agent_id === agentF);
+    scoresData  = scoresData.filter(s => s.agent_id === agentF);
+  }
+
+  // حول الـ scores لنفس format الـ reviews
+  const scoresAsRows = scoresData
+    .filter(s => !reviewsData.find(r => r.agent_id === s.agent_id))
+    .map(s => ({
+      id:          s.id,
+      agent_id:    s.agent_id,
+      agent_name:  s.agent_name,
+      review_date: null,
+      call_number: null,
+      total_score: null,
+      percentage:  s.score,
+      notes:       'Imported score',
+      answers:     null,
+      _isScore:    true,
+    }));
+
+  const allRows = [...reviewsData, ...scoresAsRows];
+  reviews = allRows;
 
   // KPIs
-  document.getElementById('h-total').innerText = reviews.length;
-  if (reviews.length) {
-    const avg = reviews.reduce((s,r) => s + parseFloat(r.percentage||0), 0) / reviews.length;
+  document.getElementById('h-total').innerText = allRows.length;
+  if (allRows.length) {
+    const avg = allRows.reduce((s,r) => s + parseFloat(r.percentage||0), 0) / allRows.length;
     document.getElementById('h-avg').innerText = avg.toFixed(1) + '%';
 
     const agentMap = {};
-    reviews.forEach(r => {
+    allRows.forEach(r => {
       if (!agentMap[r.agent_name]) agentMap[r.agent_name] = [];
       agentMap[r.agent_name].push(parseFloat(r.percentage||0));
     });
     const topAgent = Object.entries(agentMap)
       .map(([name, scores]) => ({ name, avg: scores.reduce((s,v)=>s+v,0)/scores.length }))
-      .sort((a,b) => b.avg-a.avg)[0];
+      .sort((a,b) => b.avg - a.avg)[0];
     document.getElementById('h-top').innerText   = topAgent ? topAgent.name.split(' ')[0] : '—';
-    document.getElementById('h-below').innerText = reviews.filter(r => parseFloat(r.percentage||0) < 70).length;
+    document.getElementById('h-below').innerText = allRows.filter(r => parseFloat(r.percentage||0) < 70).length;
   } else {
     ['h-avg','h-top','h-below'].forEach(id => document.getElementById(id).innerText = '—');
   }
 
-  if (!reviews.length) {
+  if (!allRows.length) {
     tbody.innerHTML = '<tr><td colspan="7"><div class="empty-state"><span class="empty-icon">📭</span>No reviews found</div></td></tr>';
     return;
   }
 
-  tbody.innerHTML = reviews.map(r => {
-    const pct     = parseFloat(r.percentage||0);
-    const pctCls  = pct>=80?'conf-high':pct>=60?'conf-mid':'conf-low';
-    const pctColor= pct>=80?'#10B981':pct>=60?'#F59E0B':'#EF4444';
+  tbody.innerHTML = allRows.map(r => {
+    const pct      = parseFloat(r.percentage||0);
+    const pctColor = pct>=80?'#10B981':pct>=60?'#F59E0B':'#EF4444';
     return '<tr>' +
       '<td><div style="display:flex;align-items:center;gap:8px;"><div class="agent-avatar" style="width:26px;height:26px;font-size:9px;">' + initials(r.agent_name) + '</div><span style="font-weight:700;">' + r.agent_name + '</span></div></td>' +
-      '<td style="color:var(--gold);font-weight:700;">' + formatDate(r.review_date) + '</td>' +
+      '<td style="color:var(--gold);font-weight:700;">' + (r.review_date ? formatDate(r.review_date) : '<span style="color:var(--muted);font-size:11px;">Imported</span>') + '</td>' +
       '<td style="font-family:monospace;font-size:11px;">' + (r.call_number||'—') + '</td>' +
-      '<td style="font-weight:800;">' + (r.total_score||0) + ' pts</td>' +
+      '<td style="font-weight:800;">' + (r.total_score ? r.total_score+' pts' : '—') + '</td>' +
       '<td style="font-weight:800;color:' + pctColor + ';">' + pct + '%</td>' +
-      '<td style="font-size:11px;color:var(--muted);max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + (r.notes||'—') + '</td>' +
+      '<td style="font-size:11px;color:var(--muted);">' + (r.notes||'—') + '</td>' +
       '<td><div style="display:flex;gap:6px;">' +
-        '<button class="btn btn-info btn-sm btn-icon" onclick="viewReview(\'' + r.id + '\')" title="View"><i class="fas fa-eye"></i></button>' +
-        '<button class="btn btn-danger btn-sm btn-icon" onclick="deleteReview(\'' + r.id + '\')" title="Delete"><i class="fas fa-trash"></i></button>' +
+        (!r._isScore ? '<button class="btn btn-info btn-sm btn-icon" onclick="viewReview(\'' + r.id + '\')" title="View"><i class="fas fa-eye"></i></button>' : '') +
+        '<button class="btn btn-danger btn-sm btn-icon" onclick="deleteReview(\'' + r.id + '\',\'' + (r._isScore?'score':'review') + '\')" title="Delete"><i class="fas fa-trash"></i></button>' +
       '</div></td>' +
       '</tr>';
   }).join('');
 }
-
+  
 // ── VIEW REVIEW ──
 function viewReview(id) {
   const r = reviews.find(x => x.id === id);
@@ -709,14 +737,17 @@ function viewReview(id) {
 }
 
 // ── DELETE REVIEW ──
-async function deleteReview(id) {
-  openModal('Delete Review', 'Delete this quality review?', async () => {
-    await db.from('quality_reviews').delete().eq('id', id);
+async function deleteReview(id, type) {
+  openModal('Delete', 'Delete this entry?', async () => {
+    if (type === 'score') {
+      await db.from('quality_scores').delete().eq('id', id);
+    } else {
+      await db.from('quality_reviews').delete().eq('id', id);
+    }
     showToast('Deleted!', 'warning');
     loadReviews();
   });
 }
-
 // ── SETTINGS: QUESTIONS ──
 function renderQSettings() {
   const container = document.getElementById('q-settings-list');
