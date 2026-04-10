@@ -1780,6 +1780,29 @@ let schMyDraft     = {};
 let schAllDrafts   = {};
 let schCurrentWeek = null;
 
+function toggleSchAccordion(elementId) {
+  const clickedItem = document.getElementById(elementId);
+  const allAccordions = document.querySelectorAll('.sch-accordion');
+  const isOpen = clickedItem.classList.contains('active');
+  allAccordions.forEach(acc => {
+    acc.classList.remove('active');
+  });
+
+  if (!isOpen) {
+    clickedItem.classList.add('active');
+  }
+}
+
+function selectWeekChip(weekId, weekLabel, chipElement) {
+document.querySelectorAll('.week-chip').forEach(c => c.classList.remove('active'));
+  if(chipElement) chipElement.classList.add('active');
+  const pubAccordion = document.getElementById('acc-published');
+  if (pubAccordion && !pubAccordion.classList.contains('active')) {
+    toggleSchAccordion('acc-published');
+  }
+  loadSchTable(weekId);
+}
+
 async function sbFetchSch(path) {
   const res = await fetch(`${SB_URL_SCH}/rest/v1/${path}`, {
     headers: { 'apikey': SB_KEY_SCH, 'Authorization': `Bearer ${SB_KEY_SCH}`, 'Content-Type': 'application/json' }
@@ -1975,21 +1998,28 @@ function buildSchGrid(agents, dates, schedMap, today) {
   return html;
 }
 
-async function loadSchTable() {
-  const weekId = document.getElementById('sch-week-select').value;
+async function loadSchTable(weekId) {
+  // لو لم يتم إرسال الـ ID، لا تفعل شيئاً (لأننا حذفنا القائمة القديمة)
   if (!weekId) return;
+  
   const week = schWeeks.find(w => w.id === weekId);
   if (!week) return;
+  
   const gridEl = document.getElementById('sch-table-grid');
-  gridEl.innerHTML = '<div class="empty-state"><i class="fas fa-spinner spinner"></i></div>';
+  gridEl.innerHTML = '<div class="empty-state"><i class="fas fa-spinner spinner"></i> Loading data...</div>';
+  
   const today = `${new Date().getFullYear()}-${String(new Date().getMonth()+1).padStart(2,'0')}-${String(new Date().getDate()).padStart(2,'0')}`;
   const dates = getSchWeekDates(week.week_start, week.week_end);
-  const records = await sbFetchSch(`schedule?select=*&week_id=eq.${weekId}`);
-  const schedMap = {};
-  (records || []).forEach(s => { schedMap[`${s.agent_id}_${s.shift_date}`] = s; });
-  gridEl.innerHTML = buildSchGrid(schAgents, dates, schedMap, today);
+  
+  try {
+    const records = await sbFetchSch(`schedule?select=*&week_id=eq.${weekId}`);
+    const schedMap = {};
+    (records || []).forEach(s => { schedMap[`${s.agent_id}_${s.shift_date}`] = s; });
+    gridEl.innerHTML = buildSchGrid(schAgents, dates, schedMap, today);
+  } catch(e) {
+    gridEl.innerHTML = '<div class="empty-state">Error loading schedule.</div>';
+  }
 }
-
 async function loadDraftGrid() {
   const draftEl = document.getElementById('sch-draft-grid');
   draftEl.innerHTML = '<div class="empty-state"><i class="fas fa-spinner spinner"></i></div>';
@@ -2132,23 +2162,42 @@ function resetSchDraft() {
 function filterSchWeeks() {
   const year  = document.getElementById('sch-filter-year').value;
   const month = document.getElementById('sch-filter-month').value;
+  const loader = document.getElementById('weeks-loader');
+  const wrapper = document.getElementById('weeks-chips-wrapper');
+  const list   = document.getElementById('weeks-list');
+
+  // إظهار اللودر وإخفاء القائمة مؤقتاً
+  loader.style.display = 'block';
+  wrapper.style.display = 'none';
+
+  // الفلترة
   const filtered = schWeeks.filter(w => {
     if (year  && !w.week_start.startsWith(year))        return false;
     if (month && w.week_start.substring(5,7) !== month) return false;
     return true;
   });
-  const sel = document.getElementById('sch-week-select');
-  sel.innerHTML = '<option value="">— Select a week —</option>' +
-    filtered.map(w => `<option value="${w.id}">${fmtSchDate(w.week_start)} → ${fmtSchDate(w.week_end)}</option>`).join('');
-  const tabsEl = document.getElementById('sch-week-tabs');
-  if (tabsEl) tabsEl.innerHTML = filtered.map(w => `
-    <div onclick="selectSchWeekTab('${w.id}')" id="sch-tab-${w.id}" style="display:flex;align-items:center;gap:6px;padding:6px 12px;border-radius:10px;cursor:pointer;border:1.5px solid var(--border);background:var(--surface2);color:var(--muted);font-size:11px;font-weight:600;white-space:nowrap;transition:all 0.2s;">
-      <i class="fas fa-calendar-week" style="font-size:10px;"></i>
-      ${fmtSchDate(w.week_start)} → ${fmtSchDate(w.week_end)}
-      <span style="font-size:9px;padding:2px 6px;border-radius:20px;background:rgba(16,185,129,0.1);color:#10b981;">${w.status}</span>
-    </div>`).join('');
-}
 
+  setTimeout(() => { // تأخير بسيط ليعطي إحساس بالتحميل
+    loader.style.display = 'none';
+    
+    if (!filtered.length) {
+      wrapper.style.display = 'none';
+      return;
+    }
+
+    wrapper.style.display = 'block';
+    // بناء الـ Chips بدلاً من Options
+    list.innerHTML = filtered.map(w => `
+      <div class="week-chip" onclick="selectWeekChip('${w.id}', '${fmtSchDate(w.week_start)} → ${fmtSchDate(w.week_end)}', this)">
+        <i class="far fa-calendar-alt"></i>
+        <span>${fmtSchDate(w.week_start)} → ${fmtSchDate(w.week_end)}</span>
+      </div>
+    `).join('');
+    
+    // إعادة تعيين محتوى الجدول
+    document.getElementById('sch-table-grid').innerHTML = '<div class="empty-state">Select a week to view schedule.</div>';
+  }, 300);
+}
 function selectSchWeekTab(weekId) {
   document.getElementById('sch-week-select').value = weekId;
   document.querySelectorAll('[id^="sch-tab-"]').forEach(t => {
