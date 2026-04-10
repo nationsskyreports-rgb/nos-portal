@@ -164,7 +164,7 @@ let allAgents     = [];
 let allShiftTypes = [];
 let breaksData    = {};
 let editRows      = {};
-let workingAgents = []; // فقط اللي شغالين في اليوم المختار
+let workingAgents = [];
 
 document.getElementById('date-picker').value = new Date().toISOString().split('T')[0];
 
@@ -178,7 +178,7 @@ async function init() {
   await loadBreaks();
 }
 
-// ── LOAD BREAKS (Daily View — شغالين بس) ──
+// ── LOAD BREAKS ──
 async function loadBreaks() {
   const date  = document.getElementById('date-picker').value;
   const tbody = document.getElementById('breaks-tbody');
@@ -188,7 +188,6 @@ async function loadBreaks() {
   workingAgents = [];
 
   try {
-    // جيب Schedule لليوم ده — Work فقط
     const { data: schedules } = await db.from('schedule')
       .select('agent_id, day_type, shift_type_id, shift_types(name,start_time,end_time)')
       .eq('shift_date', date)
@@ -197,7 +196,6 @@ async function loadBreaks() {
     const shiftMap = {};
     (schedules || []).forEach(s => { shiftMap[s.agent_id] = s; });
 
-    // فلتر الـ agents اللي شغالين بس
     workingAgents = allAgents.filter(a => !!shiftMap[a.id]);
 
     if (!workingAgents.length) {
@@ -205,14 +203,12 @@ async function loadBreaks() {
       return;
     }
 
-    // جيب الـ breaks الموجودة
     const { data: breaks } = await db.from('breaks')
       .select('*').eq('break_date', date);
 
     breaksData = {};
     (breaks || []).forEach(b => { breaksData[b.agent_id] = b; });
 
-    // ابني الـ editRows
     workingAgents.forEach(agent => {
       const sch = shiftMap[agent.id];
       const b   = breaksData[agent.id] || {};
@@ -252,7 +248,6 @@ function clearRow(agentId) {
     editRows[agentId].lunch  = '';
     editRows[agentId].break2 = '';
   }
-  // امسح من الـ inputs مباشرة
   const rows = document.querySelectorAll('#breaks-tbody tr');
   rows.forEach(row => {
     if (row.innerHTML.includes(agentId)) {
@@ -292,7 +287,7 @@ async function saveAllBreaks() {
   }
 }
 
-// ── COPY FROM YESTERDAY (شغالين بس) ──
+// ── COPY FROM YESTERDAY ──
 async function copyFromYesterday() {
   const date = document.getElementById('date-picker').value;
   const yesterday = new Date(date + 'T00:00:00');
@@ -303,10 +298,9 @@ async function copyFromYesterday() {
     const { data } = await db.from('breaks').select('*').eq('break_date', yStr);
     if (!data || !data.length) { showToast('No breaks found for yesterday', 'warning'); return; }
 
-    // كوبي بس لو الـ agent شغال في اليوم الجديد
     let copied = 0;
     data.forEach(b => {
-      if (editRows[b.agent_id]) { // شغال في اليوم الجديد
+      if (editRows[b.agent_id]) {
         editRows[b.agent_id].break1 = b.break1 ? b.break1.substring(0,5) : '';
         editRows[b.agent_id].lunch  = b.lunch  ? b.lunch.substring(0,5)  : '';
         editRows[b.agent_id].break2 = b.break2 ? b.break2.substring(0,5) : '';
@@ -314,7 +308,6 @@ async function copyFromYesterday() {
       }
     });
 
-    // حدث الـ inputs في الـ DOM
     const rows = document.querySelectorAll('#breaks-tbody tr');
     workingAgents.forEach((agent, idx) => {
       const row = rows[idx];
@@ -333,7 +326,7 @@ async function copyFromYesterday() {
   }
 }
 
-// ── REGENERATE BREAKS من الـ Schedule ──
+// ── REGENERATE BREAKS ──
 async function regenerateBreaks() {
   const date = document.getElementById('date-picker').value;
 
@@ -343,7 +336,6 @@ async function regenerateBreaks() {
       const btn = document.querySelector('.btn-ghost[onclick="regenerateBreaks()"]');
       if (btn) { btn.disabled=true; btn.innerHTML='<i class="fas fa-spinner fa-spin"></i>'; }
       try {
-        // جيب الـ schedule لليوم ده
         const { data: schedules } = await db.from('schedule')
           .select('agent_id, shift_type_id, shift_types(name,start_time,end_time)')
           .eq('shift_date', date)
@@ -354,7 +346,6 @@ async function regenerateBreaks() {
           return;
         }
 
-        // حساب الـ breaks بنفس الـ logic بتاع الـ Schedule publish
         const shiftGroups = {};
         schedules.forEach(s => {
           if (!s.shift_types) return;
@@ -371,22 +362,26 @@ async function regenerateBreaks() {
           const noBreakEnd     = shiftEndMins   - 60;
           const window         = noBreakEnd - noBreakStart;
           const windowThird    = Math.floor(window / 3);
-         group.forEach((agent, idx) => {
+
+          group.forEach((agent, idx) => {
             const spread = group.length > 1 ? windowThird / group.length : 0;
             const offset = Math.floor(idx * spread);
+
             const break1BaseMin = noBreakStart + Math.floor(windowThird * 0.3);
             const lunchBaseMin  = noBreakStart + windowThird + Math.floor(windowThird * 0.3);
             const break2BaseMin = noBreakStart + windowThird * 2 + Math.floor(windowThird * 0.3);
-            const b1Final = Math.min(break1BaseMin + offset, noBreakEnd - 15);
-            const lnFinal = Math.min(lunchBaseMin  + offset, noBreakEnd - 30);
-            const b2Final = Math.min(break2BaseMin + offset, noBreakEnd - 15);  
+
+            const b1Final = roundToQuarter(Math.min(break1BaseMin + offset, noBreakEnd - 15));
+            const lnFinal = roundToQuarter(Math.min(lunchBaseMin  + offset, noBreakEnd - 30));
+            const b2Final = roundToQuarter(Math.min(break2BaseMin + offset, noBreakEnd - 15));
+
             upserts.push({
               agent_id:   agent.agent_id,
               break_date: date,
               shift_time: group[0].start_time.substring(0,5)+' - '+group[0].end_time.substring(0,5),
-              break1: minsToTime(b1Final),
-              lunch:  minsToTime(lnFinal),
-              break2: minsToTime(b2Final),
+              break1:     minsToTime(b1Final),
+              lunch:      minsToTime(lnFinal),
+              break2:     minsToTime(b2Final),
               updated_at: new Date().toISOString(),
             });
           });
@@ -490,6 +485,7 @@ async function loadWeeklyBreaks() {
 // ── HELPERS ──
 function timeToMins(t) { if(!t)return 0; const p=t.substring(0,5).split(':'); return (+p[0])*60+(+p[1]); }
 function minsToTime(m) { const h=Math.floor(m/60).toString().padStart(2,'0'); const mn=(m%60).toString().padStart(2,'0'); return h+':'+mn+':00'; }
+function roundToQuarter(mins) { return Math.round(mins / 15) * 15; }
 function fmtTime(val) { if(!val)return ''; const m=val.match(/^(\d{1,2}):(\d{2})/); if(!m)return val; return String(parseInt(m[1])).padStart(2,'0')+':'+m[2]; }
 function formatDate(d) { if(!d)return '—'; return new Date(d+'T00:00:00').toLocaleDateString('en-GB',{weekday:'long',day:'2-digit',month:'long',year:'numeric'}); }
 function formatTime(t) { return t?t.substring(0,5):'—'; }
@@ -500,7 +496,6 @@ function getWeekDates(start, end) {
   let cur     = new Date(start + 'T00:00:00');
   const endDate = new Date(end + 'T00:00:00');
   while (cur <= endDate) {
-    // ✅ Local date بدل toISOString
     const iso = `${cur.getFullYear()}-${String(cur.getMonth()+1).padStart(2,'0')}-${String(cur.getDate()).padStart(2,'0')}`;
     dates.push({
       iso,
