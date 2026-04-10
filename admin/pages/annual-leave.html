@@ -84,7 +84,7 @@
         <button class="btn btn-ghost btn-sm" onclick="loadData()">
           <i class="fas fa-sync-alt"></i> Refresh
         </button>
-        <button class="btn btn-success btn-sm" onclick="saveAll()">
+        <button class="btn btn-success btn-sm" id="save-all-btn" onclick="saveAll()">
           <i class="fas fa-save"></i> Save All
         </button>
         <div class="admin-chip">
@@ -95,62 +95,102 @@
     </div>
 
     <div class="page-content">
-      <div class="summary-bar fade-up" id="summary-bar">
-        <div class="summary-chip">
-          <span class="sc-label">Total Agents</span>
-          <span class="sc-val" id="s-agents">—</span>
+
+      <!-- Tabs -->
+      <div class="tabs fade-up">
+        <button class="tab-btn active" onclick="switchTab('balance',this)">🏖️ Leave Balance</button>
+        <button class="tab-btn" onclick="switchTab('summary',this)">📊 Annual Balance</button>
+      </div>
+
+      <!-- TAB: Leave Balance -->
+      <div id="tab-balance">
+        <div class="summary-bar fade-up" id="summary-bar">
+          <div class="summary-chip">
+            <span class="sc-label">Total Agents</span>
+            <span class="sc-val" id="s-agents">—</span>
+          </div>
+          <div class="summary-chip">
+            <span class="sc-label">Total Entitlement</span>
+            <span class="sc-val" id="s-entitlement">—</span>
+          </div>
+          <div class="summary-chip">
+            <span class="sc-label">Total Used</span>
+            <span class="sc-val" id="s-used" style="color:var(--gold)">—</span>
+          </div>
+          <div class="summary-chip">
+            <span class="sc-label">Total Remaining</span>
+            <span class="sc-val" id="s-remaining" style="color:#10B981">—</span>
+          </div>
+          <div class="summary-chip">
+            <span class="sc-label">Low Balance (≤3)</span>
+            <span class="sc-val" id="s-low" style="color:#EF4444">—</span>
+          </div>
         </div>
-        <div class="summary-chip">
-          <span class="sc-label">Total Entitlement</span>
-          <span class="sc-val" id="s-entitlement">—</span>
-        </div>
-        <div class="summary-chip">
-          <span class="sc-label">Total Used</span>
-          <span class="sc-val" id="s-used" style="color:var(--gold)">—</span>
-        </div>
-        <div class="summary-chip">
-          <span class="sc-label">Total Remaining</span>
-          <span class="sc-val" id="s-remaining" style="color:#10B981">—</span>
-        </div>
-        <div class="summary-chip">
-          <span class="sc-label">Low Balance (≤3)</span>
-          <span class="sc-val" id="s-low" style="color:#EF4444">—</span>
+
+        <div class="section-card fade-up">
+          <div class="section-header">
+            <div class="section-title">
+              <i class="fas fa-umbrella-beach" style="color:var(--gold)"></i> Leave Balance
+            </div>
+            <span id="last-updated" style="font-size:11px;color:var(--muted);"></span>
+          </div>
+          <div class="section-body no-pad">
+            <div class="table-wrap">
+              <table class="leave-table">
+                <thead>
+                  <tr>
+                    <th rowspan="2" style="text-align:left;vertical-align:middle;">Agent</th>
+                    <th rowspan="2" style="vertical-align:middle;">Entitlement</th>
+                    <th rowspan="2" style="vertical-align:middle;">Carry Over</th>
+                    <th colspan="12" style="text-align:center;background:rgba(212,175,55,0.06);border-bottom:1px solid var(--border);color:var(--gold);">Monthly Used Days</th>
+                    <th rowspan="2" style="vertical-align:middle;color:var(--gold);">Total Used</th>
+                    <th rowspan="2" style="vertical-align:middle;">Remaining</th>
+                    <th rowspan="2" style="vertical-align:middle;"></th>
+                  </tr>
+                  <tr class="month-header-group">
+                    <th>Jan</th><th>Feb</th><th>Mar</th><th>Apr</th>
+                    <th>May</th><th>Jun</th><th>Jul</th><th>Aug</th>
+                    <th>Sep</th><th>Oct</th><th>Nov</th><th>Dec</th>
+                  </tr>
+                </thead>
+                <tbody id="leave-tbody">
+                  <tr><td colspan="17"><div class="loading-wrap"><div class="spinner"></div></div></td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
         </div>
       </div>
 
-      <div class="section-card fade-up">
-        <div class="section-header">
-          <div class="section-title">
-            <i class="fas fa-umbrella-beach" style="color:var(--gold)"></i> Leave Balance
+      <!-- TAB: Annual Balance -->
+      <div id="tab-summary" style="display:none;">
+        <div class="section-card fade-up">
+          <div class="section-header">
+            <div class="section-title">
+              <i class="fas fa-umbrella-beach" style="color:var(--gold)"></i> Annual Balance
+            </div>
           </div>
-          <span id="last-updated" style="font-size:11px;color:var(--muted);"></span>
-        </div>
-        <div class="section-body no-pad">
-          <div class="table-wrap">
-            <table class="leave-table">
-              <thead>
-                <tr>
-                  <th rowspan="2" style="text-align:left;vertical-align:middle;">Agent</th>
-                  <th rowspan="2" style="vertical-align:middle;">Entitlement</th>
-                  <th rowspan="2" style="vertical-align:middle;">Carry Over</th>
-                  <th colspan="12" style="text-align:center;background:rgba(212,175,55,0.06);border-bottom:1px solid var(--border);color:var(--gold);">Monthly Used Days</th>
-                  <th rowspan="2" style="vertical-align:middle;color:var(--gold);">Total Used</th>
-                  <th rowspan="2" style="vertical-align:middle;">Remaining</th>
-                  <th rowspan="2" style="vertical-align:middle;"></th>
-                </tr>
-                <tr class="month-header-group">
-                  <th>Jan</th><th>Feb</th><th>Mar</th><th>Apr</th>
-                  <th>May</th><th>Jun</th><th>Jul</th><th>Aug</th>
-                  <th>Sep</th><th>Oct</th><th>Nov</th><th>Dec</th>
-                </tr>
-              </thead>
-              <tbody id="leave-tbody">
-                <tr><td colspan="17"><div class="loading-wrap"><div class="spinner"></div></div></td></tr>
-              </tbody>
-            </table>
+          <div class="section-body no-pad">
+            <div class="table-wrap">
+              <table class="nos-table">
+                <thead>
+                  <tr>
+                    <th>Agent</th>
+                    <th>Entitlement</th>
+                    <th>Carry Over</th>
+                    <th>Total Used</th>
+                    <th>Remaining</th>
+                  </tr>
+                </thead>
+                <tbody id="summary-tbody">
+                  <tr><td colspan="5"><div class="loading-wrap"><div class="spinner"></div></div></td></tr>
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       </div>
+
     </div>
   </div>
 </div>
@@ -168,8 +208,21 @@ if (session) {
 }
 
 const MONTHS = ['jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec'];
-let leaveData = [];
+let leaveData   = [];
+let currentTab  = 'balance';
 
+// ── SWITCH TAB ──
+function switchTab(tab, btn) {
+  currentTab = tab;
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('tab-balance').style.display = tab === 'balance' ? 'block' : 'none';
+  document.getElementById('tab-summary').style.display = tab === 'summary' ? 'block' : 'none';
+  document.getElementById('save-all-btn').style.display = tab === 'balance' ? 'flex' : 'none';
+  if (tab === 'summary') renderAnnualSummary();
+}
+
+// ── LOAD DATA ──
 async function loadData() {
   const year  = document.getElementById('year-select').value;
   const tbody = document.getElementById('leave-tbody');
@@ -188,6 +241,7 @@ async function loadData() {
 
     renderTable();
     renderSummary();
+    if (currentTab === 'summary') renderAnnualSummary();
     document.getElementById('last-updated').innerText = 'Updated: ' + new Date().toLocaleTimeString();
   } catch(e) {
     tbody.innerHTML = '<tr><td colspan="17"><div class="empty-state"><span class="empty-icon">❌</span>Failed to load</div></td></tr>';
@@ -195,6 +249,7 @@ async function loadData() {
   }
 }
 
+// ── RENDER BALANCE TABLE ──
 function renderTable() {
   const tbody = document.getElementById('leave-tbody');
   if (!leaveData.length) {
@@ -226,10 +281,32 @@ function renderTable() {
   }).join('');
 }
 
+// ── RENDER ANNUAL BALANCE TAB ──
+function renderAnnualSummary() {
+  const tbody = document.getElementById('summary-tbody');
+  if (!leaveData.length) {
+    tbody.innerHTML = '<tr><td colspan="5"><div class="empty-state"><span class="empty-icon">📭</span>No data</div></td></tr>';
+    return;
+  }
+  tbody.innerHTML = leaveData.map(r => {
+    const totalUsed = r.total_used !== undefined ? r.total_used : MONTHS.reduce((s,m) => s+(r['used_'+m]||0), 0);
+    const remaining = r.remaining  !== undefined ? r.remaining  : ((r.entitlement||0)+(r.carry_over||0)-totalUsed);
+    const remClass  = remaining <= 3 ? 'badge-danger' : remaining <= 7 ? 'badge-warning' : 'badge-success';
+    return '<tr>' +
+      '<td><div style="display:flex;align-items:center;gap:8px;"><div class="agent-avatar" style="width:26px;height:26px;font-size:9px;">' + initials(r.formal_name) + '</div><span style="font-weight:700;">' + r.formal_name + '</span></div></td>' +
+      '<td style="font-weight:700;">' + (r.entitlement||0) + ' days</td>' +
+      '<td style="font-weight:700;">' + (r.carry_over||0)  + ' days</td>' +
+      '<td style="font-weight:800;color:var(--gold);">' + totalUsed + ' days</td>' +
+      '<td><span class="badge ' + remClass + '">' + remaining + ' days</span></td>' +
+      '</tr>';
+  }).join('');
+}
+
+// ── RECALC ROW ──
 function recalcRow(i) {
-  const r         = leaveData[i];
-  const ent       = parseInt(document.getElementById('ent-' + i).value) || 0;
-  const co        = parseInt(document.getElementById('co-'  + i).value) || 0;
+  const r          = leaveData[i];
+  const ent        = parseInt(document.getElementById('ent-' + i).value) || 0;
+  const co         = parseInt(document.getElementById('co-'  + i).value) || 0;
   const total_used = MONTHS.reduce((s, m) => s + (r['used_' + m] || 0), 0);
   const remaining  = ent + co - total_used;
   const remClass   = remaining <= 3 ? 'remaining-low' : remaining <= 7 ? 'remaining-warn' : 'remaining-ok';
@@ -237,11 +314,12 @@ function recalcRow(i) {
   if (remSpan) { remSpan.className = 'remaining-badge ' + remClass; remSpan.innerText = remaining; }
 }
 
+// ── SAVE ROW ──
 async function saveRow(i) {
-  const r   = leaveData[i];
-  const btn = document.getElementById('savebtn-' + i);
-  const ent = parseInt(document.getElementById('ent-' + i).value) || 0;
-  const co  = parseInt(document.getElementById('co-'  + i).value) || 0;
+  const r          = leaveData[i];
+  const btn        = document.getElementById('savebtn-' + i);
+  const ent        = parseInt(document.getElementById('ent-' + i).value) || 0;
+  const co         = parseInt(document.getElementById('co-'  + i).value) || 0;
   const total_used = MONTHS.reduce((s, m) => s + (r['used_' + m] || 0), 0);
   const remaining  = ent + co - total_used;
 
@@ -251,7 +329,8 @@ async function saveRow(i) {
   try {
     if (r.id) {
       await db.from('annual_leave').update({
-        entitlement: ent, carry_over: co, total_used, remaining,
+        entitlement: ent, carry_over: co,
+        total_used, remaining,
         updated_at: new Date().toISOString()
       }).eq('id', r.id);
     } else {
@@ -291,9 +370,10 @@ async function saveRow(i) {
   }
 }
 
+// ── SAVE ALL ──
 async function saveAll() {
-  const btn = document.querySelector('.btn-success');
-  btn.disabled = true;
+  const btn = document.getElementById('save-all-btn');
+  btn.disabled  = true;
   btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
   for (let i = 0; i < leaveData.length; i++) {
     await saveRow(i);
@@ -303,10 +383,11 @@ async function saveAll() {
   showToast('All agents saved! ✅', 'success');
 }
 
+// ── SUMMARY BAR ──
 function renderSummary() {
   const totalAgents      = leaveData.length;
-  const totalEntitlement = leaveData.reduce((s, r) => s + (r.entitlement || 0) + (r.carry_over || 0), 0);
-  const totalUsed        = leaveData.reduce((s, r) => s + (r.total_used  || 0), 0);
+  const totalEntitlement = leaveData.reduce((s, r) => s + (r.entitlement||0) + (r.carry_over||0), 0);
+  const totalUsed        = leaveData.reduce((s, r) => s + (r.total_used||0), 0);
   const totalRemaining   = leaveData.reduce((s, r) => {
     const rem = r.remaining !== undefined ? r.remaining : ((r.entitlement||0)+(r.carry_over||0)-(r.total_used||0));
     return s + rem;
