@@ -1170,7 +1170,15 @@ function submitCallLogForm() {
     btn.disabled = false;
     btn.innerHTML = '<i class="fas fa-paper-plane"></i> Submit to Database';
     if (res.status === 'success') {
-      showResultPopup('success', 'Call Logged! 🎉', 'Customer data has been saved to the database successfully.', 'Great!', () => resetCallForm());
+const bar = document.getElementById('call-summary-bar');
+document.getElementById('cs-name').innerText   = cname  || '—';
+document.getElementById('cs-mobile').innerText = mobile || '—';
+document.getElementById('cs-reason').innerText = reason || '—';
+bar.style.display = 'flex';
+// اخفيه تلقائي بعد 30 ثانية
+setTimeout(() => bar.style.display = 'none', 30000);
+resetCallForm();
+showToast('✅', 'Call Logged!', cname ? cname + ' — ' + mobile : reason, 'success', 5000);  
     } else {
       showFormErr(res.msg || 'Something went wrong.');
     }
