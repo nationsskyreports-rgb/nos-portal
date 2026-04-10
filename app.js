@@ -1178,6 +1178,38 @@ function resetCallForm() {
   document.getElementById('mobile-section').style.display = 'block';
   document.getElementById('form-success').style.display   = 'none';
   document.getElementById('form-error').style.display     = 'none';
+  goStep(1);
+}
+
+/* ─── STEP NAVIGATION ─── */
+let _currentStep = 1;
+
+function goStep(n) {
+  // Validate before going forward
+  if (n > _currentStep) {
+    if (_currentStep === 1) {
+      const agent  = document.getElementById('f-agent').value;
+      const reason = document.getElementById('f-reason').value;
+      if (!agent || !reason) { showFormErr('Please select Agent and Call Reason!'); return; }
+      // لو Quick log (Wrong Number / Call Dropped) اقفز لـ step 4 مباشرة
+      if (reason === 'Wrong Number' || reason === 'Call Dropped') { n = 4; }
+    }
+  }
+
+  // Update dots & lines
+  for (let i = 1; i <= 4; i++) {
+    const dot  = document.getElementById('sdot-' + i);
+    const line = document.getElementById('sline-' + i);
+    if (i < n)       { dot.className = 'step-dot done'; dot.innerHTML = '✓'; }
+    else if (i === n) { dot.className = 'step-dot active'; dot.innerHTML = i; }
+    else              { dot.className = 'step-dot'; dot.innerHTML = i; }
+    if (line) line.className = i < n ? 'step-line done' : 'step-line';
+  }
+
+  // Show panel
+  document.querySelectorAll('.step-panel').forEach(p => p.classList.remove('active'));
+  document.getElementById('step-' + n).classList.add('active');
+  _currentStep = n;
 }
 
 function showFormErr(msg) {
@@ -1715,7 +1747,10 @@ function selectChannel(ch) {
   var swWA      = document.getElementById('switch-wa-btn');
   var icon      = document.getElementById('calllog-channel-icon');
   var title     = document.getElementById('calllog-channel-title');
-
+   
+  goStep(1);
+  _currentStep = 1;
+   
   if (_activeChannel === ch) {
     _activeChannel = null;
     formArea.style.display = 'none';
