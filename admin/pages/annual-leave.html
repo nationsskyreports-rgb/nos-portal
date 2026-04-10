@@ -140,9 +140,9 @@
           </div>
           <div style="display:flex;align-items:center;gap:8px;">
             <span id="last-updated" style="font-size:11px;color:var(--muted);"></span>
-            <button class="btn btn-ghost btn-sm" onclick="loadData()">
-              <i class="fas fa-sync-alt"></i> Refresh
-            </button>
+              <button class="btn btn-success btn-sm" onclick="saveAll()">
+               <i class="fas fa-save"></i> Save All
+        </button> 
           </div>
         </div>
         <div class="section-body no-pad">
@@ -180,6 +180,12 @@
 <script src="../js/supabase.js"></script>
 <script src="../js/auth.js"></script>
 <script src="../js/ui.js"></script>
+async function saveAll() {
+  for (let i = 0; i < leaveData.length; i++) {
+    await saveRow(i);
+  }
+  showToast('All saved!', 'success');
+}
 <script>
 renderSidebar();
 const session = checkAuth();
