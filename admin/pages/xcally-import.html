@@ -65,6 +65,7 @@
         <div class="breadcrumb"><i class="fas fa-circle" style="font-size:5px;color:var(--gold)"></i> Daily Performance Tracker</div>
       </div>
       <div class="topbar-right">
+        <button class="btn btn-ghost" onclick="reapplyExcuses()"><i class="fas fa-sync-alt"></i> Re-apply Excuses</button>
         <button class="btn btn-ghost" onclick="switchView('history')"><i class="fas fa-history"></i> View History</button>
         <button class="btn btn-primary" onclick="switchView('import')"><i class="fas fa-upload"></i> Import Data</button>
         <div class="admin-chip">
@@ -838,6 +839,74 @@ function formatDateShort(d) {
 }
 
 init();
+async function reapplyExcuses() {
+  const btn = document.querySelector('[onclick="reapplyExcuses()"]');
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
+
+  try {
+    // جيب كل الـ excuses الـ Approved
+    const { data: excuses } = await db.from('excuses')
+      .select('*')
+      .eq('status', 'Approved');
+
+    if (!excuses || !excuses.length) {
+      showToast('No approved excuses found', 'warning');
+      return;
+    }
+
+    // جيب الـ daily_performance بتاعت أيام الـ excuses
+    const dates = [...new Set(excuses.map(e => e.excuse_date))];
+    const { data: perfData } = await db.from('daily_performance')
+      .select('*')
+      .in('perf_date', dates);
+
+    if (!perfData || !perfData.length) {
+      showToast('No performance data found for excuse dates', 'warning');
+      return;
+    }
+
+    const EXC_SEC = 2 * 3600;
+    let updated = 0;
+
+    for (const exc of excuses) {
+      const perf = perfData.find(p => 
+        p.perf_date === exc.excuse_date && 
+        (p.agent_id === exc.agent_id || 
+         p.agent_name.toLowerCase() === exc.agent_name.toLowerCase())
+      );
+      if (!perf) continue;
+
+      const TARGET_SEC  = perf.target_sec || 28800;
+      const rawMissing  = Math.max(0, TARGET_SEC - perf.active_sec);
+      let netMissing, conf;
+
+      if (rawMissing <= EXC_SEC) {
+        netMissing = 0;
+        conf       = 100;
+      } else {
+        netMissing = rawMissing - EXC_SEC;
+        conf       = Math.min(100, (perf.active_sec / TARGET_SEC) * 100);
+      }
+
+      await db.from('daily_performance').update({
+        conformance: parseFloat(conf.toFixed(2)),
+        missing_sec: netMissing,
+        updated_at:  new Date().toISOString()
+      }).eq('id', perf.id);
+
+      updated++;
+    }
+
+    showToast('✅ Updated ' + updated + ' record(s)!', 'success');
+
+  } catch(e) {
+    showToast('Failed: ' + e.message, 'error');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fas fa-sync-alt"></i> Re-apply Excuses';
+  }
+}  
 </script>
 </body>
 </html>
