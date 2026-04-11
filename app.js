@@ -1644,18 +1644,15 @@ async function sbFetchSch(path) {
   }
 }
 
-async function gasRun(func, ...args) {
-  try {
-    const res = await fetch(GAS_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: new URLSearchParams({ func, args: JSON.stringify(args) }).toString()
-    });
-    return res.ok ? res.json() : { status: 'error', msg: 'Network error' };
-  } catch(e) {
-    console.error('GAS error:', e);
-    return { status: 'error', msg: 'Network error' };
-  }
+function gasRun(action, ...args) {
+  return fetch(GAS_URL, {
+    method:  'POST',
+    redirect:'follow',
+    headers: { 'Content-Type': 'text/plain' },
+    body:    JSON.stringify({ action, args })
+  })
+  .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.text(); })
+  .then(text => { try { return JSON.parse(text); } catch(e) { throw new Error('Invalid JSON response'); } });
 }
 
 async function initSchTab() {
