@@ -379,8 +379,8 @@ function calculateBreaks(schedules, date) {
   agents.forEach(agent => {
     const noBreakStart = agent.startMins + 60;
     const noBreakEnd   = agent.endMins   - 60;
-    const window       = noBreakEnd - noBreakStart;
-    const windowThird  = Math.floor(window / 3);
+    const availableMins = noBreakEnd - noBreakStart;
+    const windowThird   = Math.floor(availableMins / 3);
 
     // الأوقات المثالية بناءً على شيفت الـ agent
     const idealBreak1 = roundToQuarter(noBreakStart + Math.floor(windowThird * 0.3));
