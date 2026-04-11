@@ -229,18 +229,16 @@ async function autoSync() {
     if (!r.id) continue;
     const total_used = MONTHS.reduce((s, m) => s + (r['used_' + m] || 0), 0);
     const remaining  = (r.entitlement || 0) + (r.carry_over || 0) - total_used;
-    // حفظ في Supabase
     await db.from('annual_leave').update({
       total_used,
       remaining,
       updated_at: new Date().toISOString()
     }).eq('id', r.id);
-    // حدث الـ local data
     r.total_used = total_used;
     r.remaining  = remaining;
   }
 }
-
+  
 function renderTable() {
   const tbody = document.getElementById('leave-tbody');
   if (!leaveData.length) {
