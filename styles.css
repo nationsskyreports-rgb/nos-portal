@@ -224,10 +224,10 @@ select.form-input option { background: var(--surface); color: var(--text); }
 
 
 /* ─── 07. STATUS BANNER ─── */
-.status-banner { background: var(--surface); border: 1px solid var(--border); border-radius: 18px; padding: 40px 24px; text-align: center; margin-bottom: 16px; display: none; }
+.status-banner { background: var(--surface); border: 1px solid var(--border); border-radius: 18px; padding: 40px 24px; text-align: center; margin-bottom: 16px; display: none; overflow: visible; }
 .status-icon  { font-size: 52px; margin-bottom: 14px; display: block; }
 .status-label { font-size: 11px; text-transform: uppercase; letter-spacing: 1.5px; color: var(--muted); font-weight: 600; }
-.status-value { font-size: 28px; font-weight: 800; margin: 8px 0 0; font-family: 'Syne', sans-serif; }
+.status-value { font-size: 24px; font-weight: 800; margin: 8px 0 0; font-family: 'Syne', sans-serif; white-space: nowrap; overflow: visible; width: 100%; text-align: center; }
 .status-sub   { font-size: 13px; color: var(--muted); margin-top: 8px; }
 
 
