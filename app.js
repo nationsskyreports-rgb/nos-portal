@@ -974,6 +974,76 @@ function showBreakTimeModal() {
   };
 }
 
+async function findAvailableBreakSlot(requestedTime, breakType, agentShiftStart, agentShiftEnd) {
+  const today   = new Date().toISOString().split('T')[0];
+  const colMap  = { 'Break 1': 'break1', 'Lunch': 'lunch', 'Break 2': 'break2' };
+  const col     = colMap[breakType];
+  const durMap  = { 'Break 1': 15, 'Lunch': 30, 'Break 2': 15 };
+  const dur     = durMap[breakType];
+
+  // جيب بريكات اليوم كله
+  const res  = await fetch(
+    `${SB_URL_SCH}/rest/v1/breaks?break_date=eq.${today}&select=*`,
+    { headers: { 'apikey': SB_KEY_SCH, 'Authorization': `Bearer ${SB_KEY_SCH}` } }
+  );
+  const allBreaks = await res.json();
+
+  // حوّل وقت الشيفت لـ minutes
+  const shiftStart = timeStrToMins(agentShiftStart);
+  const shiftEnd   = timeStrToMins(agentShiftEnd);
+  const noBreakStart = shiftStart + 60;
+  const noBreakEnd   = shiftEnd   - 60;
+
+  // دالة تتحقق من التعارض
+  function hasConflict(slotMins) {
+    const slotEnd = slotMins + dur;
+    // كام agent على بريك في نفس الوقت ده؟
+    let count = 0;
+    allBreaks.forEach(b => {
+      if (!b[col]) return;
+      const bStart = timeStrToMins(b[col].substring(0,5));
+      const bEnd   = bStart + dur;
+      // في overlap لو مش (slotEnd <= bStart || slotMins >= bEnd)
+      const overlap = !(slotEnd <= bStart || slotMins >= bEnd);
+      // overlap أكتر من 15 دقيقة؟
+      if (overlap) {
+        const overlapMins = Math.min(slotEnd, bEnd) - Math.max(slotMins, bStart);
+        if (overlapMins > 15) count++;
+      }
+    });
+    // مسموح باتنين بس (الـ agent الحالي + واحد تاني)
+    return count >= 2;
+  }
+
+  // دور forward على أقرب slot متاح
+  let candidate = timeStrToMins(requestedTime);
+  // لو الوقت المطلوب نفسه مش عليه conflict — قبله
+  if (!hasConflict(candidate) && candidate >= noBreakStart && candidate <= noBreakEnd - dur) {
+    return null; // مفيش مشكلة
+  }
+
+  // دور forward بـ 15 دقيقة
+  for (let i = 1; i <= 8; i++) {
+    const next = candidate + (i * 15);
+    if (next > noBreakEnd - dur) break;
+    if (!hasConflict(next)) {
+      return minsToTimeStr(next); // رجّع أقرب وقت متاح
+    }
+  }
+
+  return null; // مفيش وقت متاح — اسمح بالتغيير
+}
+
+function timeStrToMins(t) {
+  if (!t) return 0;
+  const p = t.substring(0,5).split(':');
+  return (+p[0]) * 60 + (+p[1]);
+}
+
+function minsToTimeStr(m) {
+  return Math.floor(m/60).toString().padStart(2,'0') + ':' + (m%60).toString().padStart(2,'0');
+}
+
 // ── تغيير البريك مباشرة على Supabase بدون approval ──
 async function confirmBreakTime(time) {
   if (!schMyAgentId) { showToast('❌','Error','Agent not found!','danger',4000); return; }
@@ -986,13 +1056,46 @@ async function confirmBreakTime(time) {
 
   if (!col) { showToast('❌','Error','Select break type first!','danger',4000); return; }
 
-  btn.disabled    = true;
-  msg.style.color = 'var(--muted)';
-  msg.innerText   = 'Updating...';
+btn.disabled    = true;
+msg.style.color = 'var(--muted)';
+msg.innerText   = 'Checking availability...';
 
-  try {
-    const res = await fetch(
-      `${SB_URL_SCH}/rest/v1/breaks?agent_id=eq.${schMyAgentId}&break_date=eq.${today}`,
+try {
+  // جيب shift بتاع الـ agent
+  const shiftText = document.getElementById('br-shift').innerText.replace('SHIFT: ','');
+  const shiftParts = shiftText.split(' - ');
+  const shiftStart = shiftParts[0]?.trim() || '00:00';
+  const shiftEnd   = shiftParts[1]?.trim() || '23:00';
+
+  // تحقق من التعارض
+  const suggestion = await findAvailableBreakSlot(time, selectedBreakType, shiftStart, shiftEnd);
+
+  if (suggestion) {
+    // في تعارض — عرض الاقتراح
+    btn.disabled = false;
+    msg.style.color = 'var(--warn)';
+    msg.innerText   = `⚠️ ${time} محجوز! أقرب وقت متاح: ${suggestion}`;
+
+    // عرض زرار للقبول بالوقت المقترح
+    const existingBtn = document.getElementById('suggest-btn');
+    if (existingBtn) existingBtn.remove();
+    const suggestBtn = document.createElement('button');
+    suggestBtn.id        = 'suggest-btn';
+    suggestBtn.innerText = `✅ استخدم ${suggestion}`;
+    suggestBtn.style.cssText = 'margin-top:8px;padding:8px 16px;background:var(--primary-gradient);color:white;border:none;border-radius:10px;cursor:pointer;font-weight:700;font-family:inherit;width:100%;';
+    suggestBtn.onclick = () => {
+      suggestBtn.remove();
+      msg.innerText = '';
+      confirmBreakTime(suggestion);
+    };
+    msg.parentElement.appendChild(suggestBtn);
+    return;
+  }
+
+  msg.innerText = 'Updating...';
+
+  const res = await fetch(
+   `${SB_URL_SCH}/rest/v1/breaks?agent_id=eq.${schMyAgentId}&break_date=eq.${today}`,
       {
         method:  'PATCH',
         headers: {
