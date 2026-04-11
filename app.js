@@ -1129,24 +1129,62 @@ async function confirmBreakTime(time) {
 
 
 /* ─── 15. EXCUSE & TIME OFF ─── */
-function sendExcuse() {
+async function sendExcuse() {
   const rawDate    = document.getElementById('excuseDate').value;
   const excuseType = document.getElementById('excuseType').value;
   if (!rawDate)    { customAlert('Error', 'Please select a date!'); return; }
   if (!excuseType) { customAlert('Error', 'Please select excuse type!'); return; }
+  if (!schMyAgentId) { customAlert('Error', 'Agent not found — please refresh!'); return; }
+
   const name = document.getElementById('user-name').innerText.trim();
   const msg  = document.getElementById('excuse-msg');
   const btn  = document.getElementById('excuseBtn');
-  /* FIX-5 */ setButtonLoading(btn, true, 'Submitting...');
+
+  setButtonLoading(btn, true, 'Submitting...');
   btn.disabled = true; msg.innerText = '';
-  gasRun('submitExcuseFromWeb', name, rawDate, excuseType).then(res => {
-    /* FIX-5 */ setButtonLoading(btn, false, '✓ Submit');
+
+  try {
+    const d = new Date(rawDate);
+    const month_year = d.toLocaleString('en-US', { month: 'long' }) + ' ' + d.getFullYear();
+
+    const res = await fetch(`${SB_URL_SCH}/rest/v1/excuses`, {
+      method:  'POST',
+      headers: {
+        'apikey':        SB_KEY_SCH,
+        'Authorization': `Bearer ${SB_KEY_SCH}`,
+        'Content-Type':  'application/json',
+        'Prefer':        'return=minimal'
+      },
+      body: JSON.stringify({
+        agent_id:    schMyAgentId,
+        agent_name:  name,
+        excuse_date: rawDate,
+        excuse_type: excuseType,
+        status:      'Pending',
+        month_year:  month_year,
+        created_at:  new Date().toISOString(),
+        updated_at:  new Date().toISOString(),
+      })
+    });
+
+    setButtonLoading(btn, false, '✓ Submit');
+    btn.disabled = false;
+
+    if (res.ok) {
+      msg.style.color = 'var(--accent)';
+      msg.innerText   = '✅ Request submitted! Pending approval.';
+      customAlert('Success', 'Excuse request submitted successfully!');
+      setTimeout(() => msg.innerText = '', 5000);
+    } else {
+      msg.style.color = 'var(--danger)';
+      msg.innerText   = '❌ Failed. Try again.';
+    }
+  } catch(e) {
+    setButtonLoading(btn, false, '✓ Submit');
     btn.disabled    = false;
-    msg.style.color = res.status === 'success' ? 'var(--accent)' : 'var(--danger)';
-    msg.innerText   = res.msg;
-    if (res.status === 'success') customAlert('Success', res.msg);
-    setTimeout(() => msg.innerText = '', 5000);
-  });
+    msg.style.color = 'var(--danger)';
+    msg.innerText   = '❌ Connection error!';
+  }
 }
 
 function undoLastExcuse() {
