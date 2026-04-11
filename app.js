@@ -2027,7 +2027,7 @@ function applyBreaksToUI(breaks) {
       brShiftEl.style.whiteSpace   = 'nowrap';
       brShiftEl.style.overflow     = 'hidden';
       brShiftEl.style.textOverflow = 'ellipsis';
-      brShiftEl.style.maxWidth     = '200px';
+      brShiftEl.style.maxWidth     = 'none';
       brShiftEl.title              = breaks.shift_time;
     }
     const statusTextEl = document.getElementById('status-text');
