@@ -1856,42 +1856,6 @@ function submitShiftSwap() {
     }
   });
 }
-function syncKnownSwaps() {
-  document.querySelectorAll('#requests-list .req-card').forEach(card => {
-    const typeEl   = card.querySelector('.req-type');
-    const statusEl = card.querySelector('.req-status');
-    if (typeEl && typeEl.innerText.includes('Shift Swap') && statusEl) {
-      const detail = card.querySelector('.req-detail');
-      if (detail) knownSwapStatuses[detail.innerText.trim()] = statusEl.innerText.trim();
-    }
-  });
-}
-
-function startSwapPolling() {
-  syncKnownSwaps();
-  if (swapPollTimer) clearInterval(swapPollTimer);
-  swapPollTimer = setInterval(() => {
-    if (!sessionAgent) return;
-    gasRun('checkMySwapUpdates', sessionAgent).then(res => {
-      if (!res || !res.updates || !res.updates.length) return;
-      res.updates.forEach(u => {
-        const key       = u.date + ' | ' + u.colleague;
-        const oldStatus = knownSwapStatuses[key];
-        if (oldStatus === 'Pending' && u.status !== 'Pending') {
-          if (u.status === 'Approved') {
-            sendNotif('✅ Shift Swap Approved!', 'Your swap with '+u.colleague+' on '+u.date);
-            showToast('✅','Shift Swap Approved!','Your swap with '+u.colleague+' on '+u.date+' is approved.','success',15000);
-          } else if (u.status === 'Rejected') {
-            sendNotif('❌ Shift Swap Rejected', 'Your swap with '+u.colleague+' on '+u.date);
-            showToast('❌','Shift Swap Rejected','Your swap with '+u.colleague+' on '+u.date+' was rejected.','danger',15000);
-          }
-          silentRefreshRequests();
-        }
-        knownSwapStatuses[key] = u.status;
-      });
-    }).catch(() => {});
-  }, 30000);
-}
 
 function silentRefreshRequests() {
   loadMyRequests();
