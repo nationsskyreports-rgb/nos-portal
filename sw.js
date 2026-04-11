@@ -1,5 +1,4 @@
-const CACHE_NAME = 'ns-portal-v4';
-
+const CACHE_NAME = 'ns-portal-v5';
 const STATIC_ASSETS = [
   '/',
   '/index.html',
@@ -15,7 +14,7 @@ self.addEventListener('install', e => {
   e.waitUntil(
     caches.open(CACHE_NAME).then(cache => cache.addAll(STATIC_ASSETS).catch(() => {}))
   );
-  self.skipWaiting();
+  // لا تعمل skipWaiting هنا — خلي الـ notification تظهر أول
 });
 
 self.addEventListener('activate', e => {
@@ -28,13 +27,8 @@ self.addEventListener('activate', e => {
 });
 
 self.addEventListener('fetch', e => {
-  // GAS API — مش بنعمل cache ليها خالص
   if (e.request.url.includes('script.google.com')) return;
-
-  // Supabase — مش بنعمل cache ليها خالص
   if (e.request.url.includes('supabase.co')) return;
-
-  // CSS / JS / HTML — Network-First عشان دايماً تاخد الأحدث
   if (e.request.destination === 'script' ||
       e.request.destination === 'style'  ||
       e.request.destination === 'document') {
@@ -49,9 +43,14 @@ self.addEventListener('fetch', e => {
     );
     return;
   }
-
-  // باقي الملفات (صور، fonts) — Cache-First عادي
   e.respondWith(
     caches.match(e.request).then(cached => cached || fetch(e.request).catch(() => caches.match('/index.html')))
   );
+});
+
+// استقبل رسالة SKIP_WAITING من الـ app
+self.addEventListener('message', e => {
+  if (e.data && e.data.type === 'SKIP_WAITING') {
+    self.skipWaiting();
+  }
 });
