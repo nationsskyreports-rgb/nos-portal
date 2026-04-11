@@ -2094,10 +2094,7 @@ async function initSchTab() {
       yearEl.innerHTML = '<option value="">All Years</option>' +
         years.map(y => `<option value="${y}">${y}</option>`).join('');
     }
-    filterSchWeeks();
     loadDraftGrid();
-
-    /* ── FIX-2: حدد الأسبوع الحالي أو الجاي وافتحه تلقائياً ── */
     autoSelectCurrentWeek();
 
   } catch(e) {
