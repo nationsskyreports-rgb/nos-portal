@@ -485,7 +485,7 @@ async function loadKPIs(monthName, year) {
         '<td><input class="editable-cell" type="text" value="'+(quality?.score||'')+'" placeholder="—" onchange="markEdit(\''+agent.id+'\',\'score\',this.value)" style="color:var(--gold);font-weight:700;"></td>'+
         '<td><span class="badge '+(typeof annLeft==='number'&&annLeft<=3?'badge-danger':'badge-success')+'">'+(typeof annLeft==='number'?annLeft+' days':annLeft)+'</span></td>'+
         '<td style="font-weight:700;">'+annUsedMTD+' days</td>'+
-        '<td style="font-weight:700;color:var(--gold);">'+(ann.total_used||0)+' days</td>'+
+        '<td style="font-weight:700;color:var(--gold);">'+(ann.total_used !== undefined ? ann.total_used : MONTHS_SHORT.reduce((s,m)=>s+(ann['used_'+m]||0),0))+' days</td>'+
         '</tr>';
     }).join('');
   } catch(e) {
