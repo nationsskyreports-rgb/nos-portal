@@ -908,13 +908,15 @@ async function reapplyExcuses() {
       const rawMissing = Math.max(0, TARGET_SEC - perf.active_sec);
       let netMissing, conf;
 
-      if (rawMissing <= EXC_SEC) {
-        netMissing = 0; conf = 100;
-      } else {
-        netMissing = rawMissing - EXC_SEC;
-        conf = Math.min(100, (perf.active_sec / TARGET_SEC) * 100);
-      }
-
+     if (rawMissing <= EXC_SEC) {
+     netMissing = 0;
+     conf = 100;
+     } else {
+     netMissing = rawMissing - EXC_SEC;
+  // ✅ الـ conformance بيتحسب بعد خصم الـ excuse من الـ missing
+  const effectiveActive = perf.active_sec + EXC_SEC;
+  conf = Math.min(100, (effectiveActive / TARGET_SEC) * 100);
+}
       await db.from('daily_performance').update({
         conformance: parseFloat(conf.toFixed(2)),
         missing_sec: netMissing,
