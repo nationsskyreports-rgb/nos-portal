@@ -428,7 +428,7 @@ async function loadWeekSelectOptions() {
   try {
     const { data } = await db.from('schedule_weeks').select('*').order('week_start',{ascending:false});
     (data||[]).forEach((w,idx) => {
-      const opt = new Option('Week '+(data.length-idx)+'  ('+formatDateShort(w.week_start)+' → '+formatDateShort(w.week_end)+')', w.id);
+      const weekNum = getISOWeek(new Date(w.week_start + 'T00:00:00')); const opt = new Option('Week '+weekNum+'  ('+formatDateShort(w.week_start)+' → '+formatDateShort(w.week_end)+')', w.id);
       opt.dataset.start = w.week_start;
       opt.dataset.end   = w.week_end;
       sel.add(opt);
@@ -533,7 +533,14 @@ function getWeekDates(start, end) {
 }
 function openModal(title,msg,onConfirm){document.getElementById('modal-title').innerText=title;document.getElementById('modal-msg').innerText=msg;document.getElementById('modal-overlay').classList.add('open');document.getElementById('modal-confirm').onclick=()=>{closeModal();onConfirm();};}
 function closeModal(){document.getElementById('modal-overlay').classList.remove('open');}
-
+function getISOWeek(date) {
+  const d = new Date(date);
+  d.setHours(0,0,0,0);
+  d.setDate(d.getDate() + 3 - (d.getDay() + 6) % 7);
+  const week1 = new Date(d.getFullYear(), 0, 4);
+  return 1 + Math.round(((d - week1) / 86400000 - 3 + (week1.getDay() + 6) % 7) / 7);
+}
+  
 init();
 </script>
 </body>
