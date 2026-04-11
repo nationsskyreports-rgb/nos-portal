@@ -1144,7 +1144,31 @@ async function sendExcuse() {
   btn.disabled = true; msg.innerText = '';
 
   try {
-    const d = new Date(rawDate);
+    const balRes  = await fetch(
+      `${SB_URL_SCH}/rest/v1/excuses?agent_id=eq.${schMyAgentId}&status=eq.Approved&excuse_date=gte.${rawDate.substring(0,7)}-01&excuse_date=lte.${rawDate.substring(0,7)}-31`,
+      { headers: { 'apikey': SB_KEY_SCH, 'Authorization': `Bearer ${SB_KEY_SCH}` } }
+    );
+    const balData = await balRes.json();
+    if (balData.length >= 2) {
+      customAlert('Error', 'You have reached the maximum excuses for this month!');
+      setButtonLoading(btn, false, '✓ Submit');
+      btn.disabled = false;
+      return;
+    }
+    const schedRes  = await fetch(
+      `${SB_URL_SCH}/rest/v1/schedule?agent_id=eq.${schMyAgentId}&shift_date=eq.${rawDate}&select=day_type`,
+      { headers: { 'apikey': SB_KEY_SCH, 'Authorization': `Bearer ${SB_KEY_SCH}` } }
+    );
+    const schedData = await schedRes.json();
+    if (!schedData.length || schedData[0].day_type !== 'Work') {
+      customAlert('Error', 'You are not scheduled to work on this day!');
+      setButtonLoading(btn, false, '✓ Submit');
+      btn.disabled = false;
+      return;
+    }
+
+    // 3. حفظ بـ Approved مباشرة
+    const d          = new Date(rawDate);
     const month_year = d.toLocaleString('en-US', { month: 'long' }) + ' ' + d.getFullYear();
 
     const res = await fetch(`${SB_URL_SCH}/rest/v1/excuses`, {
@@ -1160,8 +1184,8 @@ async function sendExcuse() {
         agent_name:  name,
         excuse_date: rawDate,
         excuse_type: excuseType,
-        status:      'Pending',
-        month_year:  month_year,
+        status:      'Approved',
+        month_year,
         created_at:  new Date().toISOString(),
         updated_at:  new Date().toISOString(),
       })
@@ -1172,8 +1196,8 @@ async function sendExcuse() {
 
     if (res.ok) {
       msg.style.color = 'var(--accent)';
-      msg.innerText   = '✅ Request submitted! Pending approval.';
-      customAlert('Success', 'Excuse request submitted successfully!');
+      msg.innerText   = '✅ Excuse approved!';
+      customAlert('Success', 'Excuse submitted and approved automatically!');
       setTimeout(() => msg.innerText = '', 5000);
     } else {
       msg.style.color = 'var(--danger)';
