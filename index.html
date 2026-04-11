@@ -764,11 +764,65 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="app.js"></script>
     <script src="offline-calllog.js"></script>
-  <script>
+<script>
     if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('sw.js');
+      navigator.serviceWorker.register('sw.js').then(reg => {
+        reg.addEventListener('updatefound', () => {
+          const newWorker = reg.installing;
+          newWorker.addEventListener('statechange', () => {
+            if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+              showUpdateToast();
+            }
+          });
+        });
+      });
+    }
+
+    function showUpdateToast() {
+      const bar = document.createElement('div');
+      bar.id = 'update-toast';
+      bar.style.cssText = `
+        position:fixed; bottom:80px; left:50%; transform:translateX(-50%);
+        z-index:99999; background:var(--surface);
+        border:1.5px solid var(--primary); border-radius:16px;
+        padding:14px 20px; box-shadow:0 8px 32px rgba(212,175,55,0.3);
+        display:flex; align-items:center; gap:14px;
+        min-width:280px; max-width:90vw;
+        backdrop-filter:blur(20px);
+        animation:toastIn 0.4s cubic-bezier(0.34,1.56,0.64,1) both;
+      `;
+      bar.innerHTML = `
+        <div style="font-size:24px;">🆕</div>
+        <div style="flex:1;">
+          <div style="font-family:'Syne',sans-serif;font-size:14px;font-weight:800;color:var(--text);">Update Available!</div>
+          <div style="font-size:12px;color:var(--muted);margin-top:2px;">Tap to get the latest version</div>
+        </div>
+        <button onclick="applyUpdate()" style="
+          padding:8px 16px; background:var(--primary-gradient);
+          border:none; border-radius:10px; color:white;
+          font-size:12px; font-weight:700; cursor:pointer;
+          font-family:'Plus Jakarta Sans',sans-serif; white-space:nowrap;
+        ">Update Now</button>
+        <button onclick="document.getElementById('update-toast').remove()" style="
+          width:28px; height:28px; background:var(--surface2);
+          border:1px solid var(--border); border-radius:8px;
+          color:var(--muted); cursor:pointer; font-size:13px;
+          display:flex; align-items:center; justify-content:center;
+        ">✕</button>
+      `;
+      document.body.appendChild(bar);
+    }
+
+    function applyUpdate() {
+      navigator.serviceWorker.getRegistration().then(reg => {
+        if (reg && reg.waiting) {
+          reg.waiting.postMessage({ type: 'SKIP_WAITING' });
+        }
+      });
+      window.location.reload();
     }
   </script>
+
 <div id="nos-result-popup" style="display:none"></div>
 <div id="call-summary-bar" style="display:none;position:fixed;bottom:80px;left:50%;transform:translateX(-50%);z-index:99998;background:var(--surface);border:1.5px solid var(--primary);border-radius:16px;padding:14px 18px;box-shadow:0 8px 32px rgba(212,175,55,0.25);display:none;align-items:center;gap:16px;min-width:320px;max-width:90vw;backdrop-filter:blur(20px);">
   <div style="flex:1;">
@@ -782,6 +836,6 @@
   </button>
   <button onclick="document.getElementById('call-summary-bar').style.display='none'" style="width:30px;height:30px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--muted);cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;">✕</button>
 </div>
-  
+
 </body>
 </html>
