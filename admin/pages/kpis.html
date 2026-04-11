@@ -113,7 +113,7 @@
                     <th class="th-group" colspan="5">📊 Performance</th>
                     <th class="th-group" colspan="1" style="background:rgba(245,158,11,0.1)!important;color:#F59E0B!important;">⏱ Exceptions</th>
                     <th class="th-group" colspan="1" style="background:rgba(236,72,153,0.1)!important;color:#EC4899!important;">⭐ Quality</th>
-                    <th class="th-annual" colspan="2">🏖️ Annual</th>
+                    <th class="th-annual" colspan="3">🏖️ Annual</th>
                   </tr>
                   <tr>
                     <th>Conformance</th><th>Missing Time</th><th>AHT</th>
@@ -121,6 +121,7 @@
                     <th>Score</th>
                     <th class="th-annual">Remaining</th>
                     <th class="th-annual">Used MTD</th>
+                    <th class="th-annual">Used YTD</th>
                   </tr>
                 </thead>
                 <tbody id="kpi-tbody">
@@ -484,6 +485,7 @@ async function loadKPIs(monthName, year) {
         '<td><input class="editable-cell" type="text" value="'+(quality?.score||'')+'" placeholder="—" onchange="markEdit(\''+agent.id+'\',\'score\',this.value)" style="color:var(--gold);font-weight:700;"></td>'+
         '<td><span class="badge '+(typeof annLeft==='number'&&annLeft<=3?'badge-danger':'badge-success')+'">'+(typeof annLeft==='number'?annLeft+' days':annLeft)+'</span></td>'+
         '<td style="font-weight:700;">'+annUsedMTD+' days</td>'+
+        '<td style="font-weight:700;color:var(--gold);">'+(ann.total_used||0)+' days</td>'+
         '</tr>';
     }).join('');
   } catch(e) {
