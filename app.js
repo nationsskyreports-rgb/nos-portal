@@ -1144,8 +1144,11 @@ async function sendExcuse() {
   btn.disabled = true; msg.innerText = '';
 
   try {
+    // 1. تحقق من الرصيد
+    const d   = new Date(rawDate);
+    const my  = d.toLocaleString('en-US', { month: 'long' }) + ' ' + d.getFullYear();
     const balRes  = await fetch(
-      `${SB_URL_SCH}/rest/v1/excuses?agent_id=eq.${schMyAgentId}&status=eq.Approved&excuse_date=gte.${rawDate.substring(0,7)}-01&excuse_date=lte.${rawDate.substring(0,7)}-31`,
+      `${SB_URL_SCH}/rest/v1/excuses?agent_id=eq.${schMyAgentId}&status=eq.Approved&month_year=eq.${encodeURIComponent(my)}`,
       { headers: { 'apikey': SB_KEY_SCH, 'Authorization': `Bearer ${SB_KEY_SCH}` } }
     );
     const balData = await balRes.json();
@@ -1155,6 +1158,8 @@ async function sendExcuse() {
       btn.disabled = false;
       return;
     }
+
+    // 2. تحقق من الجدول
     const schedRes  = await fetch(
       `${SB_URL_SCH}/rest/v1/schedule?agent_id=eq.${schMyAgentId}&shift_date=eq.${rawDate}&select=day_type`,
       { headers: { 'apikey': SB_KEY_SCH, 'Authorization': `Bearer ${SB_KEY_SCH}` } }
@@ -1168,9 +1173,6 @@ async function sendExcuse() {
     }
 
     // 3. حفظ بـ Approved مباشرة
-    const d          = new Date(rawDate);
-    const month_year = d.toLocaleString('en-US', { month: 'long' }) + ' ' + d.getFullYear();
-
     const res = await fetch(`${SB_URL_SCH}/rest/v1/excuses`, {
       method:  'POST',
       headers: {
@@ -1185,7 +1187,7 @@ async function sendExcuse() {
         excuse_date: rawDate,
         excuse_type: excuseType,
         status:      'Approved',
-        month_year,
+        month_year:  my,
         created_at:  new Date().toISOString(),
         updated_at:  new Date().toISOString(),
       })
