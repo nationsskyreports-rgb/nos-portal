@@ -1,13 +1,6 @@
 /* ═══════════════════════════════════════════════════
-   NOS PORTAL — app.js (MODIFIED)
+   NOS PORTAL — app.js
    كل الـ JavaScript الخاص بالبورتال
-   ═══════════════════════════════════════════════════
-   التعديلات المطبقة:
-   1. إصلاح الـ Schedule في الـ Inner
-   2. عرض الأسبوع الحالي والقادم قبل الـ Publish
-   3. إضافة زرار Search في الخطوة الأولى
-   4. فتح Time Off Request Table دائماً
-   5. إضافة Loading لأزرار الـ Submit
    ═══════════════════════════════════════════════════
    الترتيب:
    01. Global Variables    (المتغيرات العامة)
@@ -59,7 +52,7 @@ let globalTeamData     = [];
 let knownSwapStatuses  = {};
 let swapPollTimer      = null;
 let currentAnnualData  = { used: 0, left: 0 };
-let schMyAgentId       = null;
+let schMyAgentId       = null;  // ← ضيف دي هنا
 
 /* Break notification fire-once flags */
 let _notifFired = {
@@ -164,19 +157,12 @@ function submitChangePassword() {
   const newP  = document.getElementById('cp-new').value;
   const confP = document.getElementById('cp-confirm').value;
   const msg   = document.getElementById('cp-msg');
-  const btn   = document.getElementById('cpSubmitBtn');
 
   if (!oldP || !newP || !confP) { msg.style.color = 'var(--danger)'; msg.innerText = 'Fill all fields'; return; }
   if (newP !== confP)           { msg.style.color = 'var(--danger)'; msg.innerText = "Passwords don't match!"; return; }
 
-  // ✅ تعديل #5: إضافة loading indicator
-  btn.disabled = true;
-  btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Updating...';
   msg.style.color = 'var(--primary)'; msg.innerText = 'Updating...';
-  
   gasRun('updatePassword', name, oldP, newP).then(res => {
-    btn.disabled = false;
-    btn.innerHTML = '<i class="fas fa-check"></i> Update Password';
     if (res.status === 'success') {
       msg.style.color = '#059669';
       msg.innerText   = 'Password updated successfully!';
@@ -312,7 +298,7 @@ function login() {
     btn.disabled = false;
     document.getElementById('app-preloader').classList.add('hidden');
     msg.style.color = 'var(--danger)';
-    msg.innerHTML   = '<i class="fas fa-wifi"></i> Network error. Please try again.';
+    msg.innerHTML   = '<i class="fas fa-wifi"></i> Connection error!';
   });
 }
 
@@ -337,6 +323,7 @@ function logout() {
   sessionAgent = null;
   if (breakCheckTimer) clearInterval(breakCheckTimer);
   if (swapPollTimer)   clearInterval(swapPollTimer);
+  // الغى الـ Realtime subscription
   if (sbBreaksChannel) { sbClient.removeChannel(sbBreaksChannel); sbBreaksChannel = null; }
   stopNotifSound();
   currentBreaks = null; shiftEndSecs = null; shiftEndNotified = false;
@@ -405,16 +392,19 @@ function showDashboard(res) {
     document.getElementById('status-sub-text').innerText = 'Enjoy your shift!';
     document.getElementById('br-shift').innerText        = 'SHIFT: ' + shift;
 
+    // ── حساب وقت نهاية الشيفت ──
     try {
       const end = shift.split('-')[1].trim().split(':');
       shiftEndSecs     = parseInt(end[0]) * 3600 + parseInt(end[1] || 0) * 60;
       shiftEndNotified = false;
     } catch(e) {}
 
+    // ── جيب البريكات من Supabase ──
     const agentName = res.name;
     sbFetchSch(`agents?select=id&formal_name=eq.${encodeURIComponent(agentName)}&status=eq.Active`)
       .then(async agents => {
         if (!agents || !agents.length) {
+          // fallback على GAS
           _applyGASBreaks(res.todayBreaks);
           return;
         }
@@ -425,9 +415,11 @@ function showDashboard(res) {
         if (breaks) {
           applyBreaksToUI(breaks);
         } else {
+          // fallback على GAS لو مفيش بريكات في Supabase
           _applyGASBreaks(res.todayBreaks);
         }
 
+        // ابدأ الـ Realtime subscription
         subscribeTodayBreaks(agentId);
       });
 
@@ -463,6 +455,7 @@ function showDashboard(res) {
   document.getElementById('app-preloader').classList.add('hidden');
 }
 
+// fallback لو GAS
 function _applyGASBreaks(todayBreaks) {
   document.getElementById('br-break1').innerText = todayBreaks?.break1 || 'N/A';
   document.getElementById('br-lunch').innerText  = todayBreaks?.lunch  || 'N/A';
@@ -500,7 +493,6 @@ function checkDataAvailability(data) {
 
 
 /* ─── 09. SCHEDULE RENDER ─── */
-/* ✅ تعديل #1: إصلاح الـ Schedule في الـ Inner */
 function renderSchedule(scheduleData) {
   const container = document.getElementById('schedule-content');
   if (typeof scheduleData === 'string') {
@@ -518,7 +510,6 @@ function renderSchedule(scheduleData) {
   const dayOfWeek   = today.getDay();
   const weekStart   = new Date(today); weekStart.setDate(today.getDate() - dayOfWeek);
   const nextWeekStart = new Date(weekStart); nextWeekStart.setDate(weekStart.getDate() + 7);
-  const nextWeekEnd   = new Date(nextWeekStart); nextWeekEnd.setDate(nextWeekStart.getDate() + 6);
 
   const thisWeek = [], nextWeek = [];
   scheduleData.forEach(d => {
@@ -533,7 +524,7 @@ function renderSchedule(scheduleData) {
     days.forEach((d, i) => {
       const shift      = (d.shift || '').toString().trim();
       const shiftLower = shift.toLowerCase();
-      const todayClass = d.date === today.getDate() ? ' nos-today' : '';
+      const todayClass = d.isToday ? ' nos-today' : '';
       const delay      = i * 40;
       let badge = '', displayShift = shift, shiftClass = '';
 
@@ -735,7 +726,6 @@ function renderTeam(staff) {
     grid.appendChild(card);
   });
 }
-
 async function loadTeamBreaksFromSB() {
   const today = new Date().toISOString().split('T')[0];
   try {
@@ -768,16 +758,15 @@ async function loadTeamBreaksFromSB() {
         break2: b.break2 ? b.break2.substring(0,5) : '-',
       }));
      
-    staff.sort((a, b) => {
-      const aTime = a.shift ? a.shift.split(' - ')[0] : '99:99';
-      const bTime = b.shift ? b.shift.split(' - ')[0] : '99:99';
-      return aTime.localeCompare(bTime);
-    });
-    renderTeam(staff);
+staff.sort((a, b) => {
+  const aTime = a.shift ? a.shift.split(' - ')[0] : '99:99';
+  const bTime = b.shift ? b.shift.split(' - ')[0] : '99:99';
+  return aTime.localeCompare(bTime);
+});
+renderTeam(staff);
      
   } catch(e) { console.error('Team breaks error:', e); }
 }
-
 /* ─── 11. REQUESTS RENDER ─── */
 function renderRequests(requests) {
   const container = document.getElementById('requests-list');
@@ -809,149 +798,240 @@ function changeMonthData() {
   const name   = document.getElementById('user-name').innerText.trim();
   const loader = document.getElementById('filter-loader');
   loader.classList.remove('hidden');
-  gasRun('getMonthlyData', name, month).then(res => {
+  document.getElementById('annual-label').innerText = month === 'CURRENT' ? 'Annual Left' : 'Annual Used';
+  gasRun('getFilteredData', name, month).then(data => {
     loader.classList.add('hidden');
-    if (res.status === 'success' && res.data) {
+    if (checkDataAvailability(data)) {
+      if (month === 'CURRENT') currentAnnualData.left = data.annual || 0;
+      currentAnnualData.used = data.totalUsed || 0;
       ['conformance','missing','aht','calls','annual','exceptions','quality']
-        .forEach(k => document.getElementById('d-' + k).innerText = res.data[k] || '-');
+        .forEach(k => document.getElementById('d-' + k).innerText = data[k] || '-');
     }
   });
 }
 
 
 /* ─── 13. BREAK NOTIFICATIONS ─── */
-let sbBreaksChannel = null;
-
-async function loadTodayBreaksFromSB(agentId) {
-  const today = new Date().toISOString().split('T')[0];
-  try {
-    const res = await fetch(
-      `${SB_URL_SCH}/rest/v1/breaks?agent_id=eq.${agentId}&break_date=eq.${today}`,
-      { headers: { 'apikey': SB_KEY_SCH, 'Authorization': `Bearer ${SB_KEY_SCH}` } }
-    );
-    const data = await res.json();
-    if (data && data.length) {
-      const b = data[0];
-      return {
-        break1: b.break1 ? b.break1.substring(0,5) : null,
-        lunch:  b.lunch  ? b.lunch.substring(0,5)  : null,
-        break2: b.break2 ? b.break2.substring(0,5) : null,
-      };
-    }
-    return null;
-  } catch(e) { console.error('Error loading breaks:', e); return null; }
+function parseBreakTime(t) {
+  if (!t || t === '-' || t === 'N/A') return null;
+  const m = t.toString().match(/(\d{1,2}):(\d{2})/);
+  return m ? parseInt(m[1]) * 60 + parseInt(m[2]) : null;
 }
 
-function applyBreaksToUI(breaks) {
-  currentBreaks = breaks;
-  if (breaks.break1) document.getElementById('br-break1').innerText = breaks.break1;
-  if (breaks.lunch)  document.getElementById('br-lunch').innerText  = breaks.lunch;
-  if (breaks.break2) document.getElementById('br-break2').innerText = breaks.break2;
-  startBreakChecker(breaks);
+function nowMinutes() {
+  const n = new Date();
+  return n.getHours() * 60 + n.getMinutes();
+}
+
+function addMins(timeStr, mins) {
+  if (!timeStr) return '';
+  const m = timeStr.match(/(\d{1,2}):(\d{2})/);
+  if (!m) return timeStr;
+  const total = parseInt(m[1]) * 60 + parseInt(m[2]) + mins;
+  const h = Math.floor(total / 60) % 24, mn = total % 60;
+  return (h < 10 ? '0'+h : h) + ':' + (mn < 10 ? '0'+mn : mn);
+}
+
+function showBanner(bannerId, title, sub) {
+  const el = document.getElementById(bannerId); if (!el) return;
+  const t  = el.querySelector('.notif-title');
+  const s  = el.querySelector('.notif-sub');
+  if (t) t.innerText = title;
+  if (s) s.innerText = sub;
+  el.classList.remove('hidden');
+}
+function hideBanner(bannerId) {
+  const el = document.getElementById(bannerId);
+  if (el) el.classList.add('hidden');
+}
+
+function sendNotif(title, body) {
+  if (Notification.permission === 'granted') {
+    new Notification(title, { body, icon:'logo.png', badge:'icon-192.png', vibrate:[200,100,200] });
+  }
+}
+
+function checkBreaks() {
+  if (!currentBreaks) return;
+  const now  = nowMinutes();
+  const fire = (key, fn) => { if (!_notifFired[key]) { _notifFired[key] = true; fn(); } };
+
+  const b1 = parseBreakTime(currentBreaks.break1);
+  if (b1 !== null) {
+    if (now === b1-1)  fire('break1_warn',  () => { sendNotif('⏰ Break 1 in 1 minute!', 'Starting at '+currentBreaks.break1); showBanner('break-notif','⏰ Break 1 in 1 minute!','Starting at '+currentBreaks.break1); showToast('🔔','Break 1 starts in 1 minute!','Get ready — '+currentBreaks.break1,'warn',55000); });
+    if (now === b1)    fire('break1_start', () => { sendNotif('☕ Break 1 has started!','15 min — back at '+addMins(currentBreaks.break1,15)); hideBanner('break-notif'); showBanner('break-notif','☕ Break 1 has started!','15 min — back at '+addMins(currentBreaks.break1,15)); showToast('☕','Break 1 has started!','15 min. Back at '+addMins(currentBreaks.break1,15),'success',10000); });
+    if (now === b1+15) fire('break1_end',   () => { sendNotif('⏰ Break 1 is over!','Back to work!'); hideBanner('break-notif'); showToast('⏰','Break 1 is over!','Back to work!','info',8000); });
+  }
+
+  const ln = parseBreakTime(currentBreaks.lunch);
+  if (ln !== null) {
+    if (now === ln-1)  fire('lunch_warn',  () => { sendNotif('⏰ Lunch in 1 minute!','Starting at '+currentBreaks.lunch); showBanner('break-notif','⏰ Lunch in 1 minute!','Starting at '+currentBreaks.lunch); showToast('🔔','Lunch Break starts in 1 minute!','Get ready — '+currentBreaks.lunch,'warn',55000); });
+    if (now === ln)    fire('lunch_start', () => { sendNotif('🍽️ Lunch has started!','30 min — back at '+addMins(currentBreaks.lunch,30)); hideBanner('break-notif'); showBanner('break-notif','🍽️ Lunch has started!','30 min — back at '+addMins(currentBreaks.lunch,30)); showToast('🍽️','Lunch Break has started!','30 min. Back at '+addMins(currentBreaks.lunch,30),'success',10000); });
+    if (now === ln+30) fire('lunch_end',   () => { sendNotif('⏰ Lunch is over!','Back to work!'); hideBanner('break-notif'); showToast('⏰','Lunch Break is over!','Back to work!','info',8000); });
+  }
+
+  const b2 = parseBreakTime(currentBreaks.break2);
+  if (b2 !== null) {
+    if (now === b2-1)  fire('break2_warn',  () => { sendNotif('⏰ Break 2 in 1 minute!','Starting at '+currentBreaks.break2); showBanner('break-notif','⏰ Break 2 in 1 minute!','Starting at '+currentBreaks.break2); showToast('🔔','Break 2 starts in 1 minute!','Get ready — '+currentBreaks.break2,'warn',55000); });
+    if (now === b2)    fire('break2_start', () => { sendNotif('☕ Break 2 has started!','15 min — back at '+addMins(currentBreaks.break2,15)); hideBanner('break-notif'); showBanner('break-notif','☕ Break 2 has started!','15 min — back at '+addMins(currentBreaks.break2,15)); showToast('☕','Break 2 has started!','15 min. Back at '+addMins(currentBreaks.break2,15),'success',10000); });
+    if (now === b2+15) fire('break2_end',   () => { sendNotif('⏰ Break 2 is over!','Back to work!'); hideBanner('break-notif'); showToast('⏰','Break 2 is over!','Back to work!','info',8000); });
+  }
+
+  checkShiftEnd();
+}
+
+function checkShiftEnd() {
+  if (shiftEndSecs === null) return;
+  const nowMin      = nowMinutes();
+  const shiftEndMin = Math.floor(shiftEndSecs / 60);
+  const fire        = (key, fn) => { if (!_notifFired[key]) { _notifFired[key] = true; fn(); } };
+  if (nowMin === shiftEndMin-15) fire('shift_warn', () => { showBanner('shift-end-notif','⏰ Shift ends in 15 minutes!','Start wrapping up.'); showToast('⏰','Shift ends in 15 minutes!','Start wrapping things up.','warn',12000); });
+  if (nowMin === shiftEndMin)    fire('shift_end',  () => { showBanner('shift-end-notif','🚨 Your shift has ended!','Please logout now.'); showToast('🚨','Your shift has ended!','Please logout now.','danger',0); shiftEndNotified = true; });
+  if (shiftEndNotified && nowMin === shiftEndMin+10) fire('shift_late', () => { showToast('🚨',"Still logged in!",'Shift ended 10 min ago. Please logout!','danger',0); });
 }
 
 function startBreakChecker(breaks) {
+  currentBreaks = breaks;
+  Object.keys(_notifFired).forEach(k => _notifFired[k] = false);
+  shiftEndNotified = false;
   if (breakCheckTimer) clearInterval(breakCheckTimer);
-  breakCheckTimer = setInterval(() => checkBreakNotifications(breaks), 30000);
+  checkBreaks();
+  breakCheckTimer = setInterval(checkBreaks, 30000);
 }
 
-function checkBreakNotifications(breaks) {
-  const now = new Date();
-  const curSecs = now.getHours() * 3600 + now.getMinutes() * 60 + now.getSeconds();
-
-  function timeToSecs(t) { if (!t) return null; const p = t.split(':'); return parseInt(p[0]) * 3600 + parseInt(p[1]) * 60; }
-  function notif(key, title, msg, icon) {
-    if (!_notifFired[key]) {
-      _notifFired[key] = true;
-      if (Notification && Notification.permission === 'granted') {
-        new Notification(title, { body: msg, icon: icon || '🔔', tag: key });
-      }
-      playNotifSound();
-    }
-  }
-
-  const b1s = timeToSecs(breaks.break1);
-  const ls  = timeToSecs(breaks.lunch);
-  const b2s = timeToSecs(breaks.break2);
-
-  if (b1s && curSecs >= b1s - 300 && curSecs < b1s) notif('break1_warn', 'Break 1 Soon', 'Your break 1 starts in 5 minutes!', '⏰');
-  if (b1s && curSecs >= b1s && curSecs < b1s + 60) notif('break1_start', 'Break 1 Started', 'Enjoy your break!', '☕');
-  if (b1s && curSecs >= b1s + 900 && curSecs < b1s + 960) notif('break1_end', 'Break 1 Ending', 'Your break is ending soon.', '⏳');
-
-  if (ls && curSecs >= ls - 300 && curSecs < ls) notif('lunch_warn', 'Lunch Soon', 'Your lunch starts in 5 minutes!', '⏰');
-  if (ls && curSecs >= ls && curSecs < ls + 60) notif('lunch_start', 'Lunch Time', 'Enjoy your lunch!', '🍽️');
-  if (ls && curSecs >= ls + 1800 && curSecs < ls + 1860) notif('lunch_end', 'Lunch Ending', 'Your lunch is ending soon.', '⏳');
-
-  if (b2s && curSecs >= b2s - 300 && curSecs < b2s) notif('break2_warn', 'Break 2 Soon', 'Your break 2 starts in 5 minutes!', '⏰');
-  if (b2s && curSecs >= b2s && curSecs < b2s + 60) notif('break2_start', 'Break 2 Started', 'Enjoy your break!', '☕');
-  if (b2s && curSecs >= b2s + 900 && curSecs < b2s + 960) notif('break2_end', 'Break 2 Ending', 'Your break is ending soon.', '⏳');
-
-  if (shiftEndSecs && curSecs >= shiftEndSecs - 300 && curSecs < shiftEndSecs && !shiftEndNotified) {
-    shiftEndNotified = true;
-    notif('shift_warn', 'Shift Ending', 'Your shift ends in 5 minutes!', '⏰');
-  }
+function playNotifSoundTyped(type) {
+  if (isMuted) return;
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const configs = {
+      info:   [{f:600,t:0},{f:800,t:0.15}],
+      warn:   [{f:800,t:0},{f:700,t:0.2},{f:800,t:0.4}],
+      danger: [{f:400,t:0},{f:300,t:0.15},{f:400,t:0.3},{f:300,t:0.45}],
+      success:[{f:600,t:0},{f:800,t:0.1},{f:1000,t:0.2}]
+    };
+    (configs[type] || configs.info).forEach(b => {
+      const osc = ctx.createOscillator(), gain = ctx.createGain();
+      osc.connect(gain); gain.connect(ctx.destination);
+      osc.frequency.value = b.f; osc.type = 'sine';
+      gain.gain.setValueAtTime(0.25, ctx.currentTime + b.t);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + b.t + 0.35);
+      osc.start(ctx.currentTime + b.t); osc.stop(ctx.currentTime + b.t + 0.4);
+    });
+  } catch(e) {}
 }
 
-function playNotifSound() {
-  if (isMuted || notifPlaying) return;
-  notifPlaying = true;
-  const audio = new Audio('data:audio/wav;base64,UklGRiYAAABXQVZFZm10IBAAAAABAAEAQB8AAAB9AAACABAAZGF0YQIAAAAAAA==');
-  audio.play().catch(() => {}).finally(() => { notifPlaying = false; });
-}
-
-function stopNotifSound() { isMuted = true; }
+function stopNotifSound() { notifPlaying = false; isMuted = false; notifSoundCount = 0; }
 
 
 /* ─── 14. BREAK SWAP ─── */
-async function findAvailableBreakSlot(requestedTime, breakType, shiftStart, shiftEnd) {
-  if (!schMyAgentId) return null;
-  const today = new Date().toISOString().split('T')[0];
-
-  try {
-    const allBreaks = await fetch(
-      `${SB_URL_SCH}/rest/v1/breaks?break_date=eq.${today}`,
-      { headers: { 'apikey': SB_KEY_SCH, 'Authorization': `Bearer ${SB_KEY_SCH}` } }
-    ).then(r => r.json());
-
-    const dur = 15;
-    const noBreakStart = timeStrToMins(shiftStart);
-    const noBreakEnd = timeStrToMins(shiftEnd);
-
-    function hasConflict(slotMins) {
-      const slotEnd = slotMins + dur;
-      const col = { 'Break 1': 'break1', 'Lunch': 'lunch', 'Break 2': 'break2' }[breakType];
-      let count = 0;
-      allBreaks.forEach(b => {
-        if (!b[col]) return;
-        const bStart = timeStrToMins(b[col].substring(0,5));
-        const bEnd   = bStart + dur;
-        const overlap = !(slotEnd <= bStart || slotMins >= bEnd);
-        if (overlap) {
-          const overlapMins = Math.min(slotEnd, bEnd) - Math.max(slotMins, bStart);
-          if (overlapMins > 15) count++;
-        }
-      });
-      return count >= 2;
-    }
-
-    let candidate = timeStrToMins(requestedTime);
-    if (!hasConflict(candidate) && candidate >= noBreakStart && candidate <= noBreakEnd - dur) {
-      return null;
-    }
-
-    for (let i = 1; i <= 8; i++) {
-      const next = candidate + (i * 15);
-      if (next > noBreakEnd - dur) break;
-      if (!hasConflict(next)) {
-        return minsToTimeStr(next);
-      }
-    }
-
-    return null;
-  } catch(e) {
-    console.error('Error finding break slot:', e);
-    return null;
+function selectBreakType(type, btn) {
+  if (selectedBreakType === type) {
+    selectedBreakType = '';
+    btn.classList.remove('selected');
+  } else {
+    selectedBreakType = type;
+    document.querySelectorAll('.break-type-btn').forEach(b => b.classList.remove('selected'));
+    btn.classList.add('selected');
   }
+}
+
+function sendBreakSwapRequest() {
+  if (!selectedBreakType) { customAlert('Error', 'Please select a break type!'); return; }
+  showBreakTimeModal();
+}
+
+function showBreakTimeModal() {
+  const ov  = document.createElement('div');
+  ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9998;backdrop-filter:blur(4px);';
+  const box = document.createElement('div');
+  box.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:24px;min-width:300px;max-width:380px;width:90%;z-index:9999;box-shadow:0 20px 60px rgba(0,0,0,.4);';
+  box.innerHTML = `
+    <div style="font-family:Syne,sans-serif;font-size:17px;font-weight:800;color:var(--text);margin-bottom:16px;">Choose ${selectedBreakType} Time</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:18px;">
+      <div><label class="form-label">Hour</label><input type="number" id="bh" min="0" max="23" placeholder="00" class="form-input" style="text-align:center;font-size:20px;font-weight:800;"></div>
+      <div><label class="form-label">Minute</label><input type="number" id="bm" min="0" max="59" placeholder="00" class="form-input" style="text-align:center;font-size:20px;font-weight:800;"></div>
+    </div>
+    <div style="display:flex;gap:10px;">
+      <button id="bm-cancel" style="flex:1;padding:12px;background:var(--surface2);border:1px solid var(--border);border-radius:11px;color:var(--muted);cursor:pointer;font-weight:600;font-family:Plus Jakarta Sans,sans-serif;">Cancel</button>
+      <button id="bm-confirm" style="flex:1;padding:12px;background:var(--primary-gradient);color:#fff;border:none;border-radius:11px;cursor:pointer;font-weight:700;font-family:Plus Jakarta Sans,sans-serif;opacity:.4;" disabled>Confirm</button>
+    </div>`;
+  document.body.appendChild(ov); document.body.appendChild(box);
+
+  function validate() {
+    const h = box.querySelector('#bh').value, m = box.querySelector('#bm').value;
+    const ok = h !== '' && m !== '' && +h >= 0 && +h <= 23 && +m >= 0 && +m <= 59;
+    box.querySelector('#bm-confirm').disabled = !ok;
+    box.querySelector('#bm-confirm').style.opacity = ok ? 1 : 0.4;
+  }
+  box.querySelector('#bh').addEventListener('input', validate);
+  box.querySelector('#bm').addEventListener('input', validate);
+  const close = () => { document.body.removeChild(ov); document.body.removeChild(box); };
+  box.querySelector('#bm-cancel').onclick = close; ov.onclick = close;
+  box.querySelector('#bm-confirm').onclick = () => {
+    const h = box.querySelector('#bh').value, m = box.querySelector('#bm').value;
+    const time = (h.length < 2 ? '0'+h : h) + ':' + (m.length < 2 ? '0'+m : m);
+    close(); confirmBreakTime(time);
+  };
+}
+
+async function findAvailableBreakSlot(requestedTime, breakType, agentShiftStart, agentShiftEnd) {
+  const today   = new Date().toISOString().split('T')[0];
+  const colMap  = { 'Break 1': 'break1', 'Lunch': 'lunch', 'Break 2': 'break2' };
+  const col     = colMap[breakType];
+  const durMap  = { 'Break 1': 15, 'Lunch': 30, 'Break 2': 15 };
+  const dur     = durMap[breakType];
+
+  // جيب بريكات اليوم كله
+  const res  = await fetch(
+    `${SB_URL_SCH}/rest/v1/breaks?break_date=eq.${today}&select=*`,
+    { headers: { 'apikey': SB_KEY_SCH, 'Authorization': `Bearer ${SB_KEY_SCH}` } }
+  );
+  const allBreaks = await res.json();
+
+  // حوّل وقت الشيفت لـ minutes
+  const shiftStart = timeStrToMins(agentShiftStart);
+  const shiftEnd   = timeStrToMins(agentShiftEnd);
+  const noBreakStart = shiftStart + 60;
+  const noBreakEnd   = shiftEnd   - 60;
+
+  // دالة تتحقق من التعارض
+  function hasConflict(slotMins) {
+    const slotEnd = slotMins + dur;
+    // كام agent على بريك في نفس الوقت ده؟
+    let count = 0;
+    allBreaks.forEach(b => {
+      if (!b[col]) return;
+      const bStart = timeStrToMins(b[col].substring(0,5));
+      const bEnd   = bStart + dur;
+      // في overlap لو مش (slotEnd <= bStart || slotMins >= bEnd)
+      const overlap = !(slotEnd <= bStart || slotMins >= bEnd);
+      // overlap أكتر من 15 دقيقة؟
+      if (overlap) {
+        const overlapMins = Math.min(slotEnd, bEnd) - Math.max(slotMins, bStart);
+        if (overlapMins > 15) count++;
+      }
+    });
+    // مسموح باتنين بس (الـ agent الحالي + واحد تاني)
+    return count >= 2;
+  }
+
+  // دور forward على أقرب slot متاح
+  let candidate = timeStrToMins(requestedTime);
+  // لو الوقت المطلوب نفسه مش عليه conflict — قبله
+  if (!hasConflict(candidate) && candidate >= noBreakStart && candidate <= noBreakEnd - dur) {
+    return null; // مفيش مشكلة
+  }
+
+  // دور forward بـ 15 دقيقة
+  for (let i = 1; i <= 8; i++) {
+    const next = candidate + (i * 15);
+    if (next > noBreakEnd - dur) break;
+    if (!hasConflict(next)) {
+      return minsToTimeStr(next); // رجّع أقرب وقت متاح
+    }
+  }
+
+  return null; // مفيش وقت متاح — اسمح بالتغيير
 }
 
 function timeStrToMins(t) {
@@ -964,6 +1044,7 @@ function minsToTimeStr(m) {
   return Math.floor(m/60).toString().padStart(2,'0') + ':' + (m%60).toString().padStart(2,'0');
 }
 
+// ── تغيير البريك مباشرة على Supabase بدون approval ──
 async function confirmBreakTime(time) {
   if (!schMyAgentId) { showToast('❌','Error','Agent not found!','danger',4000); return; }
 
@@ -975,42 +1056,46 @@ async function confirmBreakTime(time) {
 
   if (!col) { showToast('❌','Error','Select break type first!','danger',4000); return; }
 
-  btn.disabled    = true;
-  msg.style.color = 'var(--muted)';
-  msg.innerText   = 'Checking availability...';
+btn.disabled    = true;
+msg.style.color = 'var(--muted)';
+msg.innerText   = 'Checking availability...';
 
-  try {
-    const shiftText = document.getElementById('br-shift').innerText.replace('SHIFT: ','');
-    const shiftParts = shiftText.split(' - ');
-    const shiftStart = shiftParts[0]?.trim() || '00:00';
-    const shiftEnd   = shiftParts[1]?.trim() || '23:00';
+try {
+  // جيب shift بتاع الـ agent
+  const shiftText = document.getElementById('br-shift').innerText.replace('SHIFT: ','');
+  const shiftParts = shiftText.split(' - ');
+  const shiftStart = shiftParts[0]?.trim() || '00:00';
+  const shiftEnd   = shiftParts[1]?.trim() || '23:00';
 
-    const suggestion = await findAvailableBreakSlot(time, selectedBreakType, shiftStart, shiftEnd);
+  // تحقق من التعارض
+  const suggestion = await findAvailableBreakSlot(time, selectedBreakType, shiftStart, shiftEnd);
 
-    if (suggestion) {
-      btn.disabled = false;
-      msg.style.color = 'var(--warn)';
-      msg.innerText   = `⚠️ ${time} محجوز! أقرب وقت متاح: ${suggestion}`;
+  if (suggestion) {
+    // في تعارض — عرض الاقتراح
+    btn.disabled = false;
+    msg.style.color = 'var(--warn)';
+    msg.innerText   = `⚠️ ${time} محجوز! أقرب وقت متاح: ${suggestion}`;
 
-      const existingBtn = document.getElementById('suggest-btn');
-      if (existingBtn) existingBtn.remove();
-      const suggestBtn = document.createElement('button');
-      suggestBtn.id        = 'suggest-btn';
-      suggestBtn.innerText = `✅ استخدم ${suggestion}`;
-      suggestBtn.style.cssText = 'margin-top:8px;padding:8px 16px;background:var(--primary-gradient);color:white;border:none;border-radius:10px;cursor:pointer;font-weight:700;font-family:inherit;width:100%;';
-      suggestBtn.onclick = () => {
-        suggestBtn.remove();
-        msg.innerText = '';
-        confirmBreakTime(suggestion);
-      };
-      msg.parentElement.appendChild(suggestBtn);
-      return;
-    }
+    // عرض زرار للقبول بالوقت المقترح
+    const existingBtn = document.getElementById('suggest-btn');
+    if (existingBtn) existingBtn.remove();
+    const suggestBtn = document.createElement('button');
+    suggestBtn.id        = 'suggest-btn';
+    suggestBtn.innerText = `✅ استخدم ${suggestion}`;
+    suggestBtn.style.cssText = 'margin-top:8px;padding:8px 16px;background:var(--primary-gradient);color:white;border:none;border-radius:10px;cursor:pointer;font-weight:700;font-family:inherit;width:100%;';
+    suggestBtn.onclick = () => {
+      suggestBtn.remove();
+      msg.innerText = '';
+      confirmBreakTime(suggestion);
+    };
+    msg.parentElement.appendChild(suggestBtn);
+    return;
+  }
 
-    msg.innerText = 'Updating...';
+  msg.innerText = 'Updating...';
 
-    const res = await fetch(
-      `${SB_URL_SCH}/rest/v1/breaks?agent_id=eq.${schMyAgentId}&break_date=eq.${today}`,
+  const res = await fetch(
+   `${SB_URL_SCH}/rest/v1/breaks?agent_id=eq.${schMyAgentId}&break_date=eq.${today}`,
       {
         method:  'PATCH',
         headers: {
@@ -1025,6 +1110,7 @@ async function confirmBreakTime(time) {
 
     if (!res.ok) throw new Error('Update failed');
 
+    // حدّث الـ UI على طول
     if (currentBreaks) currentBreaks[col] = time;
     const elMap = { break1: 'br-break1', lunch: 'br-lunch', break2: 'br-break2' };
     const el = document.getElementById(elMap[col]);
@@ -1057,15 +1143,9 @@ function sendExcuse() {
   const name = document.getElementById('user-name').innerText.trim();
   const msg  = document.getElementById('excuse-msg');
   const btn  = document.getElementById('excuseBtn');
-  
-  // ✅ تعديل #5: إضافة loading indicator
-  btn.disabled = true;
-  btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Submitting...';
-  msg.innerText = '';
-  
+  btn.disabled = true; msg.innerText = '';
   gasRun('submitExcuseFromWeb', name, rawDate, excuseType).then(res => {
     btn.disabled    = false;
-    btn.innerHTML   = '<i class="fas fa-paper-plane"></i> Submit Excuse';
     msg.style.color = res.status === 'success' ? 'var(--accent)' : 'var(--danger)';
     msg.innerText   = res.msg;
     if (res.status === 'success') customAlert('Success', res.msg);
@@ -1085,7 +1165,6 @@ function undoLastExcuse() {
   });
 }
 
-/* ✅ تعديل #4: فتح Time Off Request Table دائماً */
 function selectTimeOffType(type) {
   if (selectedTimeOffType === type) {
     selectedTimeOffType = null;
@@ -1095,7 +1174,6 @@ function selectTimeOffType(type) {
   }
   selectedTimeOffType = type;
   document.getElementById('time-off-form').style.display = 'block';
-  document.getElementById('time-off-table').style.display = 'block';  // ← إضافة: فتح الجدول دائماً
   ['timeOffFromDate','timeOffToDate','timeOffNotes'].forEach(id => document.getElementById(id).value = '');
   document.getElementById('time-off-msg').innerText = '';
   document.querySelectorAll('.action-row .action-btn').forEach(b => b.style.opacity = '0.4');
@@ -1106,8 +1184,6 @@ function selectTimeOffType(type) {
 function cancelTimeOffForm() {
   selectedTimeOffType = null;
   document.getElementById('time-off-form').style.display = 'none';
-  document.getElementById('time-off-table').style.display = 'block';  // ← إضافة: الجدول يبقى مفتوح
-  document.querySelectorAll('.action-row .action-btn').forEach(b => b.style.opacity = '1');
 }
 
 function submitTimeOffRequest() {
@@ -1118,16 +1194,10 @@ function submitTimeOffRequest() {
   const name  = document.getElementById('user-name').innerText.trim();
   const msg   = document.getElementById('time-off-msg');
   const btn   = document.getElementById('submitTimeOffBtn');
-  
   if (!from || !to) { msg.style.color='var(--danger)'; msg.innerText='Please select both dates!'; return; }
-  
-  // ✅ تعديل #5: إضافة loading indicator
-  btn.disabled = true;
-  btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Submitting...';
-  
+  btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Submitting...';
   gasRun('submitTimeOffRequest', name, type, from, to, notes).then(res => {
-    btn.disabled = false;
-    btn.innerHTML = '<i class="fas fa-paper-plane"></i> Submit';
+    btn.disabled = false; btn.innerHTML = '<i class="fas fa-paper-plane"></i> Submit';
     if (res.status === 'success') {
       showToast('✅', type+' Request Submitted!', 'Pending review by manager.', 'success', 6000);
       setTimeout(() => { cancelTimeOffForm(); refreshData(); }, 2000);
@@ -1161,7 +1231,6 @@ function quickLogCall(reason) {
   goStep(4);
   setTimeout(() => submitCallLogForm(), 200);
 }
-
 function submitCallLogForm() {
   const agent  = document.getElementById('f-agent').value;
   const reason = document.getElementById('f-reason').value;
@@ -1181,13 +1250,11 @@ function submitCallLogForm() {
   if (!isQ && !radioValues['f-unit'])     { showFormErr('Select Unit Type!'); return; }
 
   const btn = document.getElementById('formSubmitBtn');
-  
-  // ✅ تعديل #5: إضافة loading indicator
   btn.disabled = true;
-  btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Submitting...';
+  btn.innerHTML = '<i class="fas fa-spinner spinner"></i> Submitting...';
 
   const slowTimer = setTimeout(() => {
-    if (btn.disabled) btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Almost there...';
+    if (btn.disabled) btn.innerHTML = '<i class="fas fa-spinner spinner"></i> Almost there...';
   }, 5000);
 
   document.getElementById('form-error').style.display = 'none';
@@ -1212,14 +1279,15 @@ function submitCallLogForm() {
     btn.disabled = false;
     btn.innerHTML = '<i class="fas fa-paper-plane"></i> Submit to Database';
     if (res.status === 'success') {
-      const bar = document.getElementById('call-summary-bar');
-      document.getElementById('cs-name').innerText   = cname  || '—';
-      document.getElementById('cs-mobile').innerText = mobile || '—';
-      document.getElementById('cs-reason').innerText = reason || '—';
-      bar.style.display = 'flex';
-      setTimeout(() => bar.style.display = 'none', 30000);
-      resetCallForm();
-      showToast('✅', 'Call Logged!', cname ? cname + ' — ' + mobile : reason, 'success', 5000);  
+const bar = document.getElementById('call-summary-bar');
+document.getElementById('cs-name').innerText   = cname  || '—';
+document.getElementById('cs-mobile').innerText = mobile || '—';
+document.getElementById('cs-reason').innerText = reason || '—';
+bar.style.display = 'flex';
+// اخفيه تلقائي بعد 30 ثانية
+setTimeout(() => bar.style.display = 'none', 30000);
+resetCallForm();
+showToast('✅', 'Call Logged!', cname ? cname + ' — ' + mobile : reason, 'success', 5000);  
     } else {
       showFormErr(res.msg || 'Something went wrong.');
     }
@@ -1231,7 +1299,6 @@ function submitCallLogForm() {
     console.error('gasRun error:', err);
   });
 }
-
 function resetCallForm() {
   ['f-reason','f-mobile','f-extra'].forEach(id => document.getElementById(id).value = '');
   document.getElementById('f-cname').value = '';
@@ -1246,7 +1313,6 @@ function resetCallForm() {
 /* ─── STEP NAVIGATION ─── */
 let _currentStep = 1;
 
-/* ✅ تعديل #3: إضافة زرار Search في الخطوة الأولى */
 function goStep(n) {
   // Validate before going forward
   if (n > _currentStep) {
@@ -1254,6 +1320,7 @@ function goStep(n) {
       const agent  = document.getElementById('f-agent').value;
       const reason = document.getElementById('f-reason').value;
       if (!agent || !reason) { showFormErr('Please select Agent and Call Reason!'); return; }
+      // لو Quick log (Wrong Number / Call Dropped) اقفز لـ step 4 مباشرة
       if (reason === 'Wrong Number' || reason === 'Call Dropped') { n = 4; }
     }
   }
@@ -1272,12 +1339,6 @@ function goStep(n) {
   document.querySelectorAll('.step-panel').forEach(p => p.classList.remove('active'));
   document.getElementById('step-' + n).classList.add('active');
   _currentStep = n;
-
-  // ← إضافة: عرض/إخفاء زرار البحث حسب الخطوة الحالية
-  const searchBtn = document.getElementById('search-customer-btn');
-  if (searchBtn) {
-    searchBtn.style.display = (n === 1) ? 'block' : 'none';
-  }
 }
 
 function showFormErr(msg) {
@@ -1290,7 +1351,7 @@ function searchCustomer() {
   const query      = document.getElementById('search-query').value.trim();
   const resultsDiv = document.getElementById('search-results');
   if (!query) { resultsDiv.innerHTML = '<div class="empty-state">Please enter a name or mobile number.</div>'; return; }
-  resultsDiv.innerHTML = '<div class="empty-state"><i class="fas fa-spinner fa-spin"></i> Searching...</div>';
+  resultsDiv.innerHTML = '<div class="empty-state"><i class="fas fa-spinner spinner"></i> Searching...</div>';
   gasRun('searchCustomer', query).then(res => {
     if (res.status !== 'success' || !res.results.length) {
       resultsDiv.innerHTML = `<div class="empty-state">No results found for "${query}"</div>`;
@@ -1341,7 +1402,7 @@ let kbSidebarCollapsed = false;
 function loadKBSections() {
   if (kbLoaded) return;
   const listEl = document.getElementById('kb-sections-list');
-  listEl.innerHTML = '<div class="kb-no-results"><i class="fas fa-spinner fa-spin"></i></div>';
+  listEl.innerHTML = '<div class="kb-no-results"><i class="fas fa-spinner spinner"></i></div>';
   if (window.loadKBFromFirestore) {
     window.loadKBFromFirestore().then(data => {
       if (data && data.length) {
@@ -1432,218 +1493,368 @@ function saveKBEdit() {
   const newContent = document.getElementById('kb-edit-textarea').value;
   if (!window.saveKBSection) return;
   const saveBtn = document.getElementById('kb-save-btn');
-  
-  // ✅ تعديل #5: إضافة loading indicator
   saveBtn.disabled = true;
-  saveBtn.innerHTML= '<i class="fas fa-spinner fa-spin"></i><span class="kb-btn-label">Saving</span>';
-  
+  saveBtn.innerHTML= '<i class="fas fa-spinner spinner"></i><span class="kb-btn-label">Saving</span>';
   window.saveKBSection(s.id, newContent).then(ok => {
     saveBtn.disabled = false;
     saveBtn.innerHTML= '<i class="fas fa-check"></i><span class="kb-btn-label">Save</span>';
     if (ok) {
-      s.content = newContent;
-      cancelKBEdit();
-      showToast('✅', 'Saved!', 'Knowledge base article saved.', 'success', 3000);
+      kbSections[kbActiveIdx].content = newContent;
+      kbEditMode = false; updateKBToolbarState();
+      openKBSection(kbActiveIdx);
+      showToast('✅', 'Section Saved!', s.title+' has been updated.', 'success', 4000);
     } else {
-      showToast('❌', 'Error', 'Failed to save article.', 'danger', 3000);
+      showToast('❌', 'Save Failed!', 'Could not save changes.', 'danger', 4000);
     }
-  }).catch(() => {
-    saveBtn.disabled = false;
-    saveBtn.innerHTML= '<i class="fas fa-check"></i><span class="kb-btn-label">Save</span>';
-    showToast('❌', 'Error', 'Failed to save article.', 'danger', 3000);
   });
 }
 
 function updateKBToolbarState() {
-  const editBtn = document.getElementById('kb-edit-btn');
-  const saveBtn = document.getElementById('kb-save-btn');
+  const editBtn   = document.getElementById('kb-edit-btn');
+  const saveBtn   = document.getElementById('kb-save-btn');
   const cancelBtn = document.getElementById('kb-cancel-btn');
-  if (!editBtn || !saveBtn || !cancelBtn) return;
+  const isAdmin   = window.currentUserRole === 'Admin';
   if (kbEditMode) {
-    editBtn.style.display = 'none';
-    saveBtn.style.display = 'block';
-    cancelBtn.style.display = 'block';
+    editBtn.classList.remove('kb-visible');
+    saveBtn.classList.add('kb-visible');
+    cancelBtn.classList.add('kb-visible');
   } else {
-    editBtn.style.display = 'block';
-    saveBtn.style.display = 'none';
-    cancelBtn.style.display = 'none';
+    editBtn.classList.remove('kb-visible');
+    saveBtn.classList.remove('kb-visible');
+    cancelBtn.classList.remove('kb-visible');
+    if (isAdmin && kbActiveIdx >= 0) editBtn.classList.add('kb-visible');
   }
 }
 
 
 /* ─── 19. SHIFT SWAP ─── */
-let schWeeks       = [];
-let schAgents      = [];
-let schShiftTypes  = [];
-let schCurrentWeek = null;
-let schAllDrafts   = {};
-let schMyDraft     = {};
-
-async function findAvailableShiftSlot(agentId, date, shiftTypeId) {
-  try {
-    const res = await fetch(
-      `${SB_URL_SCH}/rest/v1/schedule?shift_date=eq.${date}&shift_type_id=eq.${shiftTypeId}&select=count`,
-      { headers: { 'apikey': SB_KEY_SCH, 'Authorization': `Bearer ${SB_KEY_SCH}` } }
-    );
-    const data = await res.json();
-    return data && data.length ? data[0].count : 0;
-  } catch(e) {
-    console.error('Error checking shift availability:', e);
-    return 0;
-  }
-}
-
 function populateSwapForm() {
-  const agentSelect = document.getElementById('swap-agent-select');
-  if (!agentSelect) return;
-  agentSelect.innerHTML = '<option value="">Select agent to swap with...</option>';
-  (globalTeamData || []).forEach(agent => {
-    if (agent.name !== sessionAgent) {
-      agentSelect.add(new Option(agent.name, agent.name));
+  const daySelect       = document.getElementById('swap-day-select');
+  const colleagueSelect = document.getElementById('swap-colleague-select');
+  const now             = new Date();
+
+  daySelect.innerHTML = '<option value="">Choose a day...</option>';
+
+  globalScheduleData.forEach(d => {
+    const shift   = (d.shift || '').toString().trim();
+    const parts   = d.date.split('/');
+    const dayDate = new Date(parseInt(parts[2]), parseInt(parts[1])-1, parseInt(parts[0]));
+    dayDate.setHours(23,59,59,999);
+
+    if (dayDate < now) return;
+
+    const opt = document.createElement('option');
+    opt.value       = d.date;
+    opt.disabled    = false;
+    opt.textContent = d.day + ' — ' + d.date + ' (' + (shift || 'Off') + ')' + (d.isToday ? '  ◀ Today' : '');
+    daySelect.appendChild(opt);
+  });
+
+  colleagueSelect.innerHTML = '<option value="">Choose a colleague...</option>';
+  const currentName = document.getElementById('user-name').innerText.trim();
+  globalTeamData.forEach(s => {
+    if (s.name !== currentName) {
+      const opt = document.createElement('option');
+      opt.value = s.name;
+      opt.textContent = s.name + '  —  ' + (s.shift || 'OFF');
+      colleagueSelect.appendChild(opt);
     }
   });
+  resetSwapDisplay();
+}
+
+function resetSwapDisplay() {
+  document.getElementById('swap-your-shift').innerText      = 'Select a day';
+  document.getElementById('swap-your-shift').className      = 'swap-compare-value swap-empty';
+  document.getElementById('swap-colleague-shift').innerText = 'Select a colleague';
+  document.getElementById('swap-colleague-shift').className = 'swap-compare-value swap-empty';
+  document.getElementById('swap-your-box').classList.remove('swap-active');
+  document.getElementById('swap-colleague-box').classList.remove('swap-active');
+  document.getElementById('swap-warning').style.display = 'none';
+}
+
+function getMinutesToShift(dateStr, shiftStr) {
+  const dp   = dateStr.split('/');
+  const tp   = shiftStr.split(' - ')[0].split(':');
+  const shiftDate = new Date(parseInt(dp[2]), parseInt(dp[1])-1, parseInt(dp[0]), parseInt(tp[0]), parseInt(tp[1]), 0, 0);
+  return Math.floor((shiftDate - new Date()) / 60000);
+}
+
+function onSwapDayChange() {
+  const date         = document.getElementById('swap-day-select').value;
+  const shiftEl      = document.getElementById('swap-your-shift');
+  const boxEl        = document.getElementById('swap-your-box');
+  const warningEl    = document.getElementById('swap-warning');
+  const warningText  = document.getElementById('swap-warning-text');
+  const colleagueSelect = document.getElementById('swap-colleague-select');
+
+  document.getElementById('swap-colleague-shift').innerText = 'Select a colleague';
+  document.getElementById('swap-colleague-shift').className = 'swap-compare-value swap-empty';
+  document.getElementById('swap-colleague-box').classList.remove('swap-active');
+  warningEl.style.display = 'none';
+
+  if (!date) {
+    shiftEl.innerText = 'Select a day'; shiftEl.className = 'swap-compare-value swap-empty';
+    boxEl.classList.remove('swap-active');
+    colleagueSelect.innerHTML = '<option value="">Choose a colleague...</option>';
+    return;
+  }
+
+  const day = globalScheduleData.find(d => d.date === date);
+  if (!day || !day.shift) { shiftEl.innerText = 'N/A'; shiftEl.className = 'swap-compare-value swap-empty'; return; }
+  shiftEl.innerText = day.shift; shiftEl.className = 'swap-compare-value'; boxEl.classList.add('swap-active');
+
+  const mins = getMinutesToShift(date, day.shift);
+  if (mins < 120) {
+    const h = Math.floor(Math.abs(mins)/60), m = Math.abs(mins)%60;
+    warningText.innerText   = 'Your shift starts in ' + (h>0?h+'h '+m+'m':m+'m') + '. Swap requests must be submitted at least 2 hours before.';
+    warningEl.style.display = 'flex';
+  }
+
+  colleagueSelect.innerHTML = '<option value="">Choose a colleague...</option>';
+  const currentName = document.getElementById('user-name').innerText.trim();
+  gasRun('getDayShifts', date).then(res => {
+    if (res && res.shifts && res.shifts.length) {
+      res.shifts.forEach(s => {
+        if (s.name !== currentName) {
+          const opt = document.createElement('option');
+          opt.value = s.name; opt.textContent = s.name + '  —  ' + (s.shift || 'OFF');
+          colleagueSelect.appendChild(opt);
+        }
+      });
+    }
+  });
+}
+
+function onSwapColleagueChange() {
+  const date      = document.getElementById('swap-day-select').value;
+  const colleague = document.getElementById('swap-colleague-select').value;
+  const shiftEl   = document.getElementById('swap-colleague-shift');
+  const boxEl     = document.getElementById('swap-colleague-box');
+
+  if (!date || !colleague) {
+    shiftEl.innerText = 'Select a colleague'; shiftEl.className = 'swap-compare-value swap-empty';
+    boxEl.classList.remove('swap-active'); return;
+  }
+
+  shiftEl.innerText = 'Loading...'; shiftEl.className = 'swap-compare-value swap-empty';
+  boxEl.classList.remove('swap-active');
+
+  gasRun('getColleagueShift', colleague, date).then(res => {
+    if (res && res.shift) {
+      shiftEl.innerText = res.shift; shiftEl.className = 'swap-compare-value'; boxEl.classList.add('swap-active');
+    } else {
+      shiftEl.innerText = 'No shift on this day'; shiftEl.className = 'swap-compare-value swap-empty';
+    }
+  }).catch(() => { shiftEl.innerText = 'Error loading'; shiftEl.className = 'swap-compare-value swap-empty'; });
 }
 
 function submitShiftSwap() {
-  const agent1 = sessionAgent;
-  const agent2 = document.getElementById('swap-agent-select').value;
-  const date   = document.getElementById('swap-date').value;
-  const msg    = document.getElementById('swap-msg');
-  const btn    = document.getElementById('swapBtn');
+  const date      = document.getElementById('swap-day-select').value;
+  const colleague = document.getElementById('swap-colleague-select').value;
+  const notes     = document.getElementById('swap-notes').value.trim();
+  const name      = document.getElementById('user-name').innerText.trim();
+  const msg       = document.getElementById('swap-request-msg');
+  const btn       = document.getElementById('swap-submit-btn');
+  const yourShift  = document.getElementById('swap-your-shift').innerText;
+  const theirShift = document.getElementById('swap-colleague-shift').innerText;
 
-  if (!agent2) { msg.innerText = 'Please select an agent'; return; }
-  if (!date)   { msg.innerText = 'Please select a date'; return; }
+  if (!date)      { customAlert('Error', 'Please select a working day!'); return; }
+  if (!colleague) { customAlert('Error', 'Please select a colleague!'); return; }
+  if (yourShift  === 'N/A' || yourShift  === 'Select a day')        { customAlert('Error', 'No valid shift found for you!'); return; }
+  if (theirShift === 'No shift on this day' || theirShift === 'Select a colleague') { customAlert('Error', "Colleague has no shift on this day!"); return; }
 
-  // ✅ تعديل #5: إضافة loading indicator
-  btn.disabled = true;
-  btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
-  msg.innerText = 'Processing swap request...';
+  const day = globalScheduleData.find(d => d.date === date);
+  if (day && getMinutesToShift(date, day.shift) < 120) {
+    customAlert('Too Late', 'Swap requests must be submitted at least 2 hours before your shift starts.');
+    return;
+  }
 
-  gasRun('submitShiftSwap', agent1, agent2, date).then(res => {
-    btn.disabled = false;
-    btn.innerHTML = '<i class="fas fa-exchange-alt"></i> Request Swap';
-    if (res.status === 'success') {
-      msg.innerText = '✅ Swap request submitted!';
-      showToast('✅', 'Swap Requested!', `Waiting for ${agent2}'s response.`, 'success', 5000);
-      setTimeout(() => {
-        document.getElementById('swap-agent-select').value = '';
-        document.getElementById('swap-date').value = '';
-        msg.innerText = '';
-      }, 3000);
-    } else {
-      msg.innerText = '❌ ' + (res.msg || 'Failed to submit swap');
-    }
-  }).catch(() => {
-    btn.disabled = false;
-    btn.innerHTML = '<i class="fas fa-exchange-alt"></i> Request Swap';
-    msg.innerText = '❌ Network error';
+  customConfirm('Confirm Swap', `Swap your shift (${yourShift}) with ${colleague} (${theirShift}) on ${date}?`).then(ok => {
+    if (!ok) return;
+    btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner spinner"></i> Submitting...';
+    gasRun('submitShiftSwapRequest', name, date, yourShift, colleague, theirShift, notes).then(res => {
+      btn.disabled = false; btn.innerHTML = '<i class="fas fa-paper-plane"></i> Submit Shift Swap Request';
+      if (res.status === 'success') {
+        msg.style.color = '#059669'; msg.innerText = 'Request submitted! Pending admin approval.';
+        showToast('⏳','Request Submitted & Pending!','Your swap request is now waiting for admin approval.','warn',7000);
+        silentRefreshRequests();
+        document.getElementById('swap-day-select').value      = '';
+        document.getElementById('swap-colleague-select').value= '';
+        document.getElementById('swap-notes').value           = '';
+        resetSwapDisplay();
+        setTimeout(() => msg.innerText = '', 6000);
+      } else {
+        msg.style.color = 'var(--danger)'; msg.innerText = res.msg || 'Failed to submit.';
+        setTimeout(() => msg.innerText = '', 5000);
+      }
+    }).catch(() => {
+      btn.disabled = false; btn.innerHTML = '<i class="fas fa-paper-plane"></i> Submit Shift Swap Request';
+      msg.style.color = 'var(--danger)'; msg.innerText = 'Connection error!';
+      setTimeout(() => msg.innerText = '', 5000);
+    });
   });
+}
+
+function syncKnownSwaps() {
+  document.querySelectorAll('#requests-list .req-card').forEach(card => {
+    const typeEl   = card.querySelector('.req-type');
+    const statusEl = card.querySelector('.req-status');
+    if (typeEl && typeEl.innerText.includes('Shift Swap') && statusEl) {
+      const detail = card.querySelector('.req-detail');
+      if (detail) knownSwapStatuses[detail.innerText.trim()] = statusEl.innerText.trim();
+    }
+  });
+}
+
+function startSwapPolling() {
+  syncKnownSwaps();
+  if (swapPollTimer) clearInterval(swapPollTimer);
+  swapPollTimer = setInterval(() => {
+    if (!sessionAgent) return;
+    gasRun('checkMySwapUpdates', sessionAgent).then(res => {
+      if (!res || !res.updates || !res.updates.length) return;
+      res.updates.forEach(u => {
+        const key       = u.date + ' | ' + u.colleague;
+        const oldStatus = knownSwapStatuses[key];
+        if (oldStatus === 'Pending' && u.status !== 'Pending') {
+          if (u.status === 'Approved') {
+            sendNotif('✅ Shift Swap Approved!', 'Your swap with '+u.colleague+' on '+u.date);
+            showToast('✅','Shift Swap Approved!','Your swap with '+u.colleague+' on '+u.date+' is approved.','success',15000);
+          } else if (u.status === 'Rejected') {
+            sendNotif('❌ Shift Swap Rejected', 'Your swap with '+u.colleague+' on '+u.date);
+            showToast('❌','Shift Swap Rejected','Your swap with '+u.colleague+' on '+u.date+' was rejected.','danger',15000);
+          }
+          silentRefreshRequests();
+        }
+        knownSwapStatuses[key] = u.status;
+      });
+    }).catch(() => {});
+  }, 30000);
+}
+
+function silentRefreshRequests() {
+  if (!sessionAgent) return;
+  gasRun('processLogin', sessionAgent, 'REFRESH_MODE').then(res => {
+    if (res && res.status === 'success' && res.userRequests) renderRequests(res.userRequests);
+  }).catch(() => {});
 }
 
 
 /* ─── 20. TOAST NOTIFICATIONS ─── */
-function showToast(icon, title, msg, type, duration) {
-  const container = document.getElementById('toast-container');
+function showToast(icon, title, sub, type, duration) {
+  type     = type     || 'info';
+  duration = duration !== undefined ? duration : 6000;
+  const container = document.getElementById('nos-toast-container');
+  if (!container) return;
   const toast = document.createElement('div');
-  toast.className = `toast toast-${type}`;
-  toast.innerHTML = `
-    <div class="toast-icon">${icon}</div>
-    <div class="toast-content">
-      <div class="toast-title">${title}</div>
-      <div class="toast-msg">${msg}</div>
-    </div>
-    <button class="toast-close" onclick="this.parentElement.remove()"><i class="fas fa-times"></i></button>`;
+  toast.className = 'nos-toast t-' + type;
+  const barColors = { info:'var(--primary-gradient)', warn:'linear-gradient(90deg,#f59e0b,#d97706)', danger:'linear-gradient(90deg,#ef4444,#dc2626)', success:'linear-gradient(90deg,#059669,#047857)' };
+  const barStyle  = duration > 0 ? `animation-duration:${duration}ms;background:${barColors[type]||barColors.info};` : '';
+  toast.innerHTML =
+    `<div class="nos-toast-icon">${icon}</div>` +
+    `<div class="nos-toast-body"><div class="nos-toast-title">${title}</div>${sub?`<div class="nos-toast-sub">${sub}</div>`:''}</div>` +
+    `<button class="nos-toast-close" onclick="dismissToast(this.parentElement)">✕</button>` +
+    (duration > 0 ? `<div class="nos-toast-bar" style="${barStyle}"></div>` : '');
   container.appendChild(toast);
-  setTimeout(() => toast.remove(), duration || 5000);
+  playNotifSoundTyped(type);
+  if (duration > 0) setTimeout(() => dismissToast(toast), duration);
+  return toast;
 }
 
-function logoutToast() {
-  showToast('👋', 'Goodbye!', 'You have been logged out.', 'info', 3000);
+function dismissToast(toast) {
+  if (!toast || toast.classList.contains('hiding')) return;
+  toast.classList.add('hiding');
+  setTimeout(() => { if (toast.parentElement) toast.parentElement.removeChild(toast); }, 400);
 }
+
+function logoutToast() { showToast('✅','Logged out successfully!','See you next shift!','success',5000); }
 
 
 /* ─── 21. ANNUAL LEAVE ─── */
-function openAnnualLeaveModal() {
-  const modal = document.getElementById('annual-leave-modal');
-  const used = document.getElementById('annual-used');
-  const left = document.getElementById('annual-left');
-  used.innerText = currentAnnualData.used || 0;
-  left.innerText = currentAnnualData.left || 0;
-  modal.style.display = 'flex';
-}
-
-function closeAnnualLeaveModal() {
-  document.getElementById('annual-leave-modal').style.display = 'none';
+function showAnnualDetails() {
+  const details = document.getElementById('annual-details');
+  if (details.style.display !== 'none') { details.style.display = 'none'; return; }
+  const name = document.getElementById('user-name').innerText.trim();
+  details.style.display = 'block';
+  ['annual-entitlement','annual-carry','annual-total','annual-used','annual-remaining']
+    .forEach(id => document.getElementById(id).innerText = '...');
+  gasRun('getAnnualData', name).then(data => {
+    if (!data) { details.style.display = 'none'; return; }
+    document.getElementById('annual-entitlement').innerText = data.entitlement + ' Days';
+    document.getElementById('annual-carry').innerText       = data.carryOver  + ' Days';
+    document.getElementById('annual-total').innerText       = data.total      + ' Days';
+    document.getElementById('annual-used').innerText        = data.used       + ' Days';
+    document.getElementById('annual-remaining').innerText   = data.remaining  + ' Days';
+    const monthsDiv = document.getElementById('annual-months');
+    monthsDiv.innerHTML = data.months && data.months.length
+      ? data.months.map(m => '📅 '+m.month+': <b>'+m.used+' Days</b>').join(' &nbsp;|&nbsp; ')
+      : '';
+  });
 }
 
 
 /* ─── 22. MISSING PUNCH ─── */
-function submitMissingPunch() {
-  const date = document.getElementById('missing-date').value;
-  const time = document.getElementById('missing-time').value;
-  const type = document.getElementById('missing-type').value;
-  const name = document.getElementById('user-name').innerText.trim();
-  const msg  = document.getElementById('missing-msg');
-  const btn  = document.getElementById('missingBtn');
-
-  if (!date || !time || !type) { msg.innerText = 'Please fill all fields'; return; }
-
-  // ✅ تعديل #5: إضافة loading indicator
-  btn.disabled = true;
-  btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Submitting...';
-  msg.innerText = '';
-
-  gasRun('submitMissingPunch', name, date, time, type).then(res => {
-    btn.disabled = false;
-    btn.innerHTML = '<i class="fas fa-paper-plane"></i> Submit';
-    if (res.status === 'success') {
-      msg.innerText = '✅ Missing punch submitted!';
-      showToast('✅', 'Missing Punch Submitted!', 'Pending manager approval.', 'success', 5000);
-      setTimeout(() => {
-        document.getElementById('missing-date').value = '';
-        document.getElementById('missing-time').value = '';
-        document.getElementById('missing-type').value = '';
-        msg.innerText = '';
-      }, 3000);
-    } else {
-      msg.innerText = '❌ ' + (res.msg || 'Failed to submit');
-    }
+function sendMissingPunch() {
+  const name             = document.getElementById('user-name').innerText.trim();
+  const missingPunchDate = document.getElementById('missingPunchDate').value;
+  if (!missingPunchDate) { customAlert('Error', 'Please select a date for the missing punch.'); return; }
+  customConfirm('Confirm', 'Report Missing Punch for ' + missingPunchDate + '?').then(r => {
+    if (!r) return;
+    gasRun('sendMissingPunchReport', name, missingPunchDate).then(res => {
+      if (res.status === 'success') {
+        showToast('⚠️','Missing Punch Reported!','Your report for '+missingPunchDate+' has been sent.','warn',6000);
+        refreshData();
+      } else customAlert('Status', res.msg);
+    }).catch(() => customAlert('Error', 'Something went wrong. Please try again.'));
   });
 }
 
 
 /* ─── 23. NAVIGATION & TABS ─── */
-function switchTab(tabId, btn, idx) {
+function switchTab(id, btn, idx) {
   document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
-  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-  
-  const tab = document.getElementById(tabId);
-  if (tab) tab.classList.add('active');
-  if (btn) btn.classList.add('active');
-
-  if (tabId === 'tab-sch-table') initSchTab();
-}
-
-function pushHistoryState() {
-  if (window.history && window.history.pushState) {
-    window.history.pushState({ page: 'dashboard' }, 'Dashboard', window.location.href);
+  if (id !== 'tab-form' && typeof _activeChannel !== 'undefined' && _activeChannel) {
+    _activeChannel = null;
+    var fa = document.getElementById('calllog-form-area');
+    if (fa) fa.style.display = 'none';
+    var bc = document.getElementById('btn-channel-call');
+    var bw = document.getElementById('btn-channel-whatsapp');
+    if (bc) { bc.style.borderColor = 'var(--border)'; bc.style.background = 'var(--surface)'; }
+    if (bw) { bw.style.borderColor = 'var(--border)'; bw.style.background = 'var(--surface)'; }
   }
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.bottom-nav-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  if (id === 'tab-kb') loadKBSections();
+  if (btn) btn.classList.add('active');
+  const bnBtns = document.querySelectorAll('.bottom-nav-btn');
+  if (bnBtns[idx]) bnBtns[idx].classList.add('active');
 }
+
+function pushHistoryState() { history.pushState(null, '', window.location.href); }
+
+window.addEventListener('popstate', () => {
+  const dashboard = document.getElementById('screen-dashboard');
+  if (dashboard && dashboard.style.display === 'block') {
+    customConfirm('Logout', 'Are you sure you want to logout?').then(r => {
+      if (r) logout();
+      else   history.pushState(null, '', window.location.href);
+    });
+  }
+});
+
+document.addEventListener('touchmove', e => {
+  const dashboard = document.getElementById('screen-dashboard');
+  if (dashboard && dashboard.style.display === 'block') {
+    const touch  = e.touches[0];
+    const target = document.elementFromPoint(touch.clientX, touch.clientY);
+    if (target && !dashboard.contains(target)) e.preventDefault();
+  }
+}, { passive: false });
 
 
 /* ─── 24. UTILITY FUNCTIONS ─── */
-async function sbFetchSch(path) {
-  try {
-    const res = await fetch(`${SB_URL_SCH}/rest/v1/${path}`, {
-      headers: { 'apikey': SB_KEY_SCH, 'Authorization': `Bearer ${SB_KEY_SCH}` }
-    });
-    return res.ok ? res.json() : null;
-  } catch(e) {
-    console.error('Supabase fetch error:', e);
-    return null;
-  }
-}
-
 function gasRun(action, ...args) {
   return fetch(GAS_URL, {
     method:  'POST',
@@ -1653,6 +1864,163 @@ function gasRun(action, ...args) {
   })
   .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.text(); })
   .then(text => { try { return JSON.parse(text); } catch(e) { throw new Error('Invalid JSON response'); } });
+}
+
+var _activeChannel = null;
+
+function selectChannel(ch) {
+  var formArea  = document.getElementById('calllog-form-area');
+  var btnCall   = document.getElementById('btn-channel-call');
+  var btnWA     = document.getElementById('btn-channel-whatsapp');
+  var swCall    = document.getElementById('switch-call-btn');
+  var swWA      = document.getElementById('switch-wa-btn');
+  var icon      = document.getElementById('calllog-channel-icon');
+  var title     = document.getElementById('calllog-channel-title');
+   
+  goStep(1);
+  _currentStep = 1;
+   
+  if (_activeChannel === ch) {
+    _activeChannel = null;
+    formArea.style.display = 'none';
+    btnCall.style.borderColor = 'var(--border)'; btnCall.style.background = 'var(--surface)';
+    btnWA.style.borderColor   = 'var(--border)'; btnWA.style.background   = 'var(--surface)';
+    return;
+  }
+
+  _activeChannel = ch;
+  formArea.style.display = 'block';
+
+  if (ch === 'call') {
+    icon.innerText  = '📞'; title.innerText = 'Call Log';
+    btnCall.style.borderColor = 'var(--primary)'; btnCall.style.background = 'rgba(212,175,55,0.1)';
+    btnWA.style.borderColor   = 'var(--border)';  btnWA.style.background   = 'var(--surface)';
+    swCall.style.borderColor  = 'var(--primary)'; swCall.style.color       = 'var(--primary)';
+    swWA.style.borderColor    = 'var(--border)';  swWA.style.color         = 'var(--muted)';
+    setTimeout(function() {
+      var mobileOpt = document.querySelector('#f-channel .radio-opt:nth-child(2)');
+      if (mobileOpt) selectRadio('f-channel', mobileOpt, 'Mobile');
+    }, 100);
+  } else {
+    icon.innerText  = '💬'; title.innerText = 'WhatsApp Log';
+    btnWA.style.borderColor   = '#25d366';        btnWA.style.background   = 'rgba(37,211,102,0.08)';
+    btnCall.style.borderColor = 'var(--border)';  btnCall.style.background = 'var(--surface)';
+    swWA.style.borderColor    = '#25d366';         swWA.style.color         = '#25d366';
+    swCall.style.borderColor  = 'var(--border)';  swCall.style.color       = 'var(--muted)';
+    setTimeout(function() {
+      var waOpt = document.querySelector('#f-channel .radio-opt:first-child');
+      if (waOpt) selectRadio('f-channel', waOpt, 'Whatsapp');
+    }, 100);
+  }
+
+  formArea.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+
+/* ─── 25. SCH TABLE ─── */
+const SB_URL_SCH = 'https://xzxdaupwwwdcwfnqweub.supabase.co';
+const SB_KEY_SCH = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh6eGRhdXB3d3dkY3dmbnF3ZXViIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUzMTM5NTAsImV4cCI6MjA5MDg4OTk1MH0.KjNZpFvLxh8XfDDoWdpVsIQZAh1PjzGXOrfDmApZ4K8';
+
+// ── Supabase Client للـ Realtime ──
+const sbClient = window.supabase.createClient(SB_URL_SCH, SB_KEY_SCH);
+let sbBreaksChannel = null;
+
+let schWeeks       = [];
+let schAgents      = [];
+let schShiftTypes  = [];
+let schMyDraft     = {};
+let schAllDrafts   = {};
+let schCurrentWeek = null;
+
+function toggleSchAccordion(elementId) {
+  const clickedItem = document.getElementById(elementId);
+  const allAccordions = document.querySelectorAll('.sch-accordion');
+  const isOpen = clickedItem.classList.contains('active');
+  allAccordions.forEach(acc => {
+    acc.classList.remove('active');
+  });
+
+  if (!isOpen) {
+    clickedItem.classList.add('active');
+  }
+}
+
+function selectWeekChip(weekId, weekLabel, chipElement) {
+  document.querySelectorAll('.week-chip').forEach(c => c.classList.remove('active'));
+  if(chipElement) chipElement.classList.add('active');
+  const pubAccordion = document.getElementById('acc-published');
+  if (pubAccordion && !pubAccordion.classList.contains('active')) {
+    toggleSchAccordion('acc-published');
+  }
+  loadSchTable(weekId);
+}
+async function sbFetchSch(path) {
+  const res = await fetch(`${SB_URL_SCH}/rest/v1/${path}`, {
+    headers: { 'apikey': SB_KEY_SCH, 'Authorization': `Bearer ${SB_KEY_SCH}`, 'Content-Type': 'application/json' }
+  });
+  return res.json();
+}
+// ── جيب بريكات اليوم من Supabase ──
+async function loadTodayBreaksFromSB(agentId) {
+  const today = new Date().toISOString().split('T')[0];
+  try {
+    const res = await fetch(
+      `${SB_URL_SCH}/rest/v1/breaks?agent_id=eq.${agentId}&break_date=eq.${today}&select=*`,
+      { headers: { 'apikey': SB_KEY_SCH, 'Authorization': `Bearer ${SB_KEY_SCH}` } }
+    );
+    const data = await res.json();
+    if (!data || !data.length) return null;
+    const b = data[0];
+    return {
+      break1:     b.break1     ? b.break1.substring(0,5)     : null,
+      lunch:      b.lunch      ? b.lunch.substring(0,5)      : null,
+      break2:     b.break2     ? b.break2.substring(0,5)     : null,
+      shift_time: b.shift_time ? b.shift_time.substring(0,11): null,  // ← جديد
+    };
+  } catch(e) { return null; }
+}
+// ── حدّث الـ UI بالبريكات ──
+function applyBreaksToUI(breaks) {
+  if (!breaks) return;
+  document.getElementById('br-break1').innerText = breaks.break1 || 'N/A';
+  document.getElementById('br-lunch').innerText  = breaks.lunch  || 'N/A';
+  document.getElementById('br-break2').innerText = breaks.break2 || 'N/A';
+if (breaks.shift_time) {
+  document.getElementById('br-shift').innerText      = 'SHIFT: ' + breaks.shift_time;
+  document.getElementById('status-text').innerText   = breaks.shift_time;
+  }
+  currentBreaks = breaks;
+  startBreakChecker(breaks);
+}
+
+// ── Realtime subscription على البريكات ──
+function subscribeTodayBreaks(agentId) {
+  const today = new Date().toISOString().split('T')[0];
+
+  if (sbBreaksChannel) { sbClient.removeChannel(sbBreaksChannel); sbBreaksChannel = null; }
+
+  sbBreaksChannel = sbClient
+    .channel('agent-breaks-' + agentId)
+    .on('postgres_changes', {
+      event:  '*',
+      schema: 'public',
+      table:  'breaks',
+      filter: `agent_id=eq.${agentId}`
+    }, async (payload) => {
+      const b = payload.new;
+      if (!b || b.break_date !== today) return;
+
+      const updated = {
+        break1: b.break1 ? b.break1.substring(0,5) : null,
+        lunch:  b.lunch  ? b.lunch.substring(0,5)  : null,
+        break2: b.break2 ? b.break2.substring(0,5) : null,
+      };
+      applyBreaksToUI(updated);
+      showToast('🔔', 'Breaks Updated!',
+        `☕ ${updated.break1 || '-'}  🍽 ${updated.lunch || '-'}  🫖 ${updated.break2 || '-'}`,
+        'info', 6000);
+    })
+    .subscribe();
 }
 
 async function initSchTab() {
@@ -1781,41 +2149,31 @@ function buildSchGrid(agents, dates, schedMap, today) {
   return html;
 }
 
-/* ✅ تعديل #2: عرض الأسبوع الحالي والقادم قبل الـ Publish */
 async function loadSchTable(weekId) {
+  // لو لم يتم إرسال الـ ID، لا تفعل شيئاً (لأننا حذفنا القائمة القديمة)
   if (!weekId) return;
   
   const week = schWeeks.find(w => w.id === weekId);
   if (!week) return;
   
   const gridEl = document.getElementById('sch-table-grid');
+  gridEl.innerHTML = '<div class="empty-state"><i class="fas fa-spinner spinner"></i> Loading data...</div>';
   
-  // عرض معاينة الأسبوع الحالي والقادم قبل الـ Publish
   const today = `${new Date().getFullYear()}-${String(new Date().getMonth()+1).padStart(2,'0')}-${String(new Date().getDate()).padStart(2,'0')}`;
   const dates = getSchWeekDates(week.week_start, week.week_end);
-  
-  gridEl.innerHTML = '<div class="empty-state"><i class="fas fa-spinner fa-spin"></i> Loading schedule preview...</div>';
   
   try {
     const records = await sbFetchSch(`schedule?select=*&week_id=eq.${weekId}`);
     const schedMap = {};
     (records || []).forEach(s => { schedMap[`${s.agent_id}_${s.shift_date}`] = s; });
-    
-    // عرض الجدول مع معاينة الأسبوع
-    let previewHtml = `<div style="margin-bottom:20px;padding:12px;background:var(--surface2);border-radius:10px;border-left:4px solid var(--primary);">
-      <div style="font-size:12px;font-weight:700;color:var(--muted);margin-bottom:8px;">📅 Schedule Preview</div>
-      <div style="font-size:13px;color:var(--text);font-weight:600;">${fmtSchDate(week.week_start)} → ${fmtSchDate(week.week_end)}</div>
-    </div>`;
-    
-    gridEl.innerHTML = previewHtml + buildSchGrid(schAgents, dates, schedMap, today);
+    gridEl.innerHTML = buildSchGrid(schAgents, dates, schedMap, today);
   } catch(e) {
     gridEl.innerHTML = '<div class="empty-state">Error loading schedule.</div>';
   }
 }
-
 async function loadDraftGrid() {
   const draftEl = document.getElementById('sch-draft-grid');
-  draftEl.innerHTML = '<div class="empty-state"><i class="fas fa-spinner fa-spin"></i></div>';
+  draftEl.innerHTML = '<div class="empty-state"><i class="fas fa-spinner spinner"></i></div>';
   const draftWeeks = await sbFetchSch('schedule_weeks?select=id,week_start,week_end&status=eq.Draft&order=week_start.desc');
   if (!draftWeeks || !draftWeeks.length) {
     draftEl.innerHTML = '<div class="empty-state">No draft weeks available</div>';
@@ -1853,91 +2211,95 @@ async function loadDraftGrid() {
   draftHtml += `</tr></thead><tbody>`;
 
   schAgents.forEach((agent, idx) => {
+    const isMe       = agent.id === schMyAgentId;
+    const agentDraft = isMe ? schMyDraft : (schAllDrafts[agent.id] || {});
     draftHtml += `<tr style="background:${idx%2===0?'var(--surface)':'var(--surface2)'};">
       <td style="padding:8px 12px;font-size:12px;font-weight:700;border-bottom:1px solid var(--border);white-space:nowrap;">
         <div style="display:flex;align-items:center;gap:8px;">
-          <div style="width:26px;height:26px;border-radius:50%;background:var(--primary-gradient);display:flex;align-items:center;justify-content:center;color:#fff;font-size:9px;font-weight:800;flex-shrink:0;">${agent.formal_name.split(' ').map(n=>n[0]).join('').toUpperCase().slice(0,2)}</div>
-          <span style="color:var(--text);">${agent.formal_name}</span>
+          <div style="width:26px;height:26px;border-radius:50%;background:${isMe?'var(--primary-gradient)':'linear-gradient(135deg,#475569,#334155)'};display:flex;align-items:center;justify-content:center;color:#fff;font-size:9px;font-weight:800;flex-shrink:0;">${agent.formal_name.split(' ').map(n=>n[0]).join('').toUpperCase().slice(0,2)}</div>
+          <span style="color:${isMe?'var(--primary)':'var(--text)'};">${agent.formal_name}${isMe?' (You)':''}</span>
         </div>
       </td>`;
     draftDates.forEach(d => {
-      const myDraft = schMyDraft[d.iso];
-      const dt = myDraft ? myDraft.dayType : 'Off';
-      const st = schShiftTypes.find(s => s.id === (myDraft ? myDraft.shiftTypeId : null));
-      const isTd = d.iso === today;
-      let cell='— Off —', color='var(--muted)', bg='transparent', border='transparent';
-      if      (dt==='Work'&&st) { cell=st.start_time.substring(0,5)+' - '+st.end_time.substring(0,5); color='#10b981'; bg='rgba(16,185,129,0.05)'; border='rgba(16,185,129,0.3)'; }
-      else if (dt==='Annual')   { cell='Annual'; color='#8b5cf6'; bg='rgba(139,92,246,0.05)'; border='rgba(139,92,246,0.3)'; }
-      else if (dt==='Sick')     { cell='Sick';   color='#ef4444'; bg='rgba(239,68,68,0.05)';  border='rgba(239,68,68,0.3)'; }
-      else if (dt==='Casual')   { cell='Casual'; color='#f59e0b'; bg='rgba(245,158,11,0.05)'; border='rgba(245,158,11,0.3)'; }
-      else if (dt==='PH')       { cell='PH';     color='#3b82f6'; bg='rgba(59,130,246,0.05)'; border='rgba(59,130,246,0.3)'; }
-      else if (dt==='Task')     { cell='Task';   color='#06b6d4'; bg='rgba(6,182,212,0.05)';  border='rgba(6,182,212,0.3)'; }
-      draftHtml += `<td style="padding:5px;border-bottom:1px solid var(--border);text-align:center;${isTd?'background:rgba(212,175,55,0.04);':''}"><div style="background:${bg};border:1.5px solid ${border};border-radius:8px;padding:5px 4px;font-size:10px;font-weight:700;color:${color};white-space:nowrap;">${cell}</div></td>`;
+      const draft = agentDraft[d.iso] || { day_type: 'Off', shift_type_id: null };
+      const isTd  = d.iso === today;
+      draftHtml += `<td style="padding:5px;border-bottom:1px solid var(--border);text-align:center;${isTd?'background:rgba(212,175,55,0.04);':''}">${buildShiftSelect(agent.id, d.iso, draft.day_type, draft.shift_type_id, isMe)}</td>`;
     });
     draftHtml += `</tr>`;
   });
 
-  draftHtml += `<tr style="background:var(--surface2);"><td style="padding:8px 12px;font-size:10px;color:var(--muted);font-weight:700;">Daily Count</td>`;
-  draftDates.forEach(d => {
-    const w = schAgents.filter(a => { const dr=schAllDrafts[a.id]; return dr&&dr[d.iso]&&dr[d.iso].dayType==='Work'; }).length;
-    draftHtml += `<td style="padding:8px;text-align:center;font-size:12px;font-weight:800;color:#10b981;">${w} <span style="font-size:9px;color:var(--muted);font-weight:400;">working</span></td>`;
-  });
-  draftHtml += `</tr></tbody></table></div>`;
+  draftHtml += `</tbody></table></div>`;
+  const table = document.createElement('div');
+  table.innerHTML = draftHtml;
+  draftEl.appendChild(table);
 
-  const gridDiv = document.createElement('div');
-  gridDiv.innerHTML = draftHtml;
-  draftEl.appendChild(gridDiv);
+  if (!isSchRequestOpen()) {
+    const banner = document.createElement('div');
+    banner.style.cssText = 'margin-top:16px;padding:16px;background:rgba(239,68,68,0.06);border:1.5px solid rgba(239,68,68,0.3);border-radius:12px;text-align:center;font-size:13px;font-weight:700;color:#ef4444;white-space:pre-line;';
+    banner.innerText = schRequestClosedMsg();
+    draftEl.appendChild(banner);
+    draftEl.querySelectorAll('select').forEach(s => s.disabled = true);
+  }
 }
 
 function onSchDraftChange(sel) {
-  const date = sel.getAttribute('data-date');
-  const value = sel.value;
-  if (!schMyDraft[date]) schMyDraft[date] = {};
-  if (value === 'Off') {
-    schMyDraft[date].dayType = 'Off';
-    schMyDraft[date].shiftTypeId = null;
-  } else if (value.startsWith('Work__')) {
-    schMyDraft[date].dayType = 'Work';
-    schMyDraft[date].shiftTypeId = value.split('__')[1];
-  } else {
-    schMyDraft[date].dayType = value;
-    schMyDraft[date].shiftTypeId = null;
+  const date = sel.dataset.date;
+  const val  = sel.value;
+  let dayType = val, shiftTypeId = null;
+  if (val.startsWith('Work__')) { dayType = 'Work'; shiftTypeId = val.split('__')[1]; }
+  schMyDraft[date] = { day_type: dayType, shift_type_id: shiftTypeId };
+  sel.style.cssText += ';' + schCellStyle(dayType);
+}
+
+function isSchRequestOpen() {
+  const day = new Date().getDay();
+  return day === 0 || day === 1 || day === 2;
+}
+
+function schRequestClosedMsg() {
+  const next = new Date();
+  const daysUntilSun = (7 - next.getDay()) % 7 || 7;
+  next.setDate(next.getDate() + daysUntilSun);
+  return `🔒 Requests are closed now.\nOpens every Sunday — next opening: ${String(next.getDate()).padStart(2,'0')}/${String(next.getMonth()+1).padStart(2,'0')}`;
+}
+
+async function submitSchRequest() {
+  if (!isSchRequestOpen()) { customAlert('Closed', schRequestClosedMsg()); return; }
+  if (!schCurrentWeek)     { customAlert('Error', 'No draft week available!'); return; }
+  if (!schMyAgentId)       { customAlert('Error', 'Agent not found!'); return; }
+
+  const agentName = document.getElementById('user-name').innerText.trim();
+  const msg = document.getElementById('sch-request-msg');
+  msg.style.color = 'var(--muted)'; msg.innerText = 'Submitting...';
+
+  const details = { week_id: schCurrentWeek.id, week_start: schCurrentWeek.week_start, draft: schMyDraft };
+  const existing = await sbFetchSch(`requests?select=id,details&agent_id=eq.${schMyAgentId}&type=eq.Schedule%20Request&status=eq.Pending&order=created_at.desc&limit=1`);
+  let existingId = null;
+  if (existing && existing.length) {
+    try {
+      const det = JSON.parse(existing[0].details);
+      if (det.week_id === schCurrentWeek.id) existingId = existing[0].id;
+    } catch(e) {}
   }
-  sel.style.cssText += ';' + schCellStyle(schMyDraft[date].dayType);
-}
 
-function submitSchDraft() {
-  if (!schMyAgentId || !schCurrentWeek) { showToast('❌','Error','Missing data','danger',4000); return; }
-  const btn = document.getElementById('submitDraftBtn');
-  
-  // ✅ تعديل #5: إضافة loading indicator
-  btn.disabled = true;
-  btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Submitting...';
+  const body = JSON.stringify(existingId
+    ? { details: JSON.stringify(details), updated_at: new Date().toISOString() }
+    : { agent_id: schMyAgentId, agent_name: agentName, type: 'Schedule Request', details: JSON.stringify(details), status: 'Pending', created_at: new Date().toISOString() }
+  );
 
-  const details = {
-    week_id: schCurrentWeek.id,
-    week_start: schCurrentWeek.week_start,
-    week_end: schCurrentWeek.week_end,
-    draft: schMyDraft
-  };
-
-  gasRun('submitScheduleDraft', schMyAgentId, JSON.stringify(details)).then(res => {
-    btn.disabled = false;
-    btn.innerHTML = '<i class="fas fa-paper-plane"></i> Submit Draft';
-    if (res.status === 'success') {
-      showToast('✅', 'Draft Submitted!', 'Waiting for approval.', 'success', 5000);
-      schMyDraft = {};
-      resetSchDraft();
-    } else {
-      showToast('❌', 'Error', res.msg || 'Failed to submit', 'danger', 4000);
-    }
+  const res = await fetch(`${SB_URL_SCH}/rest/v1/requests${existingId ? '?id=eq.'+existingId : ''}`, {
+    method: existingId ? 'PATCH' : 'POST',
+    headers: { 'apikey': SB_KEY_SCH, 'Authorization': `Bearer ${SB_KEY_SCH}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+    body
   });
-}
 
-function selectWeekChip(weekId, label, el) {
-  document.querySelectorAll('.week-chip').forEach(c => c.classList.remove('selected'));
-  el.classList.add('selected');
-  loadSchTable(weekId);
+  if (res.ok) {
+    msg.style.color = '#10b981'; msg.innerText = '✅ Request submitted!';
+    showToast('✅', 'Schedule Request Submitted!', 'Pending admin review.', 'success', 5000);
+    setTimeout(() => msg.innerText = '', 5000);
+  } else {
+    msg.style.color = 'var(--danger)'; msg.innerText = '❌ Failed. Try again.';
+  }
 }
 
 function resetSchDraft() {
@@ -1955,16 +2317,18 @@ function filterSchWeeks() {
   const wrapper = document.getElementById('weeks-chips-wrapper');
   const list   = document.getElementById('weeks-list');
 
+  // إظهار اللودر وإخفاء القائمة مؤقتاً
   loader.style.display = 'block';
   wrapper.style.display = 'none';
 
+  // الفلترة
   const filtered = schWeeks.filter(w => {
     if (year  && !w.week_start.startsWith(year))        return false;
     if (month && w.week_start.substring(5,7) !== month) return false;
     return true;
   });
 
-  setTimeout(() => {
+  setTimeout(() => { // تأخير بسيط ليعطي إحساس بالتحميل
     loader.style.display = 'none';
     
     if (!filtered.length) {
@@ -1973,6 +2337,7 @@ function filterSchWeeks() {
     }
 
     wrapper.style.display = 'block';
+    // بناء الـ Chips بدلاً من Options
     list.innerHTML = filtered.map(w => `
       <div class="week-chip" onclick="selectWeekChip('${w.id}', '${fmtSchDate(w.week_start)} → ${fmtSchDate(w.week_end)}', this)">
         <i class="far fa-calendar-alt"></i>
@@ -1980,6 +2345,7 @@ function filterSchWeeks() {
       </div>
     `).join('');
     
+    // إعادة تعيين محتوى الجدول
     document.getElementById('sch-table-grid').innerHTML = '<div class="empty-state">Select a week to view schedule.</div>';
   }, 300);
 }
@@ -2019,7 +2385,6 @@ function closeResultPopup() {
   if (window._popupAutoClose) { clearTimeout(window._popupAutoClose); window._popupAutoClose = null; }
   if (window._popupOnClose)   { window._popupOnClose(); window._popupOnClose = null; }
 }
-
 function copySummary() {
   const name   = document.getElementById('cs-name').innerText;
   const mobile = document.getElementById('cs-mobile').innerText;
