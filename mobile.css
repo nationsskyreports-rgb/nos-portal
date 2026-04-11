@@ -47,9 +47,9 @@
   #screen-dashboard { padding-bottom: 80px; } /* Increased padding for bottom nav */
   .tab-content { padding: 10px; }
 
-  .status-banner { padding: 18px 14px; border-radius: 14px; margin-bottom: 10px; }
+  .status-banner { padding: 18px 10px; border-radius: 14px; margin-bottom: 10px; overflow: visible; }
   .status-icon { font-size: 32px; margin-bottom: 6px; }
-  .status-value { font-size: 18px; }
+  .status-value { font-size: 16px; white-space: nowrap; overflow: visible; width: 100%; text-align: center; }
   .status-sub { font-size: 11px; }
 
   .breaks-card { border-radius: 14px; margin-bottom: 10px; }
