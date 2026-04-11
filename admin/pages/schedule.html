@@ -366,7 +366,6 @@ async function publishWeek() {
     } catch(e) { showToast('Failed: ' + e.message, 'error'); }
   });
 }
-
 async function updateAnnualLeave() {
   const year      = new Date(currentWeek.week_start).getFullYear();
   const yearStart = year + '-01-01';
@@ -394,15 +393,17 @@ async function updateAnnualLeave() {
     const agentMonths  = map[agent.id] || {};
     const annualRecord = (annualRecords || []).find(a => a.agent_id === agent.id);
 
+    // ✅ updates اتعرف الأول قبل أي استخدام
     const updates = {};
     cols.forEach(m => { updates['used_' + m] = agentMonths[m] || 0; });
     updates.total_used = cols.reduce((s, m) => s + (agentMonths[m] || 0), 0);
 
     if (!annualRecord) {
       await db.from('annual_leave').insert({
-        agent_id:   agent.id,
-        agent_name: agent.formal_name,
-        year, ...updates,
+        agent_id:    agent.id,
+        agent_name:  agent.formal_name,
+        year,
+        ...updates,
         entitlement: 21,
         carry_over:  0,
         remaining:   21 - updates.total_used,
@@ -414,7 +415,11 @@ async function updateAnnualLeave() {
 
     updates.remaining  = (annualRecord.entitlement + annualRecord.carry_over) - updates.total_used;
     updates.updated_at = new Date().toISOString();
-    await db.from('annual_leave').update(updates).eq('agent_id', agent.id).eq('year', year);
+
+    await db.from('annual_leave')
+      .update(updates)
+      .eq('agent_id', agent.id)
+      .eq('year', year);
   }
 
   showToast('Leave balance updated! ✅', 'success');
