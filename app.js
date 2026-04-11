@@ -2226,13 +2226,19 @@ function buildSchGrid(agents, dates, schedMap, today) {
       const st = schShiftTypes.find(s => s.id === (e ? e.shift_type_id : null));
       const isTd = d.iso === today;
       let cell='— Off —', color='var(--muted)', bg='transparent', border='transparent';
-      if      (dt==='Work'&&st) { cell=st.start_time.substring(0,5)+' - '+st.end_time.substring(0,5); color='#10b981'; bg='rgba(16,185,129,0.05)'; border='rgba(16,185,129,0.3)'; }
+       if (dt==='Work'&&st) {
+  cell = st.start_time.substring(0,5)+' - '+st.end_time.substring(0,5);
+  const hr = parseInt(st.start_time.substring(0,2));
+  if (hr < 12)      { color='#10b981'; bg='rgba(16,185,129,0.08)';  border='rgba(16,185,129,0.4)'; }
+  else if (hr < 14) { color='#3B82F6'; bg='rgba(59,130,246,0.08)';  border='rgba(59,130,246,0.4)'; }
+  else              { color='#F4D03F'; bg='rgba(244,208,63,0.08)';   border='rgba(244,208,63,0.4)'; }
+}
       else if (dt==='Annual')   { cell='Annual'; color='#8b5cf6'; bg='rgba(139,92,246,0.05)'; border='rgba(139,92,246,0.3)'; }
       else if (dt==='Sick')     { cell='Sick';   color='#ef4444'; bg='rgba(239,68,68,0.05)';  border='rgba(239,68,68,0.3)'; }
       else if (dt==='Casual')   { cell='Casual'; color='#f59e0b'; bg='rgba(245,158,11,0.05)'; border='rgba(245,158,11,0.3)'; }
       else if (dt==='PH')       { cell='PH';     color='#3b82f6'; bg='rgba(59,130,246,0.05)'; border='rgba(59,130,246,0.3)'; }
       else if (dt==='Task')     { cell='Task';   color='#06b6d4'; bg='rgba(6,182,212,0.05)';  border='rgba(6,182,212,0.3)'; }
-      html += `<td style="padding:5px;border-bottom:1px solid var(--border);text-align:center;${isTd?'background:rgba(212,175,55,0.04);':''}"><div style="background:${bg};border:1.5px solid ${border};border-radius:8px;padding:5px 4px;font-size:10px;font-weight:700;color:${color};white-space:nowrap;">${cell}</div></td>`;
+      const isYellow = dt==='Work' && st && parseInt(st.start_time.substring(0,2)) >= 14; html += `<td style="padding:5px;border-bottom:1px solid var(--border);text-align:center;${isTd?'background:rgba(212,175,55,0.04);':''}"><div style="background:${bg};border:1.5px solid ${border};border-radius:8px;padding:5px 4px;font-size:${isYellow?'11px':'10px'};font-weight:800;color:${color};white-space:nowrap;">${cell}</div></td>`;
     });
     html += `</tr>`;
   });
