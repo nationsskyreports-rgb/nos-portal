@@ -32,12 +32,15 @@
   outline:none; cursor:pointer; transition:all 0.2s; text-align:center;
 }
 .shift-select:focus { border-color:var(--gold); background:var(--surface3); }
-.shift-select.is-off    { color:var(--muted); }
-.shift-select.is-work   { color:#10B981; border-color:rgba(16,185,129,0.3); background:rgba(16,185,129,0.05); }
-.shift-select.is-annual { color:#8B5CF6; border-color:rgba(139,92,246,0.3); background:rgba(139,92,246,0.05); }
-.shift-select.is-sick   { color:#EF4444; border-color:rgba(239,68,68,0.3);  background:rgba(239,68,68,0.05); }
-.shift-select.is-casual { color:#F59E0B; border-color:rgba(245,158,11,0.3); background:rgba(245,158,11,0.05); }
-.shift-select.is-ph     { color:#3B82F6; border-color:rgba(59,130,246,0.3); background:rgba(59,130,246,0.05); }
+.shift-select.is-off              { color:var(--muted); }
+.shift-select.is-work             { color:#10B981; border-color:rgba(16,185,129,0.3); background:rgba(16,185,129,0.05); }
+.shift-select.is-annual           { color:#8B5CF6; border-color:rgba(139,92,246,0.3); background:rgba(139,92,246,0.05); }
+.shift-select.is-sick             { color:#EF4444; border-color:rgba(239,68,68,0.3);  background:rgba(239,68,68,0.05); }
+.shift-select.is-casual           { color:#F59E0B; border-color:rgba(245,158,11,0.3); background:rgba(245,158,11,0.05); }
+.shift-select.is-ph               { color:#3B82F6; border-color:rgba(59,130,246,0.3); background:rgba(59,130,246,0.05); }
+.shift-select.is-shift-afternoon  { color:#3B82F6; border-color:rgba(59,130,246,0.3);  background:rgba(59,130,246,0.05); }
+.shift-select.is-shift-evening    { color:#8B5CF6; border-color:rgba(139,92,246,0.3); background:rgba(139,92,246,0.05); }
+.shift-select.is-shift-night      { color:#F59E0B; border-color:rgba(245,158,11,0.3); background:rgba(245,158,11,0.05); }
 .day-header { display:flex; flex-direction:column; align-items:center; gap:2px; }
 .day-name   { font-size:11px; font-weight:700; color:var(--text); }
 .day-date   { font-size:10px; color:var(--muted); }
@@ -415,7 +418,7 @@ async function loadScheduleGrid() {
     dates.forEach(d => {
       const key        = `${agent.id}_${d.iso}`;
       const entry      = scheduleData[key] || { day_type: 'Off', shift_type_id: null };
-      const cls        = getSelectClass(entry.day_type);
+      const cls        = getSelectClass(entry.day_type, entry.shift_type_id);
       const agentDraft = draftRequests[agent.id] || {};
       const hasReq     = agentDraft[d.iso] !== undefined;
       const reqEntry   = agentDraft[d.iso] || {};
@@ -493,15 +496,25 @@ function buildShiftOptions(dayType, shiftTypeId) {
   return opts;
 }
 
-function getSelectClass(dayType) {
-  if (dayType==='Work')   return 'is-work';
-  if (dayType==='Annual') return 'is-annual';
-  if (dayType==='Sick')   return 'is-sick';
-  if (dayType==='Casual') return 'is-casual';
-  if (dayType==='PH')     return 'is-ph';
-  return 'is-off';
-}
+function getSelectClass(dayType, shiftTypeId) {
+  if (dayType === 'Annual') return 'is-annual';
+  if (dayType === 'Sick')   return 'is-sick';
+  if (dayType === 'Casual') return 'is-casual';
+  if (dayType === 'PH')     return 'is-ph';
+  if (dayType !== 'Work')   return 'is-off';
 
+  // ── كل شيفت بلون مختلف بناءً على وقت البداية ──
+  if (!shiftTypeId) return 'is-work';
+  const st = allShiftTypes.find(s => s.id === shiftTypeId);
+  if (!st) return 'is-work';
+
+  const hour = parseInt(st.start_time.substring(0,2));
+  if (hour < 12) return 'is-work';    // Morning  → أخضر
+  if (hour < 14) return 'is-shift-afternoon'; // 12-14  → أزرق
+  if (hour < 17) return 'is-shift-evening';   // 14-17  → بنفسجي
+  return 'is-shift-night';                     // 17+    → برتقالي
+}
+  
 function onShiftChange(sel) {
   const agentId = sel.dataset.agent;
   const date    = sel.dataset.date;
@@ -510,7 +523,7 @@ function onShiftChange(sel) {
   let dayType = val, shiftTypeId = null;
   if (val.startsWith('Work__')) { dayType = 'Work'; shiftTypeId = val.split('__')[1]; }
   scheduleData[key] = { ...scheduleData[key], day_type: dayType, shift_type_id: shiftTypeId };
-  sel.className = `shift-select ${getSelectClass(dayType)}`;
+  sel.className = `shift-select ${getSelectClass(dayType, shiftTypeId)}`;
   unsaved = true;
   document.getElementById('save-btn').innerHTML = '<i class="fas fa-save"></i> Save <span style="color:var(--warning);font-size:10px;">●</span>';
 }
