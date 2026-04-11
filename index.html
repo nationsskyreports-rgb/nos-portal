@@ -580,29 +580,40 @@
   <div style="padding:16px;">
 
     <!-- Improved Filters -->
-    <div class="sch-filters-wrap">
-      <select id="sch-filter-year" class="form-input" style="width:100px;font-size:13px;font-weight:600;" onchange="filterSchWeeks()">
-        <option value="">Year</option>
-        <option value="2023">2023</option>
-        <option value="2024">2024</option>
-        <option value="2025">2025</option>
-      </select>
-      
-      <select id="sch-filter-month" class="form-input" style="width:130px;font-size:13px;font-weight:600;" onchange="filterSchWeeks()">
-        <option value="">Month</option>
-        <option value="01">January</option><option value="02">February</option>
-        <option value="03">March</option><option value="04">April</option>
-        <option value="05">May</option><option value="06">June</option>
-        <option value="07">July</option><option value="08">August</option>
-        <option value="09">September</option><option value="10">October</option><option value="11">November</option><option value="12">December</option>
-      </select>
-
-      <!-- Loader for weeks -->
-      <div id="weeks-loader" style="display:none; color:var(--primary); font-size:14px;">
-        <i class="fas fa-circle-notch fa-spin"></i> Loading weeks...
+<div class="sch-filters-wrap" style="margin-bottom:16px;">
+  <details style="width:100%;">
+    <summary style="cursor:pointer;font-size:12px;font-weight:700;color:var(--muted);padding:10px 14px;background:var(--surface2);border-radius:10px;border:1px solid var(--border);list-style:none;display:flex;align-items:center;gap:8px;">
+      <i class="fas fa-search" style="color:var(--primary);"></i> Browse Other Weeks
+    </summary>
+    <div style="padding:12px 0 0;">
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px;">
+        <select id="sch-filter-year" class="form-input" style="width:100px;font-size:13px;font-weight:600;" onchange="filterSchWeeks()">
+          <option value="">Year</option>
+          <option value="2023">2023</option>
+          <option value="2024">2024</option>
+          <option value="2025">2025</option>
+          <option value="2026">2026</option>
+        </select>
+        <select id="sch-filter-month" class="form-input" style="width:130px;font-size:13px;font-weight:600;" onchange="filterSchWeeks()">
+          <option value="">Month</option>
+          <option value="01">January</option><option value="02">February</option>
+          <option value="03">March</option><option value="04">April</option>
+          <option value="05">May</option><option value="06">June</option>
+          <option value="07">July</option><option value="08">August</option>
+          <option value="09">September</option><option value="10">October</option>
+          <option value="11">November</option><option value="12">December</option>
+        </select>
+        <div id="weeks-loader" style="display:none;color:var(--primary);font-size:14px;">
+          <i class="fas fa-circle-notch fa-spin"></i> Loading...
+        </div>
+      </div>
+      <div id="weeks-chips-wrapper" style="display:none;margin-bottom:8px;">
+        <div class="weeks-chips-container" id="weeks-list"></div>
       </div>
     </div>
-
+  </details>
+</div>
+    
 <!-- ACCORDION 1: Published Schedule -->
 <div class="sch-accordion" id="acc-published">
   <div class="sch-acc-header" onclick="toggleSchAccordion('acc-published')">
