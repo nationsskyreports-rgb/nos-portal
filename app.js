@@ -451,7 +451,7 @@ function showDashboard(res) {
 
   schShiftTypes = [];
   loadAgentSchedule();
-  renderRequests(res.userRequests || []);
+  loadMyRequests();
   globalScheduleData = res.schedule      || [];
   globalTeamData     = res.allStaffBreaks || [];
   populateSwapForm();
@@ -778,19 +778,51 @@ async function loadTeamBreaksFromSB() {
 
 
 /* ─── 11. REQUESTS RENDER ─── */
+async function loadMyRequests() {
+  if (!schMyAgentId) return;
+  try {
+    const res  = await fetch(
+      `${SB_URL_SCH}/rest/v1/requests?agent_id=eq.${schMyAgentId}&order=created_at.desc`,
+      { headers: { 'apikey': SB_KEY_SCH, 'Authorization': `Bearer ${SB_KEY_SCH}` } }
+    );
+    const data = await res.json();
+    renderRequests(data || []);
+  } catch(e) { console.error('loadMyRequests error:', e); }
+}
+
 function renderRequests(requests) {
   const container = document.getElementById('requests-list');
   if (!requests.length) { container.innerHTML = '<div class="empty-state">No previous requests found.</div>'; return; }
   container.innerHTML = '';
-  const icons = {'Missing Punch':'fa-fingerprint','Excuse':'fa-exclamation-circle','Time Off':'fa-calendar-check','Shift Swap':'fa-exchange-alt'};
+  const icons = {
+    'Missing Punch':    'fa-fingerprint',
+    'Excuse':           'fa-exclamation-circle',
+    'Time Off':         'fa-calendar-check',
+    'Shift Swap':       'fa-exchange-alt',
+    'Schedule Request': 'fa-calendar-alt',
+    'Break Change':     'fa-coffee',
+  };
   requests.forEach(req => {
     const cls = req.status === 'Approved' ? 'status-approved' : req.status === 'Rejected' ? 'status-rejected' : 'status-pending';
+    let details = '';
+    try {
+      const d = typeof req.details === 'string' ? JSON.parse(req.details) : req.details;
+      if (req.type === 'Time Off')         details = `${d.request_type||''} · ${d.from_date||''} → ${d.to_date||''}`;
+      else if (req.type === 'Shift Swap')  details = `${d.date||''} · مع ${d.colleague||''}`;
+      else if (req.type === 'Missing Punch') details = `التاريخ: ${d.date||''}`;
+      else if (req.type === 'Schedule Request') details = `أسبوع: ${d.week_start||''}`;
+      else details = req.details || '';
+    } catch(e) { details = ''; }
+
+    const date = req.created_at ? new Date(req.created_at).toLocaleDateString('en-GB',{day:'2-digit',month:'short'}) : '';
+    const time = req.created_at ? new Date(req.created_at).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'}) : '';
+
     const div = document.createElement('div');
     div.className = 'req-card';
     div.innerHTML = `<div style="flex:1">
       <div class="req-type"><i class="fas ${icons[req.type]||'fa-file'}" style="margin-right:6px"></i>${req.type}</div>
-      <div class="req-detail">${req.details||''}</div>
-      <div class="req-date"><i class="fas fa-calendar" style="margin-right:4px"></i>${req.date}${req.time?' - '+req.time:''}</div>
+      <div class="req-detail">${details}</div>
+      <div class="req-date"><i class="fas fa-calendar" style="margin-right:4px"></i>${date} - ${time}</div>
     </div><div class="req-status ${cls}">${req.status}</div>`;
     container.appendChild(div);
   });
@@ -1263,7 +1295,7 @@ function cancelTimeOffForm() {
   if (msgEl) msgEl.innerText = '';
 }
 
-function submitTimeOffRequest() {
+async function submitTimeOffRequest() {
   const type  = selectedTimeOffType;
   const from  = document.getElementById('timeOffFromDate').value;
   const to    = document.getElementById('timeOffToDate').value;
@@ -1271,20 +1303,48 @@ function submitTimeOffRequest() {
   const name  = document.getElementById('user-name').innerText.trim();
   const msg   = document.getElementById('time-off-msg');
   const btn   = document.getElementById('submitTimeOffBtn');
-  if (!type)  { msg.style.color='var(--danger)'; msg.innerText='Please select a leave type first!'; return; }
-  if (!from || !to) { msg.style.color='var(--danger)'; msg.innerText='Please select both dates!'; return; }
-  /* FIX-5 */ setButtonLoading(btn, true, 'Submitting...');
-  gasRun('submitTimeOffRequest', name, type, from, to, notes).then(res => {
-    /* FIX-5 */ setButtonLoading(btn, false, '✈️ Submit Request');
-    if (res.status === 'success') {
-      showToast('✅', type+' Request Submitted!', 'Pending review by manager.', 'success', 6000);
-      setTimeout(() => { cancelTimeOffForm(); refreshData(); }, 2000);
-    } else {
-      msg.style.color = 'var(--danger)'; msg.innerText = res.msg || '';
-    }
-  });
-}
 
+  if (!type)        { msg.style.color='var(--danger)'; msg.innerText='Please select a leave type first!'; return; }
+  if (!from || !to) { msg.style.color='var(--danger)'; msg.innerText='Please select both dates!'; return; }
+  if (!schMyAgentId){ msg.style.color='var(--danger)'; msg.innerText='Agent not found — please refresh!'; return; }
+
+  setButtonLoading(btn, true, 'Submitting...');
+
+  try {
+    const res = await fetch(`${SB_URL_SCH}/rest/v1/requests`, {
+      method:  'POST',
+      headers: {
+        'apikey':        SB_KEY_SCH,
+        'Authorization': `Bearer ${SB_KEY_SCH}`,
+        'Content-Type':  'application/json',
+        'Prefer':        'return=minimal'
+      },
+      body: JSON.stringify({
+        agent_id:   schMyAgentId,
+        agent_name: name,
+        type:       'Time Off',
+        status:     'Pending',
+        details:    JSON.stringify({ request_type: type, from_date: from, to_date: to, notes: notes || '' }),
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      })
+    });
+
+    setButtonLoading(btn, false, '✈️ Submit Request');
+
+    if (res.ok) {
+      showToast('✅', type+' Request Submitted!', 'Pending review by manager.', 'success', 6000);
+      setTimeout(() => { cancelTimeOffForm(); }, 2000);
+    } else {
+      msg.style.color = 'var(--danger)';
+      msg.innerText   = '❌ Failed. Try again.';
+    }
+  } catch(e) {
+    setButtonLoading(btn, false, '✈️ Submit Request');
+    msg.style.color = 'var(--danger)';
+    msg.innerText   = '❌ Connection error!';
+  }
+}
 
 /* ─── 16. CALL LOG FORM ─── */
 function onAgentSelect() {}
@@ -1741,6 +1801,7 @@ function submitShiftSwap() {
 
   if (!date)      { customAlert('Error', 'Please select a working day!'); return; }
   if (!colleague) { customAlert('Error', 'Please select a colleague!'); return; }
+  if (!schMyAgentId) { customAlert('Error', 'Agent not found — please refresh!'); return; }
   if (yourShift  === 'N/A' || yourShift  === 'Select a day')        { customAlert('Error', 'No valid shift found for you!'); return; }
   if (theirShift === 'No shift on this day' || theirShift === 'Select a colleague') { customAlert('Error', "Colleague has no shift on this day!"); return; }
 
@@ -1750,32 +1811,51 @@ function submitShiftSwap() {
     return;
   }
 
-  customConfirm('Confirm Swap', `Swap your shift (${yourShift}) with ${colleague} (${theirShift}) on ${date}?`).then(ok => {
+  customConfirm('Confirm Swap', `Swap your shift (${yourShift}) with ${colleague} (${theirShift}) on ${date}?`).then(async ok => {
     if (!ok) return;
-    /* FIX-5 */ setButtonLoading(btn, true, 'Submitting...');
-    gasRun('submitShiftSwapRequest', name, date, yourShift, colleague, theirShift, notes).then(res => {
-      /* FIX-5 */ setButtonLoading(btn, false, '🔄 Submit Shift Swap Request');
-      if (res.status === 'success') {
-        msg.style.color = '#059669'; msg.innerText = 'Request submitted! Pending admin approval.';
-        showToast('⏳','Request Submitted & Pending!','Your swap request is now waiting for admin approval.','warn',7000);
-        silentRefreshRequests();
-        document.getElementById('swap-day-select').value      = '';
-        document.getElementById('swap-colleague-select').value= '';
-        document.getElementById('swap-notes').value           = '';
+    setButtonLoading(btn, true, 'Submitting...');
+    try {
+      const res = await fetch(`${SB_URL_SCH}/rest/v1/requests`, {
+        method:  'POST',
+        headers: {
+          'apikey':        SB_KEY_SCH,
+          'Authorization': `Bearer ${SB_KEY_SCH}`,
+          'Content-Type':  'application/json',
+          'Prefer':        'return=minimal'
+        },
+        body: JSON.stringify({
+          agent_id:   schMyAgentId,
+          agent_name: name,
+          type:       'Shift Swap',
+          status:     'Pending',
+          details:    JSON.stringify({ date, your_shift: yourShift, colleague, their_shift: theirShift, notes: notes || '' }),
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        })
+      });
+
+      setButtonLoading(btn, false, '🔄 Submit Shift Swap Request');
+
+      if (res.ok) {
+        msg.style.color = '#059669';
+        msg.innerText   = 'Request submitted! Pending admin approval.';
+        showToast('⏳','Request Submitted!','Your swap request is now waiting for admin approval.','warn',7000);
+        document.getElementById('swap-day-select').value       = '';
+        document.getElementById('swap-colleague-select').value = '';
+        document.getElementById('swap-notes').value            = '';
         resetSwapDisplay();
         setTimeout(() => msg.innerText = '', 6000);
       } else {
-        msg.style.color = 'var(--danger)'; msg.innerText = res.msg || 'Failed to submit.';
-        setTimeout(() => msg.innerText = '', 5000);
+        msg.style.color = 'var(--danger)';
+        msg.innerText   = '❌ Failed. Try again.';
       }
-    }).catch(() => {
-      /* FIX-5 */ setButtonLoading(btn, false, '🔄 Submit Shift Swap Request');
-      msg.style.color = 'var(--danger)'; msg.innerText = 'Connection error!';
-      setTimeout(() => msg.innerText = '', 5000);
-    });
+    } catch(e) {
+      setButtonLoading(btn, false, '🔄 Submit Shift Swap Request');
+      msg.style.color = 'var(--danger)';
+      msg.innerText   = '❌ Connection error!';
+    }
   });
 }
-
 function syncKnownSwaps() {
   document.querySelectorAll('#requests-list .req-card').forEach(card => {
     const typeEl   = card.querySelector('.req-type');
@@ -1814,12 +1894,8 @@ function startSwapPolling() {
 }
 
 function silentRefreshRequests() {
-  if (!sessionAgent) return;
-  gasRun('processLogin', sessionAgent, 'REFRESH_MODE').then(res => {
-    if (res && res.status === 'success' && res.userRequests) renderRequests(res.userRequests);
-  }).catch(() => {});
+  loadMyRequests();
 }
-
 
 /* ─── 20. TOAST NOTIFICATIONS ─── */
 function showToast(icon, title, sub, type, duration) {
@@ -1875,27 +1951,49 @@ function showAnnualDetails() {
 
 
 /* ─── 22. MISSING PUNCH ─── */
-function sendMissingPunch() {
+async function sendMissingPunch() {
   const name             = document.getElementById('user-name').innerText.trim();
   const missingPunchDate = document.getElementById('missingPunchDate').value;
   if (!missingPunchDate) { customAlert('Error', 'Please select a date for the missing punch.'); return; }
-  customConfirm('Confirm', 'Report Missing Punch for ' + missingPunchDate + '?').then(r => {
+  if (!schMyAgentId)     { customAlert('Error', 'Agent not found — please refresh!'); return; }
+
+  customConfirm('Confirm', 'Report Missing Punch for ' + missingPunchDate + '?').then(async r => {
     if (!r) return;
     const mpBtn = document.querySelector('[onclick="sendMissingPunch()"]');
     if (mpBtn) setButtonLoading(mpBtn, true, 'Sending...');
-    gasRun('sendMissingPunchReport', name, missingPunchDate).then(res => {
+    try {
+      const res = await fetch(`${SB_URL_SCH}/rest/v1/requests`, {
+        method:  'POST',
+        headers: {
+          'apikey':        SB_KEY_SCH,
+          'Authorization': `Bearer ${SB_KEY_SCH}`,
+          'Content-Type':  'application/json',
+          'Prefer':        'return=minimal'
+        },
+        body: JSON.stringify({
+          agent_id:   schMyAgentId,
+          agent_name: name,
+          type:       'Missing Punch',
+          status:     'Pending',
+          details:    JSON.stringify({ date: missingPunchDate }),
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        })
+      });
+
       if (mpBtn) setButtonLoading(mpBtn, false, '⚠️ Report Punch');
-      if (res.status === 'success') {
+
+      if (res.ok) {
         showToast('⚠️','Missing Punch Reported!','Your report for '+missingPunchDate+' has been sent.','warn',6000);
-        refreshData();
-      } else customAlert('Status', res.msg);
-    }).catch(() => {
+      } else {
+        customAlert('Error', 'Failed. Try again.');
+      }
+    } catch(e) {
       if (mpBtn) setButtonLoading(mpBtn, false, '⚠️ Report Punch');
-      customAlert('Error', 'Something went wrong. Please try again.');
-    });
+      customAlert('Error', 'Connection error!');
+    }
   });
 }
-
 
 /* ─── 23. NAVIGATION & TABS ─── */
 function switchTab(id, btn, idx) {
