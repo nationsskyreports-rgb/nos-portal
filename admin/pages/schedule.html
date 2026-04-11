@@ -53,6 +53,72 @@
 .week-tab .wk-status { font-size:9px; padding:2px 7px; border-radius:20px; }
 .count-badge { display:inline-flex; align-items:center; justify-content:center; min-width:20px; height:20px; padding:0 6px; border-radius:10px; font-size:10px; font-weight:700; background:rgba(212,175,55,0.1); color:var(--gold); }
 .day-count-item { font-size:9px; font-weight:700; padding:2px 6px; border-radius:6px; }
+
+/* ── Draft Requests Banner ── */
+.requests-banner {
+  background: rgba(212,175,55,0.04);
+  border: 1px solid rgba(212,175,55,0.2);
+  border-radius: 12px;
+  padding: 12px 16px;
+  margin-bottom: 14px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.req-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  background: rgba(16,185,129,0.1);
+  border: 1px solid rgba(16,185,129,0.2);
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #10B981;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.req-pill:hover { background: rgba(16,185,129,0.2); }
+.req-pill-pending {
+  background: rgba(245,158,11,0.1);
+  border-color: rgba(245,158,11,0.2);
+  color: #F59E0B;
+}
+
+/* ── Cell with request highlight ── */
+.has-request {
+  position: relative;
+}
+.has-request::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 6px;
+  height: 6px;
+  background: #10B981;
+  border-radius: 50%;
+}
+.req-tooltip {
+  display: none;
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 6px 10px;
+  font-size: 11px;
+  color: #10B981;
+  font-weight: 700;
+  white-space: nowrap;
+  z-index: 100;
+  box-shadow: 0 4px 14px rgba(0,0,0,0.3);
+}
+.has-request:hover .req-tooltip { display: block; }
 </style>
 </head>
 <body>
@@ -108,11 +174,25 @@
           <div class="section-title"><i class="fas fa-table" style="color:var(--gold)"></i> <span id="sched-week-title">Week Schedule</span></div>
           <div style="display:flex;gap:8px;align-items:center;">
             <span id="sched-status-badge"></span>
+            <button class="btn btn-ghost btn-sm" onclick="copyScheduleAsEmoji()" id="copy-btn">
+              <i class="fas fa-copy"></i> Copy
+            </button>
             <button class="btn btn-ghost btn-sm" onclick="saveSchedule()" id="save-btn"><i class="fas fa-save"></i> Save</button>
             <button class="btn btn-success btn-sm" onclick="publishWeek()" id="publish-btn"><i class="fas fa-globe"></i> Publish</button>
             <button class="btn btn-danger btn-sm" onclick="deleteWeek()" id="delete-btn"><i class="fas fa-trash"></i> Delete</button>
           </div>
         </div>
+
+        <!-- Draft Requests Banner -->
+        <div id="requests-banner" style="display:none; padding:12px 16px; border-bottom:1px solid var(--border);">
+          <div class="requests-banner">
+            <i class="fas fa-inbox" style="color:var(--gold);font-size:16px;flex-shrink:0;"></i>
+            <span style="font-size:13px;font-weight:700;color:var(--text);">طلبات الموظفين:</span>
+            <div id="requests-pills" style="display:flex;gap:6px;flex-wrap:wrap;"></div>
+            <span id="requests-empty" style="font-size:12px;color:var(--muted);display:none;">لا توجد طلبات بعد</span>
+          </div>
+        </div>
+
         <div style="padding:10px 16px;border-bottom:1px solid var(--border);display:flex;gap:12px;flex-wrap:wrap;" id="shift-summary"></div>
         <div class="section-body no-pad">
           <div class="table-wrap"><div id="schedule-grid"></div></div>
@@ -167,26 +247,57 @@ if (session) {
   document.getElementById('admin-name').innerText = session.username||'Admin';
   document.getElementById('admin-avatar').innerText = initials(session.username||'Admin');
 }
+
 let allWeeks      = [];
 let allAgents     = [];
 let allShiftTypes = [];
 let currentWeek   = null;
 let scheduleData  = {};
 let unsaved       = false;
+let draftRequests = {}; // { agentId: { draft: {date: {day_type, shift_type_id}} } }
 
 const TODAY = new Date().toISOString().split('T')[0];
 
+// ── Emoji Palette للشيفتات ──
+const MORNING_EMOJI = '🟢'; // Morning (قبل 12:00)
+const SHIFT_PALETTE = ['🔵','🟠','🟣','🔴','🟡','🩵','🟤','⚫'];
+const shiftEmojiMap = {}; // { shiftKey: emoji }
+let paletteIndex = 0;
+
+function getShiftEmoji(startTime) {
+  if (!startTime) return '⭕';
+  const hour = parseInt(startTime.substring(0,2));
+  if (hour < 12) return MORNING_EMOJI;
+  const key = startTime.substring(0,5);
+  if (!shiftEmojiMap[key]) {
+    shiftEmojiMap[key] = SHIFT_PALETTE[paletteIndex % SHIFT_PALETTE.length];
+    paletteIndex++;
+  }
+  return shiftEmojiMap[key];
+}
+
+function getDayTypeEmoji(dayType) {
+  const map = { Off:'⭕', Annual:'🏖️', Sick:'🤒', Casual:'☕', PH:'🎉', Task:'📋' };
+  return map[dayType] || '⭕';
+}
+
+const DAY_NAMES_AR = { Sun:'الأحد', Mon:'الاثنين', Tue:'الثلاثاء', Wed:'الأربعاء', Thu:'الخميس', Fri:'الجمعة', Sat:'السبت' };
+
+// ── Load All ──
 async function loadAll() {
   await Promise.all([loadAgents(), loadShiftTypes(), loadWeeks()]);
 }
+
 async function loadAgents() {
   const { data } = await db.from('agents').select('id,formal_name,xcally_id').eq('status','Active').order('formal_name');
   allAgents = data || [];
 }
+
 async function loadShiftTypes() {
   const { data } = await db.from('shift_types').select('*').eq('is_active',true).order('start_time');
   allShiftTypes = data || [];
 }
+
 async function loadWeeks() {
   const { data } = await db.from('schedule_weeks').select('*').order('week_start', { ascending: false });
   allWeeks = data || [];
@@ -207,8 +318,8 @@ function filterWeekTabs() {
   const year  = document.getElementById('filter-year').value;
   const month = document.getElementById('filter-month').value;
   const filtered = allWeeks.filter(w => {
-    if (year  && !w.week_start.startsWith(year))            return false;
-    if (month && w.week_start.substring(5,7) !== month)     return false;
+    if (year  && !w.week_start.startsWith(year))        return false;
+    if (month && w.week_start.substring(5,7) !== month) return false;
     return true;
   });
   const weekEl = document.getElementById('filter-week');
@@ -240,13 +351,88 @@ async function selectWeek(weekId) {
   await loadScheduleGrid();
 }
 
+// ── Load Draft Requests ──
+async function loadDraftRequests() {
+  draftRequests = {};
+  if (!currentWeek) return;
+  try {
+    const { data } = await db.from('requests')
+      .select('*')
+      .eq('type', 'Schedule Request')
+      .eq('status', 'Pending');
+    const banner    = document.getElementById('requests-banner');
+    const pillsEl   = document.getElementById('requests-pills');
+    const emptyEl   = document.getElementById('requests-empty');
+
+    // فقط الـ requests اللي للأسبوع ده
+    const weekReqs = (data||[]).filter(r => {
+      try { const det = JSON.parse(r.details); return det.week_id === currentWeek.id; } catch(e) { return false; }
+    });
+
+    if (currentWeek.status === 'Draft' || currentWeek.status === 'Open') {
+      banner.style.display = 'block';
+    } else {
+      banner.style.display = 'none';
+      return;
+    }
+
+    if (!weekReqs.length) {
+      pillsEl.innerHTML = '';
+      emptyEl.style.display = 'block';
+      return;
+    }
+
+    emptyEl.style.display = 'none';
+    pillsEl.innerHTML = '';
+
+    weekReqs.forEach(req => {
+      try {
+        const det     = JSON.parse(req.details);
+        const agent   = allAgents.find(a => a.id === req.agent_id);
+        const name    = agent?.formal_name || req.agent_name || 'Unknown';
+        draftRequests[req.agent_id] = det.draft || {};
+
+        const pill = document.createElement('div');
+        pill.className = 'req-pill';
+        pill.innerHTML = `<i class="fas fa-user" style="font-size:10px;"></i> ${name}`;
+        pill.title = 'اضغط لتطبيق طلب ' + name;
+        pill.onclick = () => applyAgentRequest(req.agent_id, det.draft || {}, name);
+        pillsEl.appendChild(pill);
+      } catch(e) {}
+    });
+  } catch(e) { console.error(e); }
+}
+
+// ── Apply Agent Request to Grid ──
+function applyAgentRequest(agentId, draft, agentName) {
+  let applied = 0;
+  Object.entries(draft).forEach(([date, entry]) => {
+    const val = entry.day_type === 'Work' && entry.shift_type_id
+      ? `Work__${entry.shift_type_id}`
+      : entry.day_type;
+    const sel = document.querySelector(`select[data-agent="${agentId}"][data-date="${date}"]`);
+    if (sel) { sel.value = val; onShiftChange(sel); applied++; }
+  });
+  if (applied) showToast('✅ تم تطبيق طلب ' + agentName + ' — اضغط Save', 'success');
+  else showToast('لم يتم تطبيق أي تغيير', 'warning');
+}
+
+// ── Load Schedule Grid ──
 async function loadScheduleGrid() {
   if (!currentWeek) return;
+  // Reset emoji map لكل أسبوع
+  Object.keys(shiftEmojiMap).forEach(k => delete shiftEmojiMap[k]);
+  paletteIndex = 0;
+
   const gridEl = document.getElementById('schedule-grid');
   gridEl.innerHTML = `<div class="loading-wrap"><div class="spinner"></div></div>`;
-  document.getElementById('sched-week-title').innerText = `${formatDateFull(currentWeek.week_start)}  →  ${formatDateFull(currentWeek.week_end)}`;
+
+  document.getElementById('sched-week-title').innerText =
+    `${formatDateFull(currentWeek.week_start)}  →  ${formatDateFull(currentWeek.week_end)}`;
+
   const statusColor = { Draft:'badge-muted', Open:'badge-warning', Published:'badge-success', Closed:'badge-danger' };
-  document.getElementById('sched-status-badge').innerHTML = `<span class="badge ${statusColor[currentWeek.status]||'badge-muted'}">${currentWeek.status}</span>`;
+  document.getElementById('sched-status-badge').innerHTML =
+    `<span class="badge ${statusColor[currentWeek.status]||'badge-muted'}">${currentWeek.status}</span>`;
 
   const { data: existing } = await db.from('schedule').select('*').eq('week_id', currentWeek.id);
   scheduleData = {};
@@ -262,7 +448,11 @@ async function loadScheduleGrid() {
     scheduleData[`${s.agent_id}_${s.shift_date}`] = { id: s.id, day_type: s.day_type, shift_type_id: shiftTypeId };
   });
 
+  // Pre-build emoji map from all shift types
+  allShiftTypes.forEach(st => getShiftEmoji(st.start_time));
+
   const dates = getWeekDates(currentWeek.week_start, currentWeek.week_end);
+
   let html = `<table class="sched-table"><thead><tr><th class="agent-col">Agent</th>`;
   dates.forEach(d => {
     const isToday = d.iso === TODAY;
@@ -276,7 +466,24 @@ async function loadScheduleGrid() {
       const key   = `${agent.id}_${d.iso}`;
       const entry = scheduleData[key] || { day_type: 'Off', shift_type_id: null };
       const cls   = getSelectClass(entry.day_type);
-      html += `<td><select class="shift-select ${cls}" data-agent="${agent.id}" data-date="${d.iso}" onchange="onShiftChange(this)">${buildShiftOptions(entry.day_type, entry.shift_type_id)}</select></td>`;
+
+      // تحقق لو في request لهذا الـ agent في هذا اليوم
+      const agentDraft = draftRequests[agent.id] || {};
+      const hasReq     = agentDraft[d.iso] !== undefined;
+      const reqEntry   = agentDraft[d.iso] || {};
+      const reqLabel   = hasReq
+        ? (reqEntry.day_type === 'Work' && reqEntry.shift_type_id
+            ? (() => { const st = allShiftTypes.find(s => s.id === reqEntry.shift_type_id); return st ? st.start_time.substring(0,5)+'-'+st.end_time.substring(0,5) : 'Work'; })()
+            : reqEntry.day_type)
+        : '';
+
+      html += `<td style="position:relative;">
+        ${hasReq ? `<div style="position:absolute;top:2px;right:2px;width:7px;height:7px;background:#10B981;border-radius:50%;z-index:1;" title="طلب: ${reqLabel}"></div>` : ''}
+        <select class="shift-select ${cls}" data-agent="${agent.id}" data-date="${d.iso}" onchange="onShiftChange(this)">
+          ${buildShiftOptions(entry.day_type, entry.shift_type_id)}
+        </select>
+        ${hasReq ? `<div style="font-size:9px;color:#10B981;font-weight:700;margin-top:2px;text-align:center;">← ${reqLabel}</div>` : ''}
+      </td>`;
     });
     html += `</tr>`;
   });
@@ -287,10 +494,90 @@ async function loadScheduleGrid() {
     html += `<td style="text-align:center;padding:8px 4px;"><span style="color:#10B981;font-weight:800;font-size:13px;">${working}</span><span style="color:var(--muted);font-size:10px;"> working</span></td>`;
   });
   html += `</tr></tbody></table>`;
+
   gridEl.innerHTML = html;
   updateSummary();
+
+  // جيب الـ draft requests
+  await loadDraftRequests();
 }
 
+// ── COPY SCHEDULE AS EMOJI ──
+function copyScheduleAsEmoji() {
+  if (!currentWeek) { showToast('Select a week first', 'error'); return; }
+
+  const dates  = getWeekDates(currentWeek.week_start, currentWeek.week_end);
+  const status = currentWeek.status;
+
+  let text = `📅 *جدول الأسبوع: ${formatDateShort(currentWeek.week_start)} ← ${formatDateShort(currentWeek.week_end)}*`;
+  if (status === 'Draft') text += ' _(Draft)_';
+  text += '\n━━━━━━━━━━━━━━━━━━━━━\n';
+
+  allAgents.forEach(agent => {
+    const dayParts = dates.map(d => {
+      const key   = `${agent.id}_${d.iso}`;
+      const entry = scheduleData[key] || { day_type: 'Off', shift_type_id: null };
+      const dayAr = DAY_NAMES_AR[d.dayName] || d.dayName;
+
+      if (entry.day_type === 'Work') {
+        const st = allShiftTypes.find(s => s.id === entry.shift_type_id);
+        if (st) {
+          const emoji = getShiftEmoji(st.start_time);
+          const time  = st.start_time.substring(0,5) + '-' + st.end_time.substring(0,5);
+          return `${dayAr}: ${emoji} ${time}`;
+        }
+        return `${dayAr}: 🟢 Work`;
+      }
+
+      const emoji = getDayTypeEmoji(entry.day_type);
+      const label = entry.day_type === 'Off' ? 'Off' :
+                    entry.day_type === 'Annual' ? 'إجازة' :
+                    entry.day_type === 'Sick'   ? 'مرضية' :
+                    entry.day_type === 'Casual' ? 'عارضة' :
+                    entry.day_type === 'PH'     ? 'PH' :
+                    entry.day_type === 'Task'   ? 'Task' : 'Off';
+      return `${dayAr}: ${emoji} ${label}`;
+    });
+
+    text += `\n👤 *${agent.formal_name}*\n`;
+    text += dayParts.join(' | ');
+    text += '\n━━━━━━━━━━━━━━━━━━━━━\n';
+  });
+
+  // الـ legend للشيفتات
+  const usedShifts = allShiftTypes.filter(st => {
+    return Object.values(scheduleData).some(e => e.day_type === 'Work' && e.shift_type_id === st.id);
+  });
+
+  if (usedShifts.length) {
+    text += '\n*مفتاح الشيفتات:*\n';
+    usedShifts.forEach(st => {
+      const emoji = getShiftEmoji(st.start_time);
+      text += `${emoji} ${st.start_time.substring(0,5)}-${st.end_time.substring(0,5)} (${st.name})\n`;
+    });
+    text += '⭕ Off | 🏖️ إجازة سنوية | 🤒 مرضية | ☕ عارضة | 🎉 PH';
+  }
+
+  navigator.clipboard.writeText(text).then(() => {
+    showToast('✅ تم نسخ الجدول!', 'success');
+    const btn = document.getElementById('copy-btn');
+    if (btn) {
+      btn.innerHTML = '<i class="fas fa-check"></i> Copied!';
+      setTimeout(() => { btn.innerHTML = '<i class="fas fa-copy"></i> Copy'; }, 2500);
+    }
+  }).catch(() => {
+    // fallback
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+    showToast('✅ تم نسخ الجدول!', 'success');
+  });
+}
+
+// ── Build Shift Options ──
 function buildShiftOptions(dayType, shiftTypeId) {
   let opts = `<option value="Off" ${dayType==='Off'?'selected':''}>— Off —</option>`;
   allShiftTypes.forEach(st => {
@@ -363,9 +650,11 @@ async function publishWeek() {
       showToast('Week published & breaks generated!', 'success');
       await loadWeeks(); renderWeekTabs();
       document.getElementById('sched-status-badge').innerHTML = '<span class="badge badge-success">Published</span>';
+      document.getElementById('requests-banner').style.display = 'none';
     } catch(e) { showToast('Failed: ' + e.message, 'error'); }
   });
 }
+
 async function updateAnnualLeave() {
   const year      = new Date(currentWeek.week_start).getFullYear();
   const yearStart = year + '-01-01';
@@ -378,9 +667,7 @@ async function updateAnnualLeave() {
     .lte('shift_date', weekEnd);
 
   const cols = ['jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec'];
-
-  const { data: annualRecords } = await db.from('annual_leave')
-    .select('*').eq('year', year);
+  const { data: annualRecords } = await db.from('annual_leave').select('*').eq('year', year);
 
   const map = {};
   (leaves || []).forEach(l => {
@@ -393,7 +680,7 @@ async function updateAnnualLeave() {
     const agentMonths  = map[agent.id] || {};
     const annualRecord = (annualRecords || []).find(a => a.agent_id === agent.id);
 
-    // ✅ updates اتعرف الأول قبل أي استخدام
+    // ✅ updates اتعرف الأول
     const updates = {};
     cols.forEach(m => { updates['used_' + m] = agentMonths[m] || 0; });
     updates.total_used = cols.reduce((s, m) => s + (agentMonths[m] || 0), 0);
@@ -415,21 +702,16 @@ async function updateAnnualLeave() {
 
     updates.remaining  = (annualRecord.entitlement + annualRecord.carry_over) - updates.total_used;
     updates.updated_at = new Date().toISOString();
-
-    await db.from('annual_leave')
-      .update(updates)
-      .eq('agent_id', agent.id)
-      .eq('year', year);
+    await db.from('annual_leave').update(updates).eq('agent_id', agent.id).eq('year', year);
   }
 
   showToast('Leave balance updated! ✅', 'success');
 }
+
 // ── AUTO GENERATE BREAKS ──
 async function autoGenerateBreaks() {
   const dates = getWeekDates(currentWeek.week_start, currentWeek.week_end);
-
   for (const d of dates) {
-    // جمع كل الـ agents الشغالين في اليوم ده
     const schedules = [];
     allAgents.forEach(agent => {
       const key   = agent.id + '_' + d.iso;
@@ -437,19 +719,10 @@ async function autoGenerateBreaks() {
       if (!entry || entry.day_type !== 'Work') return;
       const shiftType = allShiftTypes.find(st => st.id === entry.shift_type_id);
       if (!shiftType) return;
-      schedules.push({
-        agent_id:   agent.id,
-        shift_types: {
-          start_time: shiftType.start_time,
-          end_time:   shiftType.end_time,
-        }
-      });
+      schedules.push({ agent_id: agent.id, shift_types: { start_time: shiftType.start_time, end_time: shiftType.end_time } });
     });
-
     if (!schedules.length) continue;
-
     const upserts = calculateBreaks(schedules, d.iso);
-
     if (upserts.length) {
       const { error } = await db.from('breaks').upsert(upserts, { onConflict: 'agent_id,break_date' });
       if (error) console.error('Break save error:', error);
@@ -457,49 +730,31 @@ async function autoGenerateBreaks() {
   }
 }
 
-// ── CORE BREAK CALCULATION (shared logic) ──
 function calculateBreaks(schedules, date) {
-  const agents = schedules
-    .filter(s => s.shift_types)
-    .map(s => ({
-      agent_id:   s.agent_id,
-      start_time: s.shift_types.start_time,
-      end_time:   s.shift_types.end_time,
-      startMins:  timeToMins(s.shift_types.start_time),
-      endMins:    timeToMins(s.shift_types.end_time),
-    }));
-
-  // رتب بوقت البداية
+  const agents = schedules.filter(s => s.shift_types).map(s => ({
+    agent_id:   s.agent_id,
+    start_time: s.shift_types.start_time,
+    end_time:   s.shift_types.end_time,
+    startMins:  timeToMins(s.shift_types.start_time),
+    endMins:    timeToMins(s.shift_types.end_time),
+  }));
   agents.sort((a, b) => a.startMins - b.startMins);
-
-  // global used slots لكل نوع بريك
   const usedBreak1 = new Set();
   const usedLunch  = new Set();
   const usedBreak2 = new Set();
-
   const upserts = [];
-
   agents.forEach(agent => {
-    const noBreakStart = agent.startMins + 60;
-    const noBreakEnd   = agent.endMins   - 60;
+    const noBreakStart  = agent.startMins + 60;
+    const noBreakEnd    = agent.endMins   - 60;
     const availableMins = noBreakEnd - noBreakStart;
     const windowThird   = Math.floor(availableMins / 3);
-
-    // الأوقات المثالية بناءً على شيفت الـ agent
-    const idealBreak1 = roundToQuarter(noBreakStart + Math.floor(windowThird * 0.3));
-    const idealLunch  = roundToQuarter(noBreakStart + windowThird + Math.floor(windowThird * 0.3));
-    const idealBreak2 = roundToQuarter(noBreakStart + windowThird * 2 + Math.floor(windowThird * 0.3));
-
-    // دور على أقرب slot متاح جوه window الشيفت
+    const idealBreak1   = roundToQuarter(noBreakStart + Math.floor(windowThird * 0.3));
+    const idealLunch    = roundToQuarter(noBreakStart + windowThird + Math.floor(windowThird * 0.3));
+    const idealBreak2   = roundToQuarter(noBreakStart + windowThird * 2 + Math.floor(windowThird * 0.3));
     const b1 = findSlot(idealBreak1, noBreakStart, noBreakEnd - 15, usedBreak1);
     const ln = findSlot(idealLunch,  noBreakStart, noBreakEnd - 30, usedLunch);
     const b2 = findSlot(idealBreak2, noBreakStart, noBreakEnd - 15, usedBreak2);
-
-    // احجز الـ slots
-    usedBreak1.add(b1);
-    usedLunch.add(ln);
-    usedBreak2.add(b2);
-
+    usedBreak1.add(b1); usedLunch.add(ln); usedBreak2.add(b2);
     upserts.push({
       agent_id:   agent.agent_id,
       break_date: date,
@@ -510,11 +765,9 @@ function calculateBreaks(schedules, date) {
       updated_at: new Date().toISOString(),
     });
   });
-
   return upserts;
 }
 
-// ── TIME HELPERS ──
 function timeToMins(t) { if(!t)return 0; const p=t.substring(0,5).split(':'); return (+p[0])*60+(+p[1]); }
 function minsToTime(m) { const h=Math.floor(m/60).toString().padStart(2,'0'); const mn=(m%60).toString().padStart(2,'0'); return h+':'+mn+':00'; }
 function roundToQuarter(mins) { return Math.round(mins / 15) * 15; }
@@ -583,9 +836,9 @@ function autoSetEnd() {
 }
 
 async function createWeek() {
-  const start = document.getElementById('nw-start').value;
-  const end   = document.getElementById('nw-end').value;
-  const note  = document.getElementById('nw-note').value.trim();
+  const start  = document.getElementById('nw-start').value;
+  const end    = document.getElementById('nw-end').value;
+  const note   = document.getElementById('nw-note').value.trim();
   const status = document.getElementById('nw-status').value;
   if (!start || !end) { showToast('Please select start and end dates', 'error'); return; }
   if (start > end)    { showToast('Start date must be before end date', 'error'); return; }
@@ -624,7 +877,7 @@ function renderShiftTypeRow(st) {
 
 let newShiftCount = 0;
 function addShiftTypeRow() {
-  const id = `new_${++newShiftCount}`;
+  const id  = `new_${++newShiftCount}`;
   const div = document.createElement('div');
   div.className = 'form-grid form-grid-3'; div.style.marginBottom = '10px'; div.dataset.id = id;
   div.innerHTML = `
