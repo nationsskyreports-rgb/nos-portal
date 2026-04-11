@@ -284,18 +284,27 @@ async function approveExcuse(id, agentId, date) {
   }
 
   // Check shift from schedule
-  const { data: sched } = await db.from('schedule')
-    .select('day_type, shift_types(name,start_time,end_time)')
-    .eq('agent_id', agentId).eq('shift_date', date).single();
+const { data: sched, error: schedError } = await db.from('schedule')
+  .select('day_type, shift_types(name,start_time,end_time)')
+  .eq('agent_id', agentId).eq('shift_date', date)
+  .maybeSingle(); // ✅ بدل single — مش بيثرو error لو مفيش نتيجة
 
-  if (sched) {
-    const dayType = sched.day_type;
-    if (['Off','Annual','Sick','Casual','PH'].includes(dayType)) {
-      showToast('Cannot approve — agent is '+dayType+' on this day!', 'error');
-      return;
-    }
-  }
+if (schedError) {
+  showToast('Failed to check schedule: ' + schedError.message, 'error');
+  return;
+}
 
+if (!sched) {
+  showToast('Cannot approve — agent has no schedule on this day!', 'error');
+  return;
+}
+
+const dayType = sched.day_type;
+if (['Off','Annual','Sick','Casual','PH'].includes(dayType)) {
+  showToast('Cannot approve — agent is ' + dayType + ' on this day!', 'error');
+  return;
+}
+  
   try {
     await db.from('excuses').update({
       status:'Approved', updated_at:new Date().toISOString()
