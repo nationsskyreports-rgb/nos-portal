@@ -415,24 +415,45 @@ async function addExcuse() {
     showToast('Agent already used maximum excuses this month!','error'); return;
   }
 
+  // ✅ تحقق من الـ schedule
+  const { data: sched, error: schedError } = await db.from('schedule')
+    .select('day_type')
+    .eq('agent_id', agentId)
+    .eq('shift_date', date)
+    .maybeSingle();
+
+  if (schedError) {
+    showToast('Failed to check schedule: ' + schedError.message, 'error'); return;
+  }
+
+  if (!sched) {
+    showToast('Cannot add — agent has no schedule on this day!', 'error'); return;
+  }
+
+  if (['Off','Annual','Sick','Casual','PH'].includes(sched.day_type)) {
+    showToast('Cannot add — agent is ' + sched.day_type + ' on this day!', 'error'); return;
+  }
+
   const month = MONTH_NAMES[parseInt(document.getElementById('month-filter').value)];
   const year  = parseInt(document.getElementById('year-filter').value);
 
   try {
     await db.from('excuses').insert({
-      agent_id:agentId, agent_name:agentName,
-      excuse_date:date, excuse_type:type,
-      status:'Approved',
-      month_year:month+' '+year,
-      created_at:new Date().toISOString(),
-      updated_at:new Date().toISOString(),
+      agent_id:   agentId,
+      agent_name: agentName,
+      excuse_date: date,
+      excuse_type: type,
+      status:      'Approved',
+      month_year:  month+' '+year,
+      created_at:  new Date().toISOString(),
+      updated_at:  new Date().toISOString(),
     });
     showToast('Excuse added and approved!','success');
     closePanel();
     loadAll();
   } catch(e) { showToast('Failed: '+e.message,'error'); }
 }
-
+  
 // ── HELPERS ──
 function formatDate(d) {
   if (!d) return '—';
