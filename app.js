@@ -29,8 +29,6 @@ let selectedTimeOffType= null;
 let sessionAgent       = null;
 let globalScheduleData = [];
 let globalTeamData     = [];
-let knownSwapStatuses  = {};
-let swapPollTimer      = null;
 let currentAnnualData  = { used: 0, left: 0 };
 let schMyAgentId       = null;
 
@@ -309,7 +307,6 @@ function logout() {
   try { sessionStorage.removeItem('ns-session'); } catch(e) {}
   sessionAgent = null;
   if (breakCheckTimer) clearInterval(breakCheckTimer);
-  if (swapPollTimer)   clearInterval(swapPollTimer);
   if (sbBreaksChannel) { sbClient.removeChannel(sbBreaksChannel); sbBreaksChannel = null; }
   stopNotifSound();
   currentBreaks = null; shiftEndSecs = null; shiftEndNotified = false;
@@ -827,12 +824,6 @@ function renderRequests(requests) {
     container.appendChild(div);
   });
 }
-
-function exportRequests(type) {
-  const name = document.getElementById('user-name').innerText.trim();
-  gasRun('exportRequestsViaEmail', name, type).then(res => customAlert('Export', res.msg));
-}
-
 
 /* ─── 12. KPI FILTER ─── */
 function changeMonthData() {
