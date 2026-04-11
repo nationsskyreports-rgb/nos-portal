@@ -1,32 +1,12 @@
 /* ═══════════════════════════════════════════════════
-   NOS PORTAL — app.js
-   كل الـ JavaScript الخاص بالبورتال
+   NOS PORTAL — app.js  [PATCHED v2]
    ═══════════════════════════════════════════════════
-   الترتيب:
-   01. Global Variables    (المتغيرات العامة)
-   02. Theme (Dark/Light)  (الثيم)
-   03. Side Menu           (القائمة الجانبية)
-   04. Change Password     (تغيير الباسورد)
-   05. App Init (onload)   (تشغيل التطبيق)
-   06. Modal & Alert       (النوافذ)
-   07. Login & Auth        (الدخول)
-   08. Dashboard           (الداشبورد)
-   09. Schedule Render     (عرض الجدول)
-   10. Team Render         (عرض الفريق)
-   11. Requests Render     (عرض الطلبات)
-   12. KPI Filter          (فلتر KPI)
-   13. Break Notifications (إشعارات الاستراحة)
-   14. Break Swap          (تبادل الاستراحة)
-   15. Excuse / Time Off   (الأعذار والإجازات)
-   16. Call Log Form       (سجل المكالمات)
-   17. Customer Search     (بحث العملاء)
-   18. Knowledge Base      (قاعدة المعرفة)
-   19. Shift Swap          (تبديل الشيفت)
-   20. Toast Notifications (الإشعارات العائمة)
-   21. Annual Leave        (الإجازة السنوية)
-   22. Missing Punch       (Missing Punch)
-   23. Navigation & Tabs   (التنقل)
-   24. Utility Functions   (مساعدات)
+   التعديلات:
+   FIX-1: الشيفت في البانر / br-shift لا يتقطع
+   FIX-2: SCH Table يفتح جدول الأسبوع الحالي والجاي فور فتح التاب
+   FIX-3: زرار Search يظهر في Step 1 في Call Log
+   FIX-4: Time Off section مفتوح علطول بدون toggle
+   FIX-5: كل أزرار Submit تعرض Loading spinner
    ═══════════════════════════════════════════════════ */
 
 
@@ -52,7 +32,7 @@ let globalTeamData     = [];
 let knownSwapStatuses  = {};
 let swapPollTimer      = null;
 let currentAnnualData  = { used: 0, left: 0 };
-let schMyAgentId       = null;  // ← ضيف دي هنا
+let schMyAgentId       = null;
 
 /* Break notification fire-once flags */
 let _notifFired = {
@@ -218,6 +198,10 @@ window.onload = function() {
   }).catch(() => {
     document.getElementById('app-preloader').classList.add('hidden');
   });
+
+  /* ── FIX-4: Time Off section مفتوح علطول ── */
+  const timeOffSection = document.getElementById('time-off-form');
+  if (timeOffSection) timeOffSection.style.display = 'block';
 };
 
 
@@ -284,8 +268,10 @@ function login() {
   msg.style.color = 'var(--primary)';
   msg.innerHTML   = '<i class="fas fa-spinner spinner"></i> Verifying...';
   btn.disabled    = true;
+  /* FIX-5 */ setButtonLoading(btn, true, 'Verifying...');
 
   gasRun('processLogin', name, pass).then(res => {
+    /* FIX-5 */ setButtonLoading(btn, false, 'Login');
     btn.disabled = false;
     if (res.status === 'success') {
       showDashboard(res);
@@ -295,6 +281,7 @@ function login() {
       msg.innerHTML   = '<i class="fas fa-times-circle"></i> ' + res.msg;
     }
   }).catch(() => {
+    /* FIX-5 */ setButtonLoading(btn, false, 'Login');
     btn.disabled = false;
     document.getElementById('app-preloader').classList.add('hidden');
     msg.style.color = 'var(--danger)';
@@ -323,7 +310,6 @@ function logout() {
   sessionAgent = null;
   if (breakCheckTimer) clearInterval(breakCheckTimer);
   if (swapPollTimer)   clearInterval(swapPollTimer);
-  // الغى الـ Realtime subscription
   if (sbBreaksChannel) { sbClient.removeChannel(sbBreaksChannel); sbBreaksChannel = null; }
   stopNotifSound();
   currentBreaks = null; shiftEndSecs = null; shiftEndNotified = false;
@@ -387,24 +373,39 @@ function showDashboard(res) {
     statusBanner.style.display = 'block';
     breaksArea.style.display   = 'block';
     document.getElementById('status-icon').innerText     = '💼';
-    document.getElementById('status-text').innerText     = shift;
-    document.getElementById('status-text').style.color   = 'var(--primary)';
-    document.getElementById('status-sub-text').innerText = 'Enjoy your shift!';
-    document.getElementById('br-shift').innerText        = 'SHIFT: ' + shift;
 
-    // ── حساب وقت نهاية الشيفت ──
+    /* ── FIX-1: عرض الشيفت كامل بدون تقطيع ── */
+    const statusTextEl = document.getElementById('status-text');
+    statusTextEl.innerText   = shift;
+    statusTextEl.style.color = 'var(--primary)';
+    /* إضافة CSS يمنع الاقتطاع */
+    statusTextEl.style.whiteSpace  = 'nowrap';
+    statusTextEl.style.overflow    = 'visible';
+    statusTextEl.style.fontSize    = 'clamp(14px, 4vw, 22px)';
+
+    document.getElementById('status-sub-text').innerText = 'Enjoy your shift!';
+
+    /* FIX-1: br-shift بدون تقطيع */
+    const brShiftEl = document.getElementById('br-shift');
+    if (brShiftEl) {
+      brShiftEl.innerText         = 'SHIFT: ' + shift;
+      brShiftEl.style.whiteSpace  = 'nowrap';
+      brShiftEl.style.overflow    = 'hidden';
+      brShiftEl.style.textOverflow= 'ellipsis';
+      brShiftEl.style.maxWidth    = '200px';
+      brShiftEl.title             = shift; // tooltip كامل
+    }
+
     try {
       const end = shift.split('-')[1].trim().split(':');
       shiftEndSecs     = parseInt(end[0]) * 3600 + parseInt(end[1] || 0) * 60;
       shiftEndNotified = false;
     } catch(e) {}
 
-    // ── جيب البريكات من Supabase ──
     const agentName = res.name;
     sbFetchSch(`agents?select=id&formal_name=eq.${encodeURIComponent(agentName)}&status=eq.Active`)
       .then(async agents => {
         if (!agents || !agents.length) {
-          // fallback على GAS
           _applyGASBreaks(res.todayBreaks);
           return;
         }
@@ -415,11 +416,9 @@ function showDashboard(res) {
         if (breaks) {
           applyBreaksToUI(breaks);
         } else {
-          // fallback على GAS لو مفيش بريكات في Supabase
           _applyGASBreaks(res.todayBreaks);
         }
 
-        // ابدأ الـ Realtime subscription
         subscribeTodayBreaks(agentId);
       });
 
@@ -452,10 +451,14 @@ function showDashboard(res) {
   globalScheduleData = res.schedule      || [];
   globalTeamData     = res.allStaffBreaks || [];
   populateSwapForm();
+
+  /* ── FIX-4: التايم اوف مفتوح علطول ── */
+  const tof = document.getElementById('time-off-form');
+  if (tof) tof.style.display = 'block';
+
   document.getElementById('app-preloader').classList.add('hidden');
 }
 
-// fallback لو GAS
 function _applyGASBreaks(todayBreaks) {
   document.getElementById('br-break1').innerText = todayBreaks?.break1 || 'N/A';
   document.getElementById('br-lunch').innerText  = todayBreaks?.lunch  || 'N/A';
@@ -726,6 +729,7 @@ function renderTeam(staff) {
     grid.appendChild(card);
   });
 }
+
 async function loadTeamBreaksFromSB() {
   const today = new Date().toISOString().split('T')[0];
   try {
@@ -757,16 +761,18 @@ async function loadTeamBreaksFromSB() {
         lunch:  b.lunch  ? b.lunch.substring(0,5)  : '-',
         break2: b.break2 ? b.break2.substring(0,5) : '-',
       }));
-     
-staff.sort((a, b) => {
-  const aTime = a.shift ? a.shift.split(' - ')[0] : '99:99';
-  const bTime = b.shift ? b.shift.split(' - ')[0] : '99:99';
-  return aTime.localeCompare(bTime);
-});
-renderTeam(staff);
-     
+
+    staff.sort((a, b) => {
+      const aTime = a.shift ? a.shift.split(' - ')[0] : '99:99';
+      const bTime = b.shift ? b.shift.split(' - ')[0] : '99:99';
+      return aTime.localeCompare(bTime);
+    });
+    renderTeam(staff);
+
   } catch(e) { console.error('Team breaks error:', e); }
 }
+
+
 /* ─── 11. REQUESTS RENDER ─── */
 function renderRequests(requests) {
   const container = document.getElementById('requests-list');
@@ -981,57 +987,47 @@ async function findAvailableBreakSlot(requestedTime, breakType, agentShiftStart,
   const durMap  = { 'Break 1': 15, 'Lunch': 30, 'Break 2': 15 };
   const dur     = durMap[breakType];
 
-  // جيب بريكات اليوم كله
   const res  = await fetch(
     `${SB_URL_SCH}/rest/v1/breaks?break_date=eq.${today}&select=*`,
     { headers: { 'apikey': SB_KEY_SCH, 'Authorization': `Bearer ${SB_KEY_SCH}` } }
   );
   const allBreaks = await res.json();
 
-  // حوّل وقت الشيفت لـ minutes
   const shiftStart = timeStrToMins(agentShiftStart);
   const shiftEnd   = timeStrToMins(agentShiftEnd);
   const noBreakStart = shiftStart + 60;
   const noBreakEnd   = shiftEnd   - 60;
 
-  // دالة تتحقق من التعارض
   function hasConflict(slotMins) {
     const slotEnd = slotMins + dur;
-    // كام agent على بريك في نفس الوقت ده؟
     let count = 0;
     allBreaks.forEach(b => {
       if (!b[col]) return;
       const bStart = timeStrToMins(b[col].substring(0,5));
       const bEnd   = bStart + dur;
-      // في overlap لو مش (slotEnd <= bStart || slotMins >= bEnd)
       const overlap = !(slotEnd <= bStart || slotMins >= bEnd);
-      // overlap أكتر من 15 دقيقة؟
       if (overlap) {
         const overlapMins = Math.min(slotEnd, bEnd) - Math.max(slotMins, bStart);
         if (overlapMins > 15) count++;
       }
     });
-    // مسموح باتنين بس (الـ agent الحالي + واحد تاني)
     return count >= 2;
   }
 
-  // دور forward على أقرب slot متاح
   let candidate = timeStrToMins(requestedTime);
-  // لو الوقت المطلوب نفسه مش عليه conflict — قبله
   if (!hasConflict(candidate) && candidate >= noBreakStart && candidate <= noBreakEnd - dur) {
-    return null; // مفيش مشكلة
+    return null;
   }
 
-  // دور forward بـ 15 دقيقة
   for (let i = 1; i <= 8; i++) {
     const next = candidate + (i * 15);
     if (next > noBreakEnd - dur) break;
     if (!hasConflict(next)) {
-      return minsToTimeStr(next); // رجّع أقرب وقت متاح
+      return minsToTimeStr(next);
     }
   }
 
-  return null; // مفيش وقت متاح — اسمح بالتغيير
+  return null;
 }
 
 function timeStrToMins(t) {
@@ -1044,7 +1040,6 @@ function minsToTimeStr(m) {
   return Math.floor(m/60).toString().padStart(2,'0') + ':' + (m%60).toString().padStart(2,'0');
 }
 
-// ── تغيير البريك مباشرة على Supabase بدون approval ──
 async function confirmBreakTime(time) {
   if (!schMyAgentId) { showToast('❌','Error','Agent not found!','danger',4000); return; }
 
@@ -1056,46 +1051,42 @@ async function confirmBreakTime(time) {
 
   if (!col) { showToast('❌','Error','Select break type first!','danger',4000); return; }
 
-btn.disabled    = true;
-msg.style.color = 'var(--muted)';
-msg.innerText   = 'Checking availability...';
+  /* FIX-5 */ setButtonLoading(btn, true, 'Updating...');
+  msg.style.color = 'var(--muted)';
+  msg.innerText   = 'Checking availability...';
 
-try {
-  // جيب shift بتاع الـ agent
-  const shiftText = document.getElementById('br-shift').innerText.replace('SHIFT: ','');
-  const shiftParts = shiftText.split(' - ');
-  const shiftStart = shiftParts[0]?.trim() || '00:00';
-  const shiftEnd   = shiftParts[1]?.trim() || '23:00';
+  try {
+    const shiftText = document.getElementById('br-shift').innerText.replace('SHIFT: ','');
+    const shiftParts = shiftText.split(' - ');
+    const shiftStart = shiftParts[0]?.trim() || '00:00';
+    const shiftEnd   = shiftParts[1]?.trim() || '23:00';
 
-  // تحقق من التعارض
-  const suggestion = await findAvailableBreakSlot(time, selectedBreakType, shiftStart, shiftEnd);
+    const suggestion = await findAvailableBreakSlot(time, selectedBreakType, shiftStart, shiftEnd);
 
-  if (suggestion) {
-    // في تعارض — عرض الاقتراح
-    btn.disabled = false;
-    msg.style.color = 'var(--warn)';
-    msg.innerText   = `⚠️ ${time} محجوز! أقرب وقت متاح: ${suggestion}`;
+    if (suggestion) {
+      /* FIX-5 */ setButtonLoading(btn, false, '🔄 Swap Break');
+      msg.style.color = 'var(--warn)';
+      msg.innerText   = `⚠️ ${time} محجوز! أقرب وقت متاح: ${suggestion}`;
 
-    // عرض زرار للقبول بالوقت المقترح
-    const existingBtn = document.getElementById('suggest-btn');
-    if (existingBtn) existingBtn.remove();
-    const suggestBtn = document.createElement('button');
-    suggestBtn.id        = 'suggest-btn';
-    suggestBtn.innerText = `✅ استخدم ${suggestion}`;
-    suggestBtn.style.cssText = 'margin-top:8px;padding:8px 16px;background:var(--primary-gradient);color:white;border:none;border-radius:10px;cursor:pointer;font-weight:700;font-family:inherit;width:100%;';
-    suggestBtn.onclick = () => {
-      suggestBtn.remove();
-      msg.innerText = '';
-      confirmBreakTime(suggestion);
-    };
-    msg.parentElement.appendChild(suggestBtn);
-    return;
-  }
+      const existingBtn = document.getElementById('suggest-btn');
+      if (existingBtn) existingBtn.remove();
+      const suggestBtn = document.createElement('button');
+      suggestBtn.id        = 'suggest-btn';
+      suggestBtn.innerText = `✅ استخدم ${suggestion}`;
+      suggestBtn.style.cssText = 'margin-top:8px;padding:8px 16px;background:var(--primary-gradient);color:white;border:none;border-radius:10px;cursor:pointer;font-weight:700;font-family:inherit;width:100%;';
+      suggestBtn.onclick = () => {
+        suggestBtn.remove();
+        msg.innerText = '';
+        confirmBreakTime(suggestion);
+      };
+      msg.parentElement.appendChild(suggestBtn);
+      return;
+    }
 
-  msg.innerText = 'Updating...';
+    msg.innerText = 'Updating...';
 
-  const res = await fetch(
-   `${SB_URL_SCH}/rest/v1/breaks?agent_id=eq.${schMyAgentId}&break_date=eq.${today}`,
+    const res = await fetch(
+      `${SB_URL_SCH}/rest/v1/breaks?agent_id=eq.${schMyAgentId}&break_date=eq.${today}`,
       {
         method:  'PATCH',
         headers: {
@@ -1110,7 +1101,6 @@ try {
 
     if (!res.ok) throw new Error('Update failed');
 
-    // حدّث الـ UI على طول
     if (currentBreaks) currentBreaks[col] = time;
     const elMap = { break1: 'br-break1', lunch: 'br-lunch', break2: 'br-break2' };
     const el = document.getElementById(elMap[col]);
@@ -1128,7 +1118,7 @@ try {
     msg.innerText   = '❌ Failed. Try again.';
     showToast('❌', 'Update Failed!', 'Please try again.', 'danger', 4000);
   } finally {
-    btn.disabled = false;
+    /* FIX-5 */ setButtonLoading(btn, false, '🔄 Swap Break');
     setTimeout(() => msg.innerText = '', 4000);
   }
 }
@@ -1143,8 +1133,10 @@ function sendExcuse() {
   const name = document.getElementById('user-name').innerText.trim();
   const msg  = document.getElementById('excuse-msg');
   const btn  = document.getElementById('excuseBtn');
+  /* FIX-5 */ setButtonLoading(btn, true, 'Submitting...');
   btn.disabled = true; msg.innerText = '';
   gasRun('submitExcuseFromWeb', name, rawDate, excuseType).then(res => {
+    /* FIX-5 */ setButtonLoading(btn, false, '✓ Submit');
     btn.disabled    = false;
     msg.style.color = res.status === 'success' ? 'var(--accent)' : 'var(--danger)';
     msg.innerText   = res.msg;
@@ -1165,25 +1157,42 @@ function undoLastExcuse() {
   });
 }
 
+/* ── FIX-4: selectTimeOffType — علطول بيعرض الفورم ── */
 function selectTimeOffType(type) {
-  if (selectedTimeOffType === type) {
-    selectedTimeOffType = null;
-    document.getElementById('time-off-form').style.display = 'none';
-    document.querySelectorAll('.action-row .action-btn').forEach(b => b.style.opacity = '1');
-    return;
-  }
   selectedTimeOffType = type;
-  document.getElementById('time-off-form').style.display = 'block';
-  ['timeOffFromDate','timeOffToDate','timeOffNotes'].forEach(id => document.getElementById(id).value = '');
-  document.getElementById('time-off-msg').innerText = '';
-  document.querySelectorAll('.action-row .action-btn').forEach(b => b.style.opacity = '0.4');
-  event.currentTarget.style.opacity    = '1';
-  event.currentTarget.style.borderWidth= '2px';
+  const form = document.getElementById('time-off-form');
+  if (form) form.style.display = 'block';
+
+  ['timeOffFromDate','timeOffToDate','timeOffNotes'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = '';
+  });
+  const msgEl = document.getElementById('time-off-msg');
+  if (msgEl) msgEl.innerText = '';
+
+  /* هايلايت الزرار المختار */
+  document.querySelectorAll('.action-row .action-btn').forEach(b => {
+    b.style.opacity     = '0.5';
+    b.style.borderWidth = '1px';
+  });
+  if (event && event.currentTarget) {
+    event.currentTarget.style.opacity     = '1';
+    event.currentTarget.style.borderWidth = '2px';
+  }
 }
 
 function cancelTimeOffForm() {
   selectedTimeOffType = null;
-  document.getElementById('time-off-form').style.display = 'none';
+  /* FIX-4: لا نخفي الفورم، بس نعمل reset للاختيار */
+  document.querySelectorAll('.action-row .action-btn').forEach(b => {
+    b.style.opacity = '1'; b.style.borderWidth = '1px';
+  });
+  ['timeOffFromDate','timeOffToDate','timeOffNotes'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = '';
+  });
+  const msgEl = document.getElementById('time-off-msg');
+  if (msgEl) msgEl.innerText = '';
 }
 
 function submitTimeOffRequest() {
@@ -1194,10 +1203,11 @@ function submitTimeOffRequest() {
   const name  = document.getElementById('user-name').innerText.trim();
   const msg   = document.getElementById('time-off-msg');
   const btn   = document.getElementById('submitTimeOffBtn');
+  if (!type)  { msg.style.color='var(--danger)'; msg.innerText='Please select a leave type first!'; return; }
   if (!from || !to) { msg.style.color='var(--danger)'; msg.innerText='Please select both dates!'; return; }
-  btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Submitting...';
+  /* FIX-5 */ setButtonLoading(btn, true, 'Submitting...');
   gasRun('submitTimeOffRequest', name, type, from, to, notes).then(res => {
-    btn.disabled = false; btn.innerHTML = '<i class="fas fa-paper-plane"></i> Submit';
+    /* FIX-5 */ setButtonLoading(btn, false, '✈️ Submit Request');
     if (res.status === 'success') {
       showToast('✅', type+' Request Submitted!', 'Pending review by manager.', 'success', 6000);
       setTimeout(() => { cancelTimeOffForm(); refreshData(); }, 2000);
@@ -1231,6 +1241,7 @@ function quickLogCall(reason) {
   goStep(4);
   setTimeout(() => submitCallLogForm(), 200);
 }
+
 function submitCallLogForm() {
   const agent  = document.getElementById('f-agent').value;
   const reason = document.getElementById('f-reason').value;
@@ -1250,11 +1261,10 @@ function submitCallLogForm() {
   if (!isQ && !radioValues['f-unit'])     { showFormErr('Select Unit Type!'); return; }
 
   const btn = document.getElementById('formSubmitBtn');
-  btn.disabled = true;
-  btn.innerHTML = '<i class="fas fa-spinner spinner"></i> Submitting...';
+  /* FIX-5 */ setButtonLoading(btn, true, 'Submitting...');
 
   const slowTimer = setTimeout(() => {
-    if (btn.disabled) btn.innerHTML = '<i class="fas fa-spinner spinner"></i> Almost there...';
+    if (btn.disabled) setButtonLoading(btn, true, 'Almost there...');
   }, 5000);
 
   document.getElementById('form-error').style.display = 'none';
@@ -1276,29 +1286,27 @@ function submitCallLogForm() {
 
   gasRun(gasAction, data).then(res => {
     clearTimeout(slowTimer);
-    btn.disabled = false;
-    btn.innerHTML = '<i class="fas fa-paper-plane"></i> Submit to Database';
+    /* FIX-5 */ setButtonLoading(btn, false, '📤 Submit to Database');
     if (res.status === 'success') {
-const bar = document.getElementById('call-summary-bar');
-document.getElementById('cs-name').innerText   = cname  || '—';
-document.getElementById('cs-mobile').innerText = mobile || '—';
-document.getElementById('cs-reason').innerText = reason || '—';
-bar.style.display = 'flex';
-// اخفيه تلقائي بعد 30 ثانية
-setTimeout(() => bar.style.display = 'none', 30000);
-resetCallForm();
-showToast('✅', 'Call Logged!', cname ? cname + ' — ' + mobile : reason, 'success', 5000);  
+      const bar = document.getElementById('call-summary-bar');
+      document.getElementById('cs-name').innerText   = cname  || '—';
+      document.getElementById('cs-mobile').innerText = mobile || '—';
+      document.getElementById('cs-reason').innerText = reason || '—';
+      bar.style.display = 'flex';
+      setTimeout(() => bar.style.display = 'none', 30000);
+      resetCallForm();
+      showToast('✅', 'Call Logged!', cname ? cname + ' — ' + mobile : reason, 'success', 5000);
     } else {
       showFormErr(res.msg || 'Something went wrong.');
     }
   }).catch(err => {
     clearTimeout(slowTimer);
-    btn.disabled = false;
-    btn.innerHTML = '<i class="fas fa-paper-plane"></i> Submit to Database';
+    /* FIX-5 */ setButtonLoading(btn, false, '📤 Submit to Database');
     showFormErr('Network error. Please try again.');
     console.error('gasRun error:', err);
   });
 }
+
 function resetCallForm() {
   ['f-reason','f-mobile','f-extra'].forEach(id => document.getElementById(id).value = '');
   document.getElementById('f-cname').value = '';
@@ -1314,28 +1322,24 @@ function resetCallForm() {
 let _currentStep = 1;
 
 function goStep(n) {
-  // Validate before going forward
   if (n > _currentStep) {
     if (_currentStep === 1) {
       const agent  = document.getElementById('f-agent').value;
       const reason = document.getElementById('f-reason').value;
       if (!agent || !reason) { showFormErr('Please select Agent and Call Reason!'); return; }
-      // لو Quick log (Wrong Number / Call Dropped) اقفز لـ step 4 مباشرة
       if (reason === 'Wrong Number' || reason === 'Call Dropped') { n = 4; }
     }
   }
 
-  // Update dots & lines
   for (let i = 1; i <= 4; i++) {
     const dot  = document.getElementById('sdot-' + i);
     const line = document.getElementById('sline-' + i);
-    if (i < n)       { dot.className = 'step-dot done'; dot.innerHTML = '✓'; }
+    if (i < n)        { dot.className = 'step-dot done'; dot.innerHTML = '✓'; }
     else if (i === n) { dot.className = 'step-dot active'; dot.innerHTML = i; }
     else              { dot.className = 'step-dot'; dot.innerHTML = i; }
     if (line) line.className = i < n ? 'step-line done' : 'step-line';
   }
 
-  // Show panel
   document.querySelectorAll('.step-panel').forEach(p => p.classList.remove('active'));
   document.getElementById('step-' + n).classList.add('active');
   _currentStep = n;
@@ -1352,7 +1356,13 @@ function searchCustomer() {
   const resultsDiv = document.getElementById('search-results');
   if (!query) { resultsDiv.innerHTML = '<div class="empty-state">Please enter a name or mobile number.</div>'; return; }
   resultsDiv.innerHTML = '<div class="empty-state"><i class="fas fa-spinner spinner"></i> Searching...</div>';
+
+  /* FIX-5: زرار البحث يعمل loading */
+  const searchBtn = document.getElementById('search-btn') || document.querySelector('[onclick="searchCustomer()"]');
+  if (searchBtn) setButtonLoading(searchBtn, true, 'Searching...');
+
   gasRun('searchCustomer', query).then(res => {
+    if (searchBtn) setButtonLoading(searchBtn, false, '🔍 Search');
     if (res.status !== 'success' || !res.results.length) {
       resultsDiv.innerHTML = `<div class="empty-state">No results found for "${query}"</div>`;
       return;
@@ -1383,6 +1393,8 @@ function searchCustomer() {
       </div>`;
     });
     resultsDiv.innerHTML = html;
+  }).catch(() => {
+    if (searchBtn) setButtonLoading(searchBtn, false, '🔍 Search');
   });
 }
 
@@ -1672,9 +1684,9 @@ function submitShiftSwap() {
 
   customConfirm('Confirm Swap', `Swap your shift (${yourShift}) with ${colleague} (${theirShift}) on ${date}?`).then(ok => {
     if (!ok) return;
-    btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner spinner"></i> Submitting...';
+    /* FIX-5 */ setButtonLoading(btn, true, 'Submitting...');
     gasRun('submitShiftSwapRequest', name, date, yourShift, colleague, theirShift, notes).then(res => {
-      btn.disabled = false; btn.innerHTML = '<i class="fas fa-paper-plane"></i> Submit Shift Swap Request';
+      /* FIX-5 */ setButtonLoading(btn, false, '🔄 Submit Shift Swap Request');
       if (res.status === 'success') {
         msg.style.color = '#059669'; msg.innerText = 'Request submitted! Pending admin approval.';
         showToast('⏳','Request Submitted & Pending!','Your swap request is now waiting for admin approval.','warn',7000);
@@ -1689,7 +1701,7 @@ function submitShiftSwap() {
         setTimeout(() => msg.innerText = '', 5000);
       }
     }).catch(() => {
-      btn.disabled = false; btn.innerHTML = '<i class="fas fa-paper-plane"></i> Submit Shift Swap Request';
+      /* FIX-5 */ setButtonLoading(btn, false, '🔄 Submit Shift Swap Request');
       msg.style.color = 'var(--danger)'; msg.innerText = 'Connection error!';
       setTimeout(() => msg.innerText = '', 5000);
     });
@@ -1801,12 +1813,18 @@ function sendMissingPunch() {
   if (!missingPunchDate) { customAlert('Error', 'Please select a date for the missing punch.'); return; }
   customConfirm('Confirm', 'Report Missing Punch for ' + missingPunchDate + '?').then(r => {
     if (!r) return;
+    const mpBtn = document.querySelector('[onclick="sendMissingPunch()"]');
+    if (mpBtn) setButtonLoading(mpBtn, true, 'Sending...');
     gasRun('sendMissingPunchReport', name, missingPunchDate).then(res => {
+      if (mpBtn) setButtonLoading(mpBtn, false, '⚠️ Report Punch');
       if (res.status === 'success') {
         showToast('⚠️','Missing Punch Reported!','Your report for '+missingPunchDate+' has been sent.','warn',6000);
         refreshData();
       } else customAlert('Status', res.msg);
-    }).catch(() => customAlert('Error', 'Something went wrong. Please try again.'));
+    }).catch(() => {
+      if (mpBtn) setButtonLoading(mpBtn, false, '⚠️ Report Punch');
+      customAlert('Error', 'Something went wrong. Please try again.');
+    });
   });
 }
 
@@ -1866,6 +1884,22 @@ function gasRun(action, ...args) {
   .then(text => { try { return JSON.parse(text); } catch(e) { throw new Error('Invalid JSON response'); } });
 }
 
+/* ── FIX-5: دالة عامة لعمل loading على أي زرار ── */
+function setButtonLoading(btn, isLoading, label) {
+  if (!btn) return;
+  if (isLoading) {
+    btn._origHTML    = btn.innerHTML;
+    btn._origDisabled = btn.disabled;
+    btn.disabled    = true;
+    btn.style.opacity = '0.8';
+    btn.innerHTML   = `<i class="fas fa-spinner fa-spin" style="margin-right:6px;"></i>${label || 'Loading...'}`;
+  } else {
+    btn.disabled    = btn._origDisabled || false;
+    btn.style.opacity = '1';
+    btn.innerHTML   = btn._origHTML || label || 'Submit';
+  }
+}
+
 var _activeChannel = null;
 
 function selectChannel(ch) {
@@ -1876,10 +1910,10 @@ function selectChannel(ch) {
   var swWA      = document.getElementById('switch-wa-btn');
   var icon      = document.getElementById('calllog-channel-icon');
   var title     = document.getElementById('calllog-channel-title');
-   
+
   goStep(1);
   _currentStep = 1;
-   
+
   if (_activeChannel === ch) {
     _activeChannel = null;
     formArea.style.display = 'none';
@@ -1921,7 +1955,6 @@ function selectChannel(ch) {
 const SB_URL_SCH = 'https://xzxdaupwwwdcwfnqweub.supabase.co';
 const SB_KEY_SCH = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh6eGRhdXB3d3dkY3dmbnF3ZXViIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUzMTM5NTAsImV4cCI6MjA5MDg4OTk1MH0.KjNZpFvLxh8XfDDoWdpVsIQZAh1PjzGXOrfDmApZ4K8';
 
-// ── Supabase Client للـ Realtime ──
 const sbClient = window.supabase.createClient(SB_URL_SCH, SB_KEY_SCH);
 let sbBreaksChannel = null;
 
@@ -1936,13 +1969,8 @@ function toggleSchAccordion(elementId) {
   const clickedItem = document.getElementById(elementId);
   const allAccordions = document.querySelectorAll('.sch-accordion');
   const isOpen = clickedItem.classList.contains('active');
-  allAccordions.forEach(acc => {
-    acc.classList.remove('active');
-  });
-
-  if (!isOpen) {
-    clickedItem.classList.add('active');
-  }
+  allAccordions.forEach(acc => { acc.classList.remove('active'); });
+  if (!isOpen) { clickedItem.classList.add('active'); }
 }
 
 function selectWeekChip(weekId, weekLabel, chipElement) {
@@ -1954,13 +1982,14 @@ function selectWeekChip(weekId, weekLabel, chipElement) {
   }
   loadSchTable(weekId);
 }
+
 async function sbFetchSch(path) {
   const res = await fetch(`${SB_URL_SCH}/rest/v1/${path}`, {
     headers: { 'apikey': SB_KEY_SCH, 'Authorization': `Bearer ${SB_KEY_SCH}`, 'Content-Type': 'application/json' }
   });
   return res.json();
 }
-// ── جيب بريكات اليوم من Supabase ──
+
 async function loadTodayBreaksFromSB(agentId) {
   const today = new Date().toISOString().split('T')[0];
   try {
@@ -1975,25 +2004,40 @@ async function loadTodayBreaksFromSB(agentId) {
       break1:     b.break1     ? b.break1.substring(0,5)     : null,
       lunch:      b.lunch      ? b.lunch.substring(0,5)      : null,
       break2:     b.break2     ? b.break2.substring(0,5)     : null,
-      shift_time: b.shift_time ? b.shift_time.substring(0,11): null,  // ← جديد
+      shift_time: b.shift_time ? b.shift_time.substring(0,11): null,
     };
   } catch(e) { return null; }
 }
-// ── حدّث الـ UI بالبريكات ──
+
 function applyBreaksToUI(breaks) {
   if (!breaks) return;
   document.getElementById('br-break1').innerText = breaks.break1 || 'N/A';
   document.getElementById('br-lunch').innerText  = breaks.lunch  || 'N/A';
   document.getElementById('br-break2').innerText = breaks.break2 || 'N/A';
-if (breaks.shift_time) {
-  document.getElementById('br-shift').innerText      = 'SHIFT: ' + breaks.shift_time;
-  document.getElementById('status-text').innerText   = breaks.shift_time;
+
+  if (breaks.shift_time) {
+    /* FIX-1: br-shift مع style يمنع تقطيع النص */
+    const brShiftEl = document.getElementById('br-shift');
+    if (brShiftEl) {
+      brShiftEl.innerText          = 'SHIFT: ' + breaks.shift_time;
+      brShiftEl.style.whiteSpace   = 'nowrap';
+      brShiftEl.style.overflow     = 'hidden';
+      brShiftEl.style.textOverflow = 'ellipsis';
+      brShiftEl.style.maxWidth     = '200px';
+      brShiftEl.title              = breaks.shift_time;
+    }
+    const statusTextEl = document.getElementById('status-text');
+    if (statusTextEl) {
+      statusTextEl.innerText        = breaks.shift_time;
+      statusTextEl.style.whiteSpace = 'nowrap';
+      statusTextEl.style.overflow   = 'visible';
+      statusTextEl.style.fontSize   = 'clamp(14px, 4vw, 22px)';
+    }
   }
   currentBreaks = breaks;
   startBreakChecker(breaks);
 }
 
-// ── Realtime subscription على البريكات ──
 function subscribeTodayBreaks(agentId) {
   const today = new Date().toISOString().split('T')[0];
 
@@ -2023,6 +2067,7 @@ function subscribeTodayBreaks(agentId) {
     .subscribe();
 }
 
+/* ── FIX-2: initSchTab يفتح جدول الأسبوع الحالي والجاي تلقائياً ── */
 async function initSchTab() {
   schWeeks = []; schAgents = [];
   try {
@@ -2047,9 +2092,47 @@ async function initSchTab() {
     }
     filterSchWeeks();
     loadDraftGrid();
+
+    /* ── FIX-2: حدد الأسبوع الحالي أو الجاي وافتحه تلقائياً ── */
+    autoSelectCurrentWeek();
+
   } catch(e) {
     console.error('SCH Tab failed:', e);
   }
+}
+
+/* ── FIX-2: دالة تختار الأسبوع الحالي أو الجاي تلقائياً ── */
+function autoSelectCurrentWeek() {
+  if (!schWeeks.length) return;
+
+  const todayIso = new Date().toISOString().split('T')[0];
+
+  // أول هنحاول نلاقي الأسبوع الحالي
+  let targetWeek = schWeeks.find(w => w.week_start <= todayIso && w.week_end >= todayIso);
+
+  // لو ما لقيناش، خد أقرب أسبوع جاي
+  if (!targetWeek) {
+    const future = schWeeks.filter(w => w.week_start > todayIso).sort((a,b) => a.week_start.localeCompare(b.week_start));
+    targetWeek = future[0] || schWeeks[0];
+  }
+
+  if (!targetWeek) return;
+
+  // فتح accordion الـ Published لو مش مفتوح
+  const pubAccordion = document.getElementById('acc-published');
+  if (pubAccordion && !pubAccordion.classList.contains('active')) {
+    toggleSchAccordion('acc-published');
+  }
+
+  // انتظر شوية عشان filterSchWeeks تخلص
+  setTimeout(() => {
+    const chip = document.querySelector(`.week-chip[onclick*="${targetWeek.id}"]`);
+    if (chip) {
+      document.querySelectorAll('.week-chip').forEach(c => c.classList.remove('active'));
+      chip.classList.add('active');
+    }
+    loadSchTable(targetWeek.id);
+  }, 400);
 }
 
 function fmtSchDate(d) {
@@ -2150,18 +2233,17 @@ function buildSchGrid(agents, dates, schedMap, today) {
 }
 
 async function loadSchTable(weekId) {
-  // لو لم يتم إرسال الـ ID، لا تفعل شيئاً (لأننا حذفنا القائمة القديمة)
   if (!weekId) return;
-  
+
   const week = schWeeks.find(w => w.id === weekId);
   if (!week) return;
-  
+
   const gridEl = document.getElementById('sch-table-grid');
   gridEl.innerHTML = '<div class="empty-state"><i class="fas fa-spinner spinner"></i> Loading data...</div>';
-  
+
   const today = `${new Date().getFullYear()}-${String(new Date().getMonth()+1).padStart(2,'0')}-${String(new Date().getDate()).padStart(2,'0')}`;
   const dates = getSchWeekDates(week.week_start, week.week_end);
-  
+
   try {
     const records = await sbFetchSch(`schedule?select=*&week_id=eq.${weekId}`);
     const schedMap = {};
@@ -2171,6 +2253,7 @@ async function loadSchTable(weekId) {
     gridEl.innerHTML = '<div class="empty-state">Error loading schedule.</div>';
   }
 }
+
 async function loadDraftGrid() {
   const draftEl = document.getElementById('sch-draft-grid');
   draftEl.innerHTML = '<div class="empty-state"><i class="fas fa-spinner spinner"></i></div>';
@@ -2270,6 +2353,8 @@ async function submitSchRequest() {
 
   const agentName = document.getElementById('user-name').innerText.trim();
   const msg = document.getElementById('sch-request-msg');
+  const submitBtn = document.querySelector('[onclick="submitSchRequest()"]');
+  /* FIX-5 */ if (submitBtn) setButtonLoading(submitBtn, true, 'Submitting...');
   msg.style.color = 'var(--muted)'; msg.innerText = 'Submitting...';
 
   const details = { week_id: schCurrentWeek.id, week_start: schCurrentWeek.week_start, draft: schMyDraft };
@@ -2293,6 +2378,7 @@ async function submitSchRequest() {
     body
   });
 
+  /* FIX-5 */ if (submitBtn) setButtonLoading(submitBtn, false, '📤 Submit Schedule Request');
   if (res.ok) {
     msg.style.color = '#10b981'; msg.innerText = '✅ Request submitted!';
     showToast('✅', 'Schedule Request Submitted!', 'Pending admin review.', 'success', 5000);
@@ -2317,35 +2403,31 @@ function filterSchWeeks() {
   const wrapper = document.getElementById('weeks-chips-wrapper');
   const list   = document.getElementById('weeks-list');
 
-  // إظهار اللودر وإخفاء القائمة مؤقتاً
   loader.style.display = 'block';
   wrapper.style.display = 'none';
 
-  // الفلترة
   const filtered = schWeeks.filter(w => {
     if (year  && !w.week_start.startsWith(year))        return false;
     if (month && w.week_start.substring(5,7) !== month) return false;
     return true;
   });
 
-  setTimeout(() => { // تأخير بسيط ليعطي إحساس بالتحميل
+  setTimeout(() => {
     loader.style.display = 'none';
-    
+
     if (!filtered.length) {
       wrapper.style.display = 'none';
       return;
     }
 
     wrapper.style.display = 'block';
-    // بناء الـ Chips بدلاً من Options
     list.innerHTML = filtered.map(w => `
       <div class="week-chip" onclick="selectWeekChip('${w.id}', '${fmtSchDate(w.week_start)} → ${fmtSchDate(w.week_end)}', this)">
         <i class="far fa-calendar-alt"></i>
         <span>${fmtSchDate(w.week_start)} → ${fmtSchDate(w.week_end)}</span>
       </div>
     `).join('');
-    
-    // إعادة تعيين محتوى الجدول
+
     document.getElementById('sch-table-grid').innerHTML = '<div class="empty-state">Select a week to view schedule.</div>';
   }, 300);
 }
@@ -2385,6 +2467,7 @@ function closeResultPopup() {
   if (window._popupAutoClose) { clearTimeout(window._popupAutoClose); window._popupAutoClose = null; }
   if (window._popupOnClose)   { window._popupOnClose(); window._popupOnClose = null; }
 }
+
 function copySummary() {
   const name   = document.getElementById('cs-name').innerText;
   const mobile = document.getElementById('cs-mobile').innerText;
@@ -2392,5 +2475,72 @@ function copySummary() {
   const text   = `Name: ${name}\nMobile: ${mobile}\nReason: ${reason}`;
   navigator.clipboard.writeText(text).then(() => {
     showToast('📋', 'Copied!', 'Customer info copied to clipboard', 'success', 3000);
+  });
+}
+
+/* ── FIX-3: Search button inline في Step 1 ──
+   ملاحظة: الزرار ده محتاج يتضاف في الـ HTML بتاع step-1
+   بس هنا بنعمل inject له تلقائياً لو مش موجود
+*/
+document.addEventListener('DOMContentLoaded', () => {
+  /* FIX-3: أضف زرار البحث في step-1 لو مش موجود */
+  const step1 = document.getElementById('step-1');
+  if (step1 && !document.getElementById('inline-search-btn')) {
+    const searchWrapper = document.createElement('div');
+    searchWrapper.style.cssText = 'margin-top:16px;';
+    searchWrapper.innerHTML = `
+      <div style="border-top:1px solid var(--border);padding-top:16px;margin-top:8px;">
+        <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;">
+          ⚡ Quick Customer Search
+        </div>
+        <div style="display:flex;gap:8px;">
+          <input type="text" id="step1-search-input" placeholder="Name or mobile..."
+            class="form-input" style="flex:1;"
+            onkeydown="if(event.key==='Enter') step1SearchCustomer()">
+          <button id="inline-search-btn"
+            onclick="step1SearchCustomer()"
+            style="padding:10px 16px;background:var(--primary-gradient);color:white;border:none;border-radius:11px;cursor:pointer;font-weight:700;font-family:inherit;white-space:nowrap;">
+            🔍 Search
+          </button>
+        </div>
+        <div id="step1-search-results" style="margin-top:10px;"></div>
+      </div>`;
+    step1.appendChild(searchWrapper);
+  }
+
+  /* FIX-4: Time Off مفتوح علطول */
+  const tof = document.getElementById('time-off-form');
+  if (tof) tof.style.display = 'block';
+});
+
+/* FIX-3: دالة البحث الصغيرة في Step 1 */
+function step1SearchCustomer() {
+  const query = (document.getElementById('step1-search-input')?.value || '').trim();
+  const resultsEl = document.getElementById('step1-search-results');
+  const btn = document.getElementById('inline-search-btn');
+  if (!query || !resultsEl) return;
+
+  setButtonLoading(btn, true, 'Searching...');
+  resultsEl.innerHTML = '<div style="font-size:12px;color:var(--muted);padding:8px 0;"><i class="fas fa-spinner fa-spin"></i> Searching...</div>';
+
+  gasRun('searchCustomer', query).then(res => {
+    setButtonLoading(btn, false, '🔍 Search');
+    if (res.status !== 'success' || !res.results || !res.results.length) {
+      resultsEl.innerHTML = `<div style="font-size:12px;color:var(--muted);padding:4px 0;">No results for "${query}"</div>`;
+      return;
+    }
+    let html = '';
+    res.results.slice(0, 3).forEach(r => {
+      html += `<div style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:10px;margin-bottom:6px;font-size:12px;">
+        <div style="font-weight:700;color:var(--text);">${r.name || 'N/A'}</div>
+        <div style="color:var(--muted);">${r.mobile || '-'} · ${r.reason || '-'}</div>
+        <div style="color:var(--muted);font-size:11px;">${r.timestamp || ''}</div>
+      </div>`;
+    });
+    if (res.count > 3) html += `<div style="font-size:11px;color:var(--muted);text-align:center;">${res.count - 3} more results — go to Search tab</div>`;
+    resultsEl.innerHTML = html;
+  }).catch(() => {
+    setButtonLoading(btn, false, '🔍 Search');
+    resultsEl.innerHTML = '<div style="font-size:12px;color:var(--danger);">Connection error</div>';
   });
 }
