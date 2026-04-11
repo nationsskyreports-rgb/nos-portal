@@ -7,6 +7,7 @@
 <link rel="stylesheet" href="../css/main.css">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <style>
 .sched-table { width:100%; border-collapse:collapse; font-size:12px; }
 .sched-table th {
@@ -81,44 +82,6 @@
   transition: all 0.2s;
 }
 .req-pill:hover { background: rgba(16,185,129,0.2); }
-.req-pill-pending {
-  background: rgba(245,158,11,0.1);
-  border-color: rgba(245,158,11,0.2);
-  color: #F59E0B;
-}
-
-/* ── Cell with request highlight ── */
-.has-request {
-  position: relative;
-}
-.has-request::after {
-  content: '';
-  position: absolute;
-  top: 2px;
-  left: 2px;
-  width: 6px;
-  height: 6px;
-  background: #10B981;
-  border-radius: 50%;
-}
-.req-tooltip {
-  display: none;
-  position: absolute;
-  top: 100%;
-  left: 50%;
-  transform: translateX(-50%);
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 6px 10px;
-  font-size: 11px;
-  color: #10B981;
-  font-weight: 700;
-  white-space: nowrap;
-  z-index: 100;
-  box-shadow: 0 4px 14px rgba(0,0,0,0.3);
-}
-.has-request:hover .req-tooltip { display: block; }
 </style>
 </head>
 <body>
@@ -174,8 +137,8 @@
           <div class="section-title"><i class="fas fa-table" style="color:var(--gold)"></i> <span id="sched-week-title">Week Schedule</span></div>
           <div style="display:flex;gap:8px;align-items:center;">
             <span id="sched-status-badge"></span>
-            <button class="btn btn-ghost btn-sm" onclick="copyScheduleAsEmoji()" id="copy-btn">
-              <i class="fas fa-copy"></i> Copy
+            <button class="btn btn-ghost btn-sm" onclick="exportScheduleAsPNG()" id="copy-btn">
+              <i class="fas fa-image"></i> Save as Image
             </button>
             <button class="btn btn-ghost btn-sm" onclick="saveSchedule()" id="save-btn"><i class="fas fa-save"></i> Save</button>
             <button class="btn btn-success btn-sm" onclick="publishWeek()" id="publish-btn"><i class="fas fa-globe"></i> Publish</button>
@@ -254,14 +217,14 @@ let allShiftTypes = [];
 let currentWeek   = null;
 let scheduleData  = {};
 let unsaved       = false;
-let draftRequests = {}; // { agentId: { draft: {date: {day_type, shift_type_id}} } }
+let draftRequests = {};
 
 const TODAY = new Date().toISOString().split('T')[0];
 
-// ── Emoji Palette للشيفتات ──
-const MORNING_EMOJI = '🟢'; // Morning (قبل 12:00)
+// ── Emoji Palette ──
+const MORNING_EMOJI = '🟢';
 const SHIFT_PALETTE = ['🔵','🟠','🟣','🔴','🟡','🩵','🟤','⚫'];
-const shiftEmojiMap = {}; // { shiftKey: emoji }
+const shiftEmojiMap = {};
 let paletteIndex = 0;
 
 function getShiftEmoji(startTime) {
@@ -283,7 +246,6 @@ function getDayTypeEmoji(dayType) {
 
 const DAY_NAMES_AR = { Sun:'الأحد', Mon:'الاثنين', Tue:'الثلاثاء', Wed:'الأربعاء', Thu:'الخميس', Fri:'الجمعة', Sat:'السبت' };
 
-// ── Load All ──
 async function loadAll() {
   await Promise.all([loadAgents(), loadShiftTypes(), loadWeeks()]);
 }
@@ -356,15 +318,11 @@ async function loadDraftRequests() {
   draftRequests = {};
   if (!currentWeek) return;
   try {
-    const { data } = await db.from('requests')
-      .select('*')
-      .eq('type', 'Schedule Request')
-      .eq('status', 'Pending');
-    const banner    = document.getElementById('requests-banner');
-    const pillsEl   = document.getElementById('requests-pills');
-    const emptyEl   = document.getElementById('requests-empty');
+    const { data } = await db.from('requests').select('*').eq('type', 'Schedule Request').eq('status', 'Pending');
+    const banner  = document.getElementById('requests-banner');
+    const pillsEl = document.getElementById('requests-pills');
+    const emptyEl = document.getElementById('requests-empty');
 
-    // فقط الـ requests اللي للأسبوع ده
     const weekReqs = (data||[]).filter(r => {
       try { const det = JSON.parse(r.details); return det.week_id === currentWeek.id; } catch(e) { return false; }
     });
@@ -372,8 +330,7 @@ async function loadDraftRequests() {
     if (currentWeek.status === 'Draft' || currentWeek.status === 'Open') {
       banner.style.display = 'block';
     } else {
-      banner.style.display = 'none';
-      return;
+      banner.style.display = 'none'; return;
     }
 
     if (!weekReqs.length) {
@@ -387,15 +344,13 @@ async function loadDraftRequests() {
 
     weekReqs.forEach(req => {
       try {
-        const det     = JSON.parse(req.details);
-        const agent   = allAgents.find(a => a.id === req.agent_id);
-        const name    = agent?.formal_name || req.agent_name || 'Unknown';
+        const det   = JSON.parse(req.details);
+        const agent = allAgents.find(a => a.id === req.agent_id);
+        const name  = agent?.formal_name || req.agent_name || 'Unknown';
         draftRequests[req.agent_id] = det.draft || {};
-
         const pill = document.createElement('div');
         pill.className = 'req-pill';
         pill.innerHTML = `<i class="fas fa-user" style="font-size:10px;"></i> ${name}`;
-        pill.title = 'اضغط لتطبيق طلب ' + name;
         pill.onclick = () => applyAgentRequest(req.agent_id, det.draft || {}, name);
         pillsEl.appendChild(pill);
       } catch(e) {}
@@ -403,13 +358,10 @@ async function loadDraftRequests() {
   } catch(e) { console.error(e); }
 }
 
-// ── Apply Agent Request to Grid ──
 function applyAgentRequest(agentId, draft, agentName) {
   let applied = 0;
   Object.entries(draft).forEach(([date, entry]) => {
-    const val = entry.day_type === 'Work' && entry.shift_type_id
-      ? `Work__${entry.shift_type_id}`
-      : entry.day_type;
+    const val = entry.day_type === 'Work' && entry.shift_type_id ? `Work__${entry.shift_type_id}` : entry.day_type;
     const sel = document.querySelector(`select[data-agent="${agentId}"][data-date="${date}"]`);
     if (sel) { sel.value = val; onShiftChange(sel); applied++; }
   });
@@ -420,7 +372,6 @@ function applyAgentRequest(agentId, draft, agentName) {
 // ── Load Schedule Grid ──
 async function loadScheduleGrid() {
   if (!currentWeek) return;
-  // Reset emoji map لكل أسبوع
   Object.keys(shiftEmojiMap).forEach(k => delete shiftEmojiMap[k]);
   paletteIndex = 0;
 
@@ -448,7 +399,6 @@ async function loadScheduleGrid() {
     scheduleData[`${s.agent_id}_${s.shift_date}`] = { id: s.id, day_type: s.day_type, shift_type_id: shiftTypeId };
   });
 
-  // Pre-build emoji map from all shift types
   allShiftTypes.forEach(st => getShiftEmoji(st.start_time));
 
   const dates = getWeekDates(currentWeek.week_start, currentWeek.week_end);
@@ -463,11 +413,9 @@ async function loadScheduleGrid() {
   allAgents.forEach(agent => {
     html += `<tr><td class="agent-col"><div style="display:flex;align-items:center;gap:8px;"><div class="agent-avatar" style="width:26px;height:26px;font-size:9px;flex-shrink:0;">${initials(agent.formal_name)}</div><span>${agent.formal_name}</span></div></td>`;
     dates.forEach(d => {
-      const key   = `${agent.id}_${d.iso}`;
-      const entry = scheduleData[key] || { day_type: 'Off', shift_type_id: null };
-      const cls   = getSelectClass(entry.day_type);
-
-      // تحقق لو في request لهذا الـ agent في هذا اليوم
+      const key        = `${agent.id}_${d.iso}`;
+      const entry      = scheduleData[key] || { day_type: 'Off', shift_type_id: null };
+      const cls        = getSelectClass(entry.day_type);
       const agentDraft = draftRequests[agent.id] || {};
       const hasReq     = agentDraft[d.iso] !== undefined;
       const reqEntry   = agentDraft[d.iso] || {};
@@ -497,84 +445,40 @@ async function loadScheduleGrid() {
 
   gridEl.innerHTML = html;
   updateSummary();
-
-  // جيب الـ draft requests
   await loadDraftRequests();
 }
 
-// ── COPY SCHEDULE AS EMOJI ──
-function copyScheduleAsEmoji() {
+// ── EXPORT SCHEDULE AS PNG ──
+async function exportScheduleAsPNG() {
   if (!currentWeek) { showToast('Select a week first', 'error'); return; }
 
-  const dates  = getWeekDates(currentWeek.week_start, currentWeek.week_end);
-  const status = currentWeek.status;
+  const btn = document.getElementById('copy-btn');
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري التصدير...';
 
-  let text = `📅 *جدول الأسبوع: ${formatDateShort(currentWeek.week_start)} ← ${formatDateShort(currentWeek.week_end)}*`;
-  if (status === 'Draft') text += ' _(Draft)_';
-  text += '\n━━━━━━━━━━━━━━━━━━━━━\n';
+  try {
+    const gridEl = document.getElementById('schedule-grid');
 
-  allAgents.forEach(agent => {
-    const dayParts = dates.map(d => {
-      const key   = `${agent.id}_${d.iso}`;
-      const entry = scheduleData[key] || { day_type: 'Off', shift_type_id: null };
-      const dayAr = DAY_NAMES_AR[d.dayName] || d.dayName;
-
-      if (entry.day_type === 'Work') {
-        const st = allShiftTypes.find(s => s.id === entry.shift_type_id);
-        if (st) {
-          const emoji = getShiftEmoji(st.start_time);
-          const time  = st.start_time.substring(0,5) + '-' + st.end_time.substring(0,5);
-          return `${dayAr}: ${emoji} ${time}`;
-        }
-        return `${dayAr}: 🟢 Work`;
-      }
-
-      const emoji = getDayTypeEmoji(entry.day_type);
-      const label = entry.day_type === 'Off' ? 'Off' :
-                    entry.day_type === 'Annual' ? 'إجازة' :
-                    entry.day_type === 'Sick'   ? 'مرضية' :
-                    entry.day_type === 'Casual' ? 'عارضة' :
-                    entry.day_type === 'PH'     ? 'PH' :
-                    entry.day_type === 'Task'   ? 'Task' : 'Off';
-      return `${dayAr}: ${emoji} ${label}`;
+    const canvas = await html2canvas(gridEl, {
+      backgroundColor: '#111111',
+      scale: 2,
+      useCORS: true,
+      logging: false,
     });
 
-    text += `\n👤 *${agent.formal_name}*\n`;
-    text += dayParts.join(' | ');
-    text += '\n━━━━━━━━━━━━━━━━━━━━━\n';
-  });
+    const link = document.createElement('a');
+    link.download = `Schedule_${currentWeek.week_start}_${currentWeek.week_end}.png`;
+    link.href = canvas.toDataURL('image/png');
+    link.click();
 
-  // الـ legend للشيفتات
-  const usedShifts = allShiftTypes.filter(st => {
-    return Object.values(scheduleData).some(e => e.day_type === 'Work' && e.shift_type_id === st.id);
-  });
+    showToast('✅ تم تحميل الجدول كصورة!', 'success');
 
-  if (usedShifts.length) {
-    text += '\n*مفتاح الشيفتات:*\n';
-    usedShifts.forEach(st => {
-      const emoji = getShiftEmoji(st.start_time);
-      text += `${emoji} ${st.start_time.substring(0,5)}-${st.end_time.substring(0,5)} (${st.name})\n`;
-    });
-    text += '⭕ Off | 🏖️ إجازة سنوية | 🤒 مرضية | ☕ عارضة | 🎉 PH';
+  } catch(e) {
+    showToast('Failed: ' + e.message, 'error');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fas fa-image"></i> Save as Image';
   }
-
-  navigator.clipboard.writeText(text).then(() => {
-    showToast('✅ تم نسخ الجدول!', 'success');
-    const btn = document.getElementById('copy-btn');
-    if (btn) {
-      btn.innerHTML = '<i class="fas fa-check"></i> Copied!';
-      setTimeout(() => { btn.innerHTML = '<i class="fas fa-copy"></i> Copy'; }, 2500);
-    }
-  }).catch(() => {
-    // fallback
-    const ta = document.createElement('textarea');
-    ta.value = text;
-    document.body.appendChild(ta);
-    ta.select();
-    document.execCommand('copy');
-    document.body.removeChild(ta);
-    showToast('✅ تم نسخ الجدول!', 'success');
-  });
 }
 
 // ── Build Shift Options ──
@@ -659,56 +563,32 @@ async function updateAnnualLeave() {
   const year      = new Date(currentWeek.week_start).getFullYear();
   const yearStart = year + '-01-01';
   const weekEnd   = currentWeek.week_end;
-
-  const { data: leaves } = await db.from('schedule')
-    .select('agent_id, shift_date')
-    .eq('day_type', 'Annual')
-    .gte('shift_date', yearStart)
-    .lte('shift_date', weekEnd);
-
+  const { data: leaves } = await db.from('schedule').select('agent_id, shift_date').eq('day_type', 'Annual').gte('shift_date', yearStart).lte('shift_date', weekEnd);
   const cols = ['jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec'];
   const { data: annualRecords } = await db.from('annual_leave').select('*').eq('year', year);
-
   const map = {};
   (leaves || []).forEach(l => {
     const month = new Date(l.shift_date + 'T00:00:00').getMonth();
     if (!map[l.agent_id]) map[l.agent_id] = {};
     map[l.agent_id][cols[month]] = (map[l.agent_id][cols[month]] || 0) + 1;
   });
-
   for (const agent of allAgents) {
     const agentMonths  = map[agent.id] || {};
     const annualRecord = (annualRecords || []).find(a => a.agent_id === agent.id);
-
-    // ✅ updates اتعرف الأول
     const updates = {};
     cols.forEach(m => { updates['used_' + m] = agentMonths[m] || 0; });
     updates.total_used = cols.reduce((s, m) => s + (agentMonths[m] || 0), 0);
-
     if (!annualRecord) {
-      await db.from('annual_leave').insert({
-        agent_id:    agent.id,
-        agent_name:  agent.formal_name,
-        year,
-        ...updates,
-        entitlement: 21,
-        carry_over:  0,
-        remaining:   21 - updates.total_used,
-        created_at:  new Date().toISOString(),
-        updated_at:  new Date().toISOString(),
-      });
+      await db.from('annual_leave').insert({ agent_id: agent.id, agent_name: agent.formal_name, year, ...updates, entitlement: 21, carry_over: 0, remaining: 21 - updates.total_used, created_at: new Date().toISOString(), updated_at: new Date().toISOString() });
       continue;
     }
-
     updates.remaining  = (annualRecord.entitlement + annualRecord.carry_over) - updates.total_used;
     updates.updated_at = new Date().toISOString();
     await db.from('annual_leave').update(updates).eq('agent_id', agent.id).eq('year', year);
   }
-
   showToast('Leave balance updated! ✅', 'success');
 }
 
-// ── AUTO GENERATE BREAKS ──
 async function autoGenerateBreaks() {
   const dates = getWeekDates(currentWeek.week_start, currentWeek.week_end);
   for (const d of dates) {
@@ -742,7 +622,7 @@ function calculateBreaks(schedules, date) {
   const usedBreak1 = new Set();
   const usedLunch  = new Set();
   const usedBreak2 = new Set();
-  const upserts = [];
+  const upserts    = [];
   agents.forEach(agent => {
     const noBreakStart  = agent.startMins + 60;
     const noBreakEnd    = agent.endMins   - 60;
@@ -774,8 +654,7 @@ function roundToQuarter(mins) { return Math.round(mins / 15) * 15; }
 function findSlot(ideal, min, max, usedSet) {
   if (!usedSet.has(ideal) && ideal >= min && ideal <= max) return ideal;
   for (let i = 15; i <= 120; i += 15) {
-    const fwd = ideal + i;
-    const bwd = ideal - i;
+    const fwd = ideal + i; const bwd = ideal - i;
     if (fwd <= max && !usedSet.has(fwd)) return fwd;
     if (bwd >= min && !usedSet.has(bwd)) return bwd;
   }
@@ -934,7 +813,6 @@ function updateSummary() {
     <span class="day-count-item" style="background:rgba(212,175,55,0.1);color:var(--gold);">👥 Agents: ${allAgents.length}</span>`;
 }
 
-// ── HELPERS ──
 function getWeekDates(start, end) {
   const dates = []; const days = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
   let cur = new Date(start + 'T00:00:00'); const endDate = new Date(end + 'T00:00:00');
