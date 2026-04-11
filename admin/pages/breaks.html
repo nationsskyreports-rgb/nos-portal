@@ -246,14 +246,16 @@ function clearRow(agentId) {
     editRows[agentId].lunch  = '';
     editRows[agentId].break2 = '';
   }
-  const rows = document.querySelectorAll('#breaks-tbody tr');
-  rows.forEach(row => {
-    if (row.innerHTML.includes(agentId)) {
-      row.querySelectorAll('input').forEach(inp => inp.value = '');
-    }
-  });
-}
 
+const rows = document.querySelectorAll('#breaks-tbody tr');
+rows.forEach(row => {
+  // ✅ بندور على data-agent بدل innerHTML
+  const btn = row.querySelector(`button[onclick="clearRow('${agentId}')"]`);
+  if (btn) {
+    row.querySelectorAll('input').forEach(inp => inp.value = '');
+  }
+});
+}
 // ── SAVE ALL ──
 async function saveAllBreaks() {
   const date = document.getElementById('date-picker').value;
