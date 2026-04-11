@@ -381,8 +381,12 @@ function showDashboard(res) {
     /* إضافة CSS يمنع الاقتطاع */
     statusTextEl.style.whiteSpace  = 'nowrap';
     statusTextEl.style.overflow    = 'visible';
-    statusTextEl.style.fontSize    = 'clamp(14px, 4vw, 22px)';
-
+   statusTextEl.style.fontSize     = 'clamp(11px, 3vw, 18px)';
+   statusTextEl.style.maxWidth     = '100%';
+   statusTextEl.style.overflow     = 'hidden';
+   statusTextEl.style.textOverflow = 'ellipsis';
+   statusTextEl.style.display      = 'block';
+  
     document.getElementById('status-sub-text').innerText = 'Enjoy your shift!';
 
     /* FIX-1: br-shift بدون تقطيع */
@@ -2101,38 +2105,51 @@ async function initSchTab() {
   }
 }
 
-/* ── FIX-2: دالة تختار الأسبوع الحالي أو الجاي تلقائياً ── */
 function autoSelectCurrentWeek() {
   if (!schWeeks.length) return;
-
   const todayIso = new Date().toISOString().split('T')[0];
 
-  // أول هنحاول نلاقي الأسبوع الحالي
   let targetWeek = schWeeks.find(w => w.week_start <= todayIso && w.week_end >= todayIso);
-
-  // لو ما لقيناش، خد أقرب أسبوع جاي
   if (!targetWeek) {
     const future = schWeeks.filter(w => w.week_start > todayIso).sort((a,b) => a.week_start.localeCompare(b.week_start));
     targetWeek = future[0] || schWeeks[0];
   }
-
   if (!targetWeek) return;
 
-  // فتح accordion الـ Published لو مش مفتوح
   const pubAccordion = document.getElementById('acc-published');
   if (pubAccordion && !pubAccordion.classList.contains('active')) {
     toggleSchAccordion('acc-published');
   }
 
-  // انتظر شوية عشان filterSchWeeks تخلص
-  setTimeout(() => {
-    const chip = document.querySelector(`.week-chip[onclick*="${targetWeek.id}"]`);
-    if (chip) {
-      document.querySelectorAll('.week-chip').forEach(c => c.classList.remove('active'));
-      chip.classList.add('active');
-    }
-    loadSchTable(targetWeek.id);
-  }, 400);
+  loadCurrentAndNextWeeks(targetWeek);
+}
+
+async function loadCurrentAndNextWeeks(currentWeek) {
+  const gridEl = document.getElementById('sch-table-grid');
+  gridEl.innerHTML = '<div class="empty-state"><i class="fas fa-spinner spinner"></i> Loading...</div>';
+
+  const todayIso = new Date().toISOString().split('T')[0];
+  const nextWeek = schWeeks.filter(w => w.week_start > currentWeek.week_end)
+    .sort((a,b) => a.week_start.localeCompare(b.week_start))[0];
+
+  let html = '';
+  for (const [week, label] of [[currentWeek,'📅 This Week'], [nextWeek,'📆 Next Week']].filter(([w]) => w)) {
+    const dates = getSchWeekDates(week.week_start, week.week_end);
+    try {
+      const records = await sbFetchSch(`schedule?select=*&week_id=eq.${week.id}`);
+      const schedMap = {};
+      (records||[]).forEach(s => { schedMap[`${s.agent_id}_${s.shift_date}`] = s; });
+      html += `
+        <div style="margin-bottom:24px;">
+          <div style="font-size:11px;font-weight:800;color:var(--primary);text-transform:uppercase;letter-spacing:2px;margin-bottom:10px;display:flex;align-items:center;gap:8px;">
+            ${label}
+            <span style="font-size:10px;color:var(--muted);font-weight:600;">${fmtSchDate(week.week_start)} → ${fmtSchDate(week.week_end)}</span>
+          </div>
+          ${buildSchGrid(schAgents, dates, schedMap, todayIso)}
+        </div>`;
+    } catch(e) {}
+  }
+  gridEl.innerHTML = html || '<div class="empty-state">No schedule found.</div>';
 }
 
 function fmtSchDate(d) {
