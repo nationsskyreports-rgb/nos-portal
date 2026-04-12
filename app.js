@@ -2724,13 +2724,29 @@ async function loadLastTwoCalls(agentName) {
     if (!el) return;
     if (!data || !data.length) { el.innerHTML = ''; return; }
     el.innerHTML = data.map(c => `
-      <div style="background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:12px 14px;display:flex;align-items:center;gap:12px;">
-        <div style="width:34px;height:34px;border-radius:10px;background:var(--primary-gradient);display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;">📞</div>
-        <div style="flex:1;min-width:0;">
-          <div style="font-size:13px;font-weight:800;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${c.customer_name || '—'}</div>
-          <div style="font-size:11px;color:var(--muted);margin-top:2px;">${c.call_reason || '—'}</div>
+      <div style="background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:12px 14px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+          <div style="display:flex;align-items:center;gap:10px;">
+            <div style="width:34px;height:34px;border-radius:10px;background:var(--primary-gradient);display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;">📞</div>
+            <div>
+              <div style="font-size:13px;font-weight:800;color:var(--text);">${c.customer_name || '—'}</div>
+              <div style="font-size:11px;color:var(--muted);font-family:monospace;">${c.customer_mobile || '—'}${c.customer_mobile2 && c.customer_mobile2 !== '-' && c.customer_mobile2 !== 'N/A' ? ' · ' + c.customer_mobile2 : ''}</div>
+            </div>
+          </div>
+          <div style="font-size:10px;color:var(--muted);white-space:nowrap;">${c.logged_at ? new Date(c.logged_at).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'}) : ''}</div>
         </div>
-        <div style="font-size:10px;color:var(--muted);white-space:nowrap;">${c.logged_at ? new Date(c.logged_at).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'}) : ''}</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;font-size:11px;">
+          <div><span style="color:var(--muted);">Reason: </span><span style="font-weight:700;color:var(--primary);">${c.call_reason || '—'}</span></div>
+          <div><span style="color:var(--muted);">Channel: </span><span style="font-weight:700;color:var(--text);">${c.communication_channel || '—'}</span></div>
+          <div><span style="color:var(--muted);">Media: </span><span style="font-weight:700;color:var(--text);">${c.media_source || '—'}</span></div>
+          <div><span style="color:var(--muted);">Budget: </span><span style="font-weight:700;color:var(--text);">${c.budget || '—'}</span></div>
+          <div><span style="color:var(--muted);">Unit: </span><span style="font-weight:700;color:var(--text);">${c.unit_type || '—'}</span></div>
+          <div><span style="color:var(--muted);">Sales: </span><span style="font-weight:700;color:var(--text);">${c.sales_call_requested || '—'}</span></div>
+        </div>
+        ${c.extra_notes && c.extra_notes.trim() && c.extra_notes !== '-' ? `
+        <div style="margin-top:8px;padding:8px;background:var(--surface);border-radius:8px;border:1px solid var(--border);font-size:11px;color:var(--muted);">
+          <i class="fas fa-sticky-note" style="margin-right:5px;color:var(--warn);"></i>${c.extra_notes}
+        </div>` : ''}
       </div>
     `).join('');
   } catch(e) { console.warn('loadLastTwoCalls error:', e); }
