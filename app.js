@@ -805,7 +805,7 @@ function renderRequests(requests) {
     try {
       const d = typeof req.details === 'string' ? JSON.parse(req.details) : req.details;
       if (req.type === 'Time Off')         details = `${d.request_type||''} · ${d.from_date||''} → ${d.to_date||''}`;
-      else if (req.type === 'Shift Swap')  details = `${d.date||''} · مع ${d.colleague||''}`;
+      else if (req.type === 'Shift Swap')  details = `${d.date||''} · with ${d.colleague||''}`;
       else if (req.type === 'Missing Punch') details = `Date: ${d.date||''}`;
       else if (req.type === 'Schedule Request') details = `أسبوع: ${d.week_start||''}`;
       else details = req.details || '';
@@ -2137,7 +2137,7 @@ function applyBreaksToUI(breaks) {
   document.getElementById('br-break2').innerText = breaks.break2 || 'N/A';
 
   if (breaks.shift_time) {
-    /* FIX-1: br-shift مع style يمنع تقطيع النص */
+    /* FIX-1: br-shift with style يمنع تقطيع النص */
     const brShiftEl = document.getElementById('br-shift');
     if (brShiftEl) {
       brShiftEl.innerText          = 'SHIFT: ' + breaks.shift_time;
