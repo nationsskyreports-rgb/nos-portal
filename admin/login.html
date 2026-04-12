@@ -33,7 +33,6 @@ body {
   overflow: hidden;
 }
 
-/* Background effects */
 body::before {
   content: '';
   position: fixed;
@@ -72,15 +71,19 @@ body::after {
   margin-bottom: 32px;
 }
 
-.brand-logo {
-  width: 64px; height: 64px;
-  background: linear-gradient(135deg,#1d4ed8 0%,#3b82f6 50%,#1d4ed8 100%);
-  border-radius: 18px;
-  display: inline-flex;
-  align-items: center; justify-content: center;
-  font-size: 28px;
-  margin-bottom: 16px;
-  background: linear-gradient(135deg,#1d4ed8 0%,#3b82f6 50%,#1d4ed8 100%);
+.brand-logo-img {
+  width: 140px;
+  height: 140px;
+  object-fit: contain;
+  display: block;
+  margin: 0 auto 20px;
+  filter: drop-shadow(0 8px 24px rgba(59,130,246,0.4)) hue-rotate(200deg) saturate(2);
+  animation: float 3s ease-in-out infinite;
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50%       { transform: translateY(-6px); }
 }
 
 .brand-name {
@@ -223,9 +226,7 @@ body::after {
 
 <div class="login-wrap">
   <div class="brand">
-    <div class="brand-logo" style="background:linear-gradient(135deg,#1d4ed8 0%,#3b82f6 50%,#1d4ed8 100%);box-shadow:0 8px 32px rgba(59,130,246,0.3);">
-  <img src="logo.png" alt="NOS" style="width:36px;height:36px;object-fit:contain;filter:brightness(0) invert(1);">
-</div>
+    <img src="logo.png" alt="NOS Logo" class="brand-logo-img">
     <span class="brand-name">NATIONS OF SKY</span>
     <span class="brand-sub">Admin Panel</span>
   </div>
@@ -309,7 +310,6 @@ function doLogin() {
 
 document.addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
 
-// لو مسجل دخول، روح للداشبورد
 if (sessionStorage.getItem('nos-admin')) window.location.href = 'index.html';
 </script>
 </body>
