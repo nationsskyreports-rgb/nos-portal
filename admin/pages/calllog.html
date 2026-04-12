@@ -220,7 +220,7 @@ async function loadCalls() {
 
     if (dateFrom) query = query.gte('logged_at', dateFrom + 'T00:00:00');
     if (dateTo)   query = query.lte('logged_at', dateTo   + 'T23:59:59');
-    if (agent)    query = query.eq('agent_name', agent);
+    if (agent) query = query.ilike('agent_name', agent);
     if (reason)   query = query.eq('call_reason', reason);
     if (searchQuery) {
       query = query.or(`customer_name.ilike.%${searchQuery}%,customer_mobile.ilike.%${searchQuery}%,call_reason.ilike.%${searchQuery}%`);
