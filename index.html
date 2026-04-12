@@ -396,12 +396,25 @@
         <div class="quick-log-btn" onclick="quickLogCall('Wrong Number')"><i class="fas fa-phone-slash"></i><span>Wrong Number</span></div>
         <div class="quick-log-btn" onclick="quickLogCall('Call Dropped')"><i class="fas fa-phone-slash"></i><span>Call Dropped</span></div>
       </div>
-      <div class="step-nav">
+<div class="step-nav">
         <button class="step-nav-btn next" onclick="goStep(2)">Next <i class="fas fa-arrow-right"></i></button>
       </div>
+      <div style="display:flex;gap:8px;margin-top:12px;">
+        <input type="text" id="step1-search-input" placeholder="Name or mobile..."
+          class="form-input" style="flex:1;"
+          onkeydown="if(event.key==='Enter') step1SearchCustomer()">
+        <button id="inline-search-btn" onclick="step1SearchCustomer()"
+          style="padding:10px 16px;background:var(--primary-gradient);color:white;border:none;border-radius:11px;cursor:pointer;font-weight:700;font-family:inherit;white-space:nowrap;">
+          🔍 Search
+        </button>
+        <button onclick="clearStep1Search()"
+          style="padding:10px 16px;background:var(--surface2);border:1px solid var(--border);border-radius:11px;color:var(--muted);cursor:pointer;font-weight:700;font-family:inherit;white-space:nowrap;">
+          ✕ Clear
+        </button>
+      </div>
+      <div id="step1-search-results" style="margin-top:8px;"></div>
       <div id="last-two-calls" style="display:flex;flex-direction:column;gap:8px;margin-top:12px;"></div>
     </div>
-    
     <!-- STEP 2: Customer Info -->
     <div class="step-panel" id="step-2">
       <div class="step-title">👤 Step 2 — Customer Info</div>
