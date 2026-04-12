@@ -829,7 +829,7 @@ function updateSummary() {
 
 function getWeekDates(start, end) {
   const dates = []; const days = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
-  let cur = new Date(start + 'T00:00:00'); const endDate = new Date(end + 'T00:00:00');
+  let cur = new Date(start + 'T12:00:00'); const endDate = new Date(end + 'T12:00:00');
   while (cur <= endDate) {
     const iso = `${cur.getFullYear()}-${String(cur.getMonth()+1).padStart(2,'0')}-${String(cur.getDate()).padStart(2,'0')}`;
     dates.push({ iso, dayName: days[cur.getDay()], display: String(cur.getDate()).padStart(2,'0')+'/'+String(cur.getMonth()+1).padStart(2,'0') });
