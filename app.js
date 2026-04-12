@@ -1819,7 +1819,7 @@ function submitShiftSwap() {
           agent_name: name,
           type:       'Shift Swap',
           status:     'Pending',
-          details:    JSON.stringify({ date, your_shift: yourShift, colleague, their_shift: theirShift, notes: notes || '' }),
+          details:    JSON.stringify({ date, agent_shift: yourShift, colleague, their_shift: theirShift, notes: notes || '' }),
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
         })
