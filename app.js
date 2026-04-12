@@ -2683,7 +2683,7 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 /* FIX-3: دالة البحث الصغيرة في Step 1 */
-function step1SearchCustomer() {
+async function step1SearchCustomer() {
   const query = (document.getElementById('step1-search-input')?.value || '').trim();
   const resultsEl = document.getElementById('step1-search-results');
   const btn = document.getElementById('inline-search-btn');
@@ -2692,27 +2692,58 @@ function step1SearchCustomer() {
   setButtonLoading(btn, true, 'Searching...');
   resultsEl.innerHTML = '<div style="font-size:12px;color:var(--muted);padding:8px 0;"><i class="fas fa-spinner fa-spin"></i> Searching...</div>';
 
-  gasRun('searchCustomer', query).then(res => {
-    setButtonLoading(btn, false, '🔍 Search');
-    if (res.status !== 'success' || !res.results || !res.results.length) {
-      resultsEl.innerHTML = `<div style="font-size:12px;color:var(--muted);padding:4px 0;">No results for "${query}"</div>`;
-      return;
-    }
+  try {
+    // الاتنين بالتوازي
+    const [gasRes, sbRes] = await Promise.allSettled([
+      gasRun('searchCustomer', query),
+      fetch(`${SB_URL_SCH}/rest/v1/call_logs?or=(customer_name.ilike.%25${encodeURIComponent(query)}%25,customer_mobile.ilike.%25${encodeURIComponent(query)}%25)&order=logged_at.desc&limit=5`,
+        { headers: { 'apikey': SB_KEY_SCH, 'Authorization': `Bearer ${SB_KEY_SCH}` } }
+      ).then(r => r.json())
+    ]);
+
     let html = '';
-    res.results.slice(0, 3).forEach(r => {
-      html += `<div style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:10px;margin-bottom:6px;font-size:12px;">
-        <div style="font-weight:700;color:var(--text);">${r.name || 'N/A'}</div>
-        <div style="color:var(--muted);">${r.mobile || '-'} · ${r.reason || '-'}</div>
-        <div style="color:var(--muted);font-size:11px;">${r.timestamp || ''}</div>
-      </div>`;
-    });
-    if (res.count > 3) html += `<div style="font-size:11px;color:var(--muted);text-align:center;">${res.count - 3} more results — go to Search tab</div>`;
+    let total = 0;
+
+    // GAS results
+    if (gasRes.status === 'fulfilled' && gasRes.value?.status === 'success' && gasRes.value?.results?.length) {
+      const results = gasRes.value.results;
+      total += results.length;
+      html += `<div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">📋 GAS — ${results.length} result(s)</div>`;
+      html += results.slice(0, 3).map(r => `
+        <div style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:10px;margin-bottom:6px;font-size:12px;">
+          <div style="font-weight:700;color:var(--text);">${r.name || 'N/A'}</div>
+          <div style="color:var(--muted);">${r.mobile || '-'} · ${r.reason || '-'}</div>
+          <div style="color:var(--muted);font-size:11px;">${r.timestamp || ''} · ${r.agent || ''}</div>
+        </div>`).join('');
+    }
+
+    // Supabase results
+    if (sbRes.status === 'fulfilled' && sbRes.value?.length) {
+      const results = sbRes.value;
+      total += results.length;
+      html += `<div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin:10px 0 6px;">🗄️ Database — ${results.length} result(s)</div>`;
+      html += results.map(c => `
+        <div style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:10px;margin-bottom:6px;font-size:12px;">
+          <div style="font-weight:700;color:var(--text);">${c.customer_name || 'N/A'}</div>
+          <div style="color:var(--muted);font-family:monospace;">${c.customer_mobile || '-'}${c.customer_mobile2 && c.customer_mobile2 !== '-' ? ' · ' + c.customer_mobile2 : ''}</div>
+          <div style="color:var(--muted);">${c.call_reason || '-'} · ${c.agent_name || '-'}</div>
+          <div style="color:var(--muted);font-size:11px;">${c.logged_at ? new Date(c.logged_at).toLocaleDateString('en-GB') : ''}</div>
+        </div>`).join('');
+    }
+
+    if (!total) {
+      html = `<div style="font-size:12px;color:var(--muted);padding:4px 0;">No results for "${query}"</div>`;
+    }
+
     resultsEl.innerHTML = html;
-  }).catch(() => {
-    setButtonLoading(btn, false, '🔍 Search');
+
+  } catch(e) {
     resultsEl.innerHTML = '<div style="font-size:12px;color:var(--danger);">Connection error</div>';
-  });
+  } finally {
+    setButtonLoading(btn, false, '🔍 Search');
+  }
 }
+
 async function loadLastTwoCalls(agentName) {
   try {
     const res = await fetch(
