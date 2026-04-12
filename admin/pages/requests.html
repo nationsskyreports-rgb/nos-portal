@@ -315,7 +315,6 @@ function viewRequest(id) {
   let detailHtml = '';
   try {
     const d = typeof r.details === 'string' ? JSON.parse(r.details) : (r.details || {});
-    // استثني week_id والـ draft من العرض (كبيرين جداً)
     const filtered = Object.entries(d).filter(([k]) => !['draft','week_id'].includes(k));
     detailHtml = filtered.map(([k,v]) => `
       <div class="detail-row">
@@ -365,17 +364,41 @@ function viewRequest(id) {
       </div>
     </div>
   `;
+  
+const showActions = r.status === 'Pending' && r.type !== 'Excuse' && r.type !== 'Break Change';
 
-  document.getElementById('panel-footer').innerHTML = `
+document.getElementById('panel-footer').innerHTML = `
     <button class="btn btn-ghost" onclick="closePanel()">Close</button>
-    <a href="${cfg.page}" class="btn btn-primary" style="text-decoration:none;">
-      <i class="fas fa-external-link-alt"></i> ${cfg.label}
-    </a>
-  `;
-
+    ${showActions ? `
+      <button class="btn btn-danger" onclick="rejectRequest('${r.id}')">
+        <i class="fas fa-times"></i> Reject
+      </button>
+      <button class="btn btn-success" onclick="approveRequest('${r.id}')">
+        <i class="fas fa-check"></i> Approve
+      </button>
+    ` : `
+      <a href="${cfg.page}" class="btn btn-primary" style="text-decoration:none;">
+        <i class="fas fa-external-link-alt"></i> ${cfg.label}
+      </a>
+    `}
+  `;  
   openPanel();
 }
 
+async function approveRequest(id) {
+  await db.from('requests').update({ status:'Approved', updated_at: new Date().toISOString() }).eq('id', id);
+  showToast('✅ Request Approved!', 'success');
+  closePanel();
+  loadRequests();
+}
+
+async function rejectRequest(id) {
+  await db.from('requests').update({ status:'Rejected', updated_at: new Date().toISOString() }).eq('id', id);
+  showToast('❌ Request Rejected', 'warning');
+  closePanel();
+  loadRequests();
+}
+  
 // ── Format Details ──
 function formatDetails(r) {
   if (!r.details) return '—';
