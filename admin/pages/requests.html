@@ -404,12 +404,13 @@ function formatDetails(r) {
   if (!r.details) return '—';
   try {
     const d = typeof r.details === 'string' ? JSON.parse(r.details) : r.details;
-    if (r.type === 'Time Off')         return `${d.request_type||''} · ${d.from_date||''} → ${d.to_date||''}`;
-    if (r.type === 'Excuse')           return `${d.excuse_type||''} · ${d.date||''}`;
-    if (r.type === 'Missing Punch')    return `التاريخ: ${d.date||''}`;
-    if (r.type === 'Shift Swap')       return `${d.date||''} · مع ${d.colleague||''}`;
-    if (r.type === 'Break Change')     return `${d.break_type||''} → ${d.requested_time||''}`;
-    if (r.type === 'Schedule Request') return `أسبوع: ${d.week_start||''}`;
+if (r.type === 'Time Off')         return `${d.request_type||''} · ${d.from_date||''} → ${d.to_date||''}`;
+if (r.type === 'Excuse')           return `${d.excuse_type||''} · ${d.date||''}`;
+if (r.type === 'Missing Punch')    return `Date: ${d.date||''}`;
+if (r.type === 'Shift Swap')       return `${d.date||''} · with ${d.colleague||''}`;
+if (r.type === 'Break Change')     return `${d.break_type||''} → ${d.requested_time||''}`;
+if (r.type === 'Schedule Request') return `Week: ${d.week_start||''}`;
+    
     return '—';
   } catch { return '—'; }
 }
