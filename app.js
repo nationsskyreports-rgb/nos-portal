@@ -2700,21 +2700,23 @@ async function step1SearchCustomer() {
       ).then(r => r.json())
     ]);
 
-    // GAS results
+// GAS results
     const gasResults = (gasRes.status === 'fulfilled' && gasRes.value?.status === 'success')
       ? gasRes.value.results || [] : [];
-
     // Supabase results
     const sbResults = (sbRes.status === 'fulfilled' && Array.isArray(sbRes.value))
       ? sbRes.value : [];
-
-    // Deduplicate — لو الموبايل موجود في GAS مش هيظهر من SB
-    const gasMobiles = new Set(gasResults.map(r => (r.mobile || '').replace(/\s/g, '')));
-    const uniqueSB   = sbResults.filter(c => !gasMobiles.has((c.customer_mobile || '').replace(/\s/g, '')));
-
+    // Deduplicate بالموبايل والاسم
+    const normalize  = m => (m || '').replace(/\s/g, '').replace(/^0/, '');
+    const gasNames   = new Set(gasResults.map(r => (r.name || '').toLowerCase().trim()));
+    const gasMobiles = new Set(gasResults.map(r => normalize(r.mobile)));
+    const uniqueSB   = sbResults.filter(c =>
+      !gasMobiles.has(normalize(c.customer_mobile)) &&
+      !gasNames.has((c.customer_name || '').toLowerCase().trim())
+    );
     let html = '';
     const total = gasResults.length + uniqueSB.length;
-
+     
     // GAS results
     if (gasResults.length) {
       html += `<div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">📋 GAS — ${gasResults.length} result(s)</div>`;
