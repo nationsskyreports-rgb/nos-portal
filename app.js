@@ -806,7 +806,7 @@ function renderRequests(requests) {
       const d = typeof req.details === 'string' ? JSON.parse(req.details) : req.details;
       if (req.type === 'Time Off')         details = `${d.request_type||''} · ${d.from_date||''} → ${d.to_date||''}`;
       else if (req.type === 'Shift Swap')  details = `${d.date||''} · مع ${d.colleague||''}`;
-      else if (req.type === 'Missing Punch') details = `التاريخ: ${d.date||''}`;
+      else if (req.type === 'Missing Punch') details = `Date: ${d.date||''}`;
       else if (req.type === 'Schedule Request') details = `أسبوع: ${d.week_start||''}`;
       else details = req.details || '';
     } catch(e) { details = ''; }
