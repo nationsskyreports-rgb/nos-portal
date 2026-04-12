@@ -2693,7 +2693,6 @@ async function step1SearchCustomer() {
   resultsEl.innerHTML = '<div style="font-size:12px;color:var(--muted);padding:8px 0;"><i class="fas fa-spinner fa-spin"></i> Searching...</div>';
 
   try {
-    // الاتنين بالتوازي
     const [gasRes, sbRes] = await Promise.allSettled([
       gasRun('searchCustomer', query),
       fetch(`${SB_URL_SCH}/rest/v1/call_logs?or=(customer_name.ilike.%25${encodeURIComponent(query)}%25,customer_mobile.ilike.%25${encodeURIComponent(query)}%25)&order=logged_at.desc&limit=5`,
@@ -2701,28 +2700,37 @@ async function step1SearchCustomer() {
       ).then(r => r.json())
     ]);
 
+    // GAS results
+    const gasResults = (gasRes.status === 'fulfilled' && gasRes.value?.status === 'success')
+      ? gasRes.value.results || [] : [];
+
+    // Supabase results
+    const sbResults = (sbRes.status === 'fulfilled' && Array.isArray(sbRes.value))
+      ? sbRes.value : [];
+
+    // Deduplicate — لو الموبايل موجود في GAS مش هيظهر من SB
+    const gasMobiles = new Set(gasResults.map(r => (r.mobile || '').replace(/\s/g, '')));
+    const uniqueSB   = sbResults.filter(c => !gasMobiles.has((c.customer_mobile || '').replace(/\s/g, '')));
+
     let html = '';
-    let total = 0;
+    const total = gasResults.length + uniqueSB.length;
 
     // GAS results
-    if (gasRes.status === 'fulfilled' && gasRes.value?.status === 'success' && gasRes.value?.results?.length) {
-      const results = gasRes.value.results;
-      total += results.length;
-      html += `<div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">📋 GAS — ${results.length} result(s)</div>`;
-      html += results.slice(0, 3).map(r => `
+    if (gasResults.length) {
+      html += `<div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">📋 GAS — ${gasResults.length} result(s)</div>`;
+      html += gasResults.slice(0, 3).map(r => `
         <div style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:10px;margin-bottom:6px;font-size:12px;">
           <div style="font-weight:700;color:var(--text);">${r.name || 'N/A'}</div>
-          <div style="color:var(--muted);">${r.mobile || '-'} · ${r.reason || '-'}</div>
-          <div style="color:var(--muted);font-size:11px;">${r.timestamp || ''} · ${r.agent || ''}</div>
+          <div style="color:var(--muted);font-family:monospace;">${r.mobile || '-'}</div>
+          <div style="color:var(--muted);">${r.reason || '-'} · ${r.agent || '-'}</div>
+          <div style="color:var(--muted);font-size:11px;">${r.timestamp || ''}</div>
         </div>`).join('');
     }
 
     // Supabase results
-    if (sbRes.status === 'fulfilled' && sbRes.value?.length) {
-      const results = sbRes.value;
-      total += results.length;
-      html += `<div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin:10px 0 6px;">🗄️ Database — ${results.length} result(s)</div>`;
-      html += results.map(c => `
+    if (uniqueSB.length) {
+      html += `<div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin:10px 0 6px;">🗄️ Database — ${uniqueSB.length} result(s)</div>`;
+      html += uniqueSB.map(c => `
         <div style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:10px;margin-bottom:6px;font-size:12px;">
           <div style="font-weight:700;color:var(--text);">${c.customer_name || 'N/A'}</div>
           <div style="color:var(--muted);font-family:monospace;">${c.customer_mobile || '-'}${c.customer_mobile2 && c.customer_mobile2 !== '-' ? ' · ' + c.customer_mobile2 : ''}</div>
