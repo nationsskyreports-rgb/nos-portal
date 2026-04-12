@@ -724,10 +724,11 @@ function openNewWeekPanel() {
 function autoSetEnd() {
   const start = document.getElementById('nw-start').value;
   if (!start) return;
-  const end = new Date(start); end.setDate(end.getDate() + 6);
+  const end = new Date(start + 'T12:00:00');
+  end.setDate(end.getDate() + 6);
   document.getElementById('nw-end').value = end.toISOString().split('T')[0];
 }
-
+  
 async function createWeek() {
   const start  = document.getElementById('nw-start').value;
   const end    = document.getElementById('nw-end').value;
