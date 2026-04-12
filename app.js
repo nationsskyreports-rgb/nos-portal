@@ -349,6 +349,7 @@ function showDashboard(res) {
   document.getElementById('nav-avatar').innerText  = initials;
   document.getElementById('user-name').innerText   = res.name;
   document.getElementById('f-agent').value         = res.name;
+  loadLastTwoCalls(res.name); 
 
   if (checkDataAvailability(res.data)) {
     currentAnnualData.left = res.data.annual   || 0;
@@ -1403,8 +1404,38 @@ function submitCallLogForm() {
 
   const gasAction = (_activeChannel === 'whatsapp') ? 'submitWhatsAppLog' : 'submitCallLog';
 
-  gasRun(gasAction, data).then(res => {
-    clearTimeout(slowTimer);
+
+   // حفظ في Supabase بالتوازي مع GAS
+if (!isQ) {
+  fetch(`${SB_URL_SCH}/rest/v1/call_logs`, {
+    method: 'POST',
+    headers: {
+      'apikey': SB_KEY_SCH,
+      'Authorization': `Bearer ${SB_KEY_SCH}`,
+      'Content-Type': 'application/json',
+      'Prefer': 'return=minimal'
+    },
+    body: JSON.stringify({
+      agent_name:            data.agent,
+      customer_name:         data.cname,
+      customer_mobile:       data.mobile,
+      call_reason:           data.reason,
+      communication_channel: data.channel,
+      media_source:          data.media,
+      business_relativity:   data.bizrel,
+      sales_call_requested:  data.salescall,
+      budget:                data.budget,
+      unit_type:             data.unit,
+      extra_notes:           data.extra,
+      logged_at:             new Date().toISOString(),
+    })
+  }).catch(e => console.warn('SB call log failed:', e));
+}
+
+gasRun(gasAction, data).then(res => {
+   
+   
+   clearTimeout(slowTimer);
     /* FIX-5 */ setButtonLoading(btn, false, '📤 Submit to Database');
     if (res.status === 'success') {
       const bar = document.getElementById('call-summary-bar');
@@ -1415,6 +1446,7 @@ function submitCallLogForm() {
       setTimeout(() => bar.style.display = 'none', 30000);
       resetCallForm();
       showToast('✅', 'Call Logged!', cname ? cname + ' — ' + mobile : reason, 'success', 5000);
+      loadLastTwoCalls(data.agent); 
     } else {
       showFormErr(res.msg || 'Something went wrong.');
     }
@@ -2680,4 +2712,26 @@ function step1SearchCustomer() {
     setButtonLoading(btn, false, '🔍 Search');
     resultsEl.innerHTML = '<div style="font-size:12px;color:var(--danger);">Connection error</div>';
   });
+}
+async function loadLastTwoCalls(agentName) {
+  try {
+    const res = await fetch(
+      `${SB_URL_SCH}/rest/v1/call_logs?agent_name=eq.${encodeURIComponent(agentName)}&order=logged_at.desc&limit=2`,
+      { headers: { 'apikey': SB_KEY_SCH, 'Authorization': `Bearer ${SB_KEY_SCH}` } }
+    );
+    const data = await res.json();
+    const el = document.getElementById('last-two-calls');
+    if (!el) return;
+    if (!data || !data.length) { el.innerHTML = ''; return; }
+    el.innerHTML = data.map(c => `
+      <div style="background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:12px 14px;display:flex;align-items:center;gap:12px;">
+        <div style="width:34px;height:34px;border-radius:10px;background:var(--primary-gradient);display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;">📞</div>
+        <div style="flex:1;min-width:0;">
+          <div style="font-size:13px;font-weight:800;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${c.customer_name || '—'}</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:2px;">${c.call_reason || '—'}</div>
+        </div>
+        <div style="font-size:10px;color:var(--muted);white-space:nowrap;">${c.logged_at ? new Date(c.logged_at).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'}) : ''}</div>
+      </div>
+    `).join('');
+  } catch(e) { console.warn('loadLastTwoCalls error:', e); }
 }
