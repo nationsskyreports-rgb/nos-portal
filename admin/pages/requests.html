@@ -220,16 +220,15 @@ const TODAY = new Date().toISOString().split('T')[0];
 
 // ── Type Config ──
 const TYPE_CONFIG = {
-  'Excuse':           { icon:'⚠️',  color:'rgba(245,158,11,0.1)',  border:'rgba(245,158,11,0.2)',  page:'../pages/excuses.html',    label:'إدارة الأعذار' },
-  'Time Off':         { icon:'🏖️',  color:'rgba(139,92,246,0.1)',  border:'rgba(139,92,246,0.2)',  page:'../pages/requests.html',   label:'إدارة الطلبات' },
-  'Missing Punch':    { icon:'👆',  color:'rgba(239,68,68,0.1)',   border:'rgba(239,68,68,0.2)',   page:'../pages/requests.html',   label:'إدارة الطلبات' },
-  'Shift Swap':       { icon:'🔄',  color:'rgba(59,130,246,0.1)',  border:'rgba(59,130,246,0.2)',  page:'../pages/requests.html',   label:'إدارة الطلبات' },
-  'Schedule Request': { icon:'📅',  color:'rgba(212,175,55,0.1)',  border:'rgba(212,175,55,0.2)',  page:'../pages/schedule.html',   label:'فتح الجدول' },
-  'Break Change':     { icon:'☕',  color:'rgba(16,185,129,0.1)',  border:'rgba(16,185,129,0.2)',  page:'../pages/breaks.html',     label:'إدارة البريكات' },
+  'Excuse':           { icon:'⚠️',  color:'rgba(245,158,11,0.1)',  border:'rgba(245,158,11,0.2)',  page:'../pages/excuses.html',  label:'Excuses' },
+  'Time Off':         { icon:'🏖️',  color:'rgba(139,92,246,0.1)',  border:'rgba(139,92,246,0.2)',  page:'../pages/requests.html', label:'Go to Page' },
+  'Missing Punch':    { icon:'👆',  color:'rgba(239,68,68,0.1)',   border:'rgba(239,68,68,0.2)',   page:'../pages/requests.html', label:'Go to Page' },
+  'Shift Swap':       { icon:'🔄',  color:'rgba(59,130,246,0.1)',  border:'rgba(59,130,246,0.2)',  page:'../pages/requests.html', label:'Go to Page' },
+  'Schedule Request': { icon:'📅',  color:'rgba(212,175,55,0.1)',  border:'rgba(212,175,55,0.2)',  page:'../pages/schedule.html', label:'Schedule' },
+  'Break Change':     { icon:'☕',  color:'rgba(16,185,129,0.1)',  border:'rgba(16,185,129,0.2)',  page:'../pages/breaks.html',   label:'Breaks' },
 };
 
-const DEFAULT_CONFIG = { icon:'📄', color:'rgba(107,122,153,0.1)', border:'rgba(107,122,153,0.2)', page:'#', label:'عرض' };
-
+const DEFAULT_CONFIG = { icon:'📄', color:'rgba(107,122,153,0.1)', border:'rgba(107,122,153,0.2)', page:'#', label:'View' };
 // ── Load ──
 async function loadRequests() {
   document.getElementById('inbox-list').innerHTML = '<div class="loading-wrap"><div class="spinner"></div></div>';
@@ -344,7 +343,7 @@ function viewRequest(id) {
     </div>
 
     <!-- Details -->
-    <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:var(--muted);margin-bottom:10px;">تفاصيل الطلب</div>
+    <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:var(--muted);margin-bottom:10px;">Request Details</div>
     <div style="background:var(--surface2);border-radius:12px;padding:12px 16px;margin-bottom:20px;">
       ${detailHtml || '<div style="color:var(--muted);font-size:13px;padding:8px 0;">لا توجد تفاصيل</div>'}
     </div>
@@ -361,14 +360,14 @@ function viewRequest(id) {
     <div style="background:rgba(16,185,129,0.06);border:1px solid rgba(16,185,129,0.15);border-radius:12px;padding:14px 16px;display:flex;align-items:center;gap:12px;">
       <i class="fas fa-info-circle" style="color:#10B981;font-size:16px;flex-shrink:0;"></i>
       <div style="font-size:13px;color:var(--muted);">
-        للتعامل مع هذا الطلب، روح لـ
+        To handle this request, go to
         <strong style="color:var(--text);">${cfg.label}</strong>
       </div>
     </div>
   `;
 
   document.getElementById('panel-footer').innerHTML = `
-    <button class="btn btn-ghost" onclick="closePanel()">إغلاق</button>
+    <button class="btn btn-ghost" onclick="closePanel()">Close</button>
     <a href="${cfg.page}" class="btn btn-primary" style="text-decoration:none;">
       <i class="fas fa-external-link-alt"></i> ${cfg.label}
     </a>
