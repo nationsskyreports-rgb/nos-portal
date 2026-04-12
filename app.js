@@ -2559,6 +2559,28 @@ const res = await fetch(`${SB_URL_SCH}/rest/v1/requests${existingId ? '?id=eq.'+
 
     if (submitBtn) setButtonLoading(submitBtn, false, '📤 Submit Schedule Request');
 
+// تطبيق الشيفتات مباشرة في schedule table
+if (Object.keys(schMyDraft).length) {
+  const upserts = Object.entries(schMyDraft).map(([date, entry]) => ({
+    agent_id:      schMyAgentId,
+    week_id:       schCurrentWeek.id,
+    shift_date:    date,
+    day_type:      entry.day_type,
+    shift_type_id: entry.shift_type_id || null,
+    status:        'Pending'
+  }));
+  await fetch(`${SB_URL_SCH}/rest/v1/schedule`, {
+    method:  'POST',
+    headers: {
+      'apikey':        SB_KEY_SCH,
+      'Authorization': `Bearer ${SB_KEY_SCH}`,
+      'Content-Type':  'application/json',
+      'Prefer':        'resolution=merge-duplicates,return=minimal'
+    },
+    body: JSON.stringify(upserts)
+  });
+}
+     
     if (res.ok) {
       msg.style.color = '#10b981'; msg.innerText = '✅ Request submitted!';
       showToast('✅', 'Schedule Request Submitted!', 'Pending admin review.', 'success', 5000);
