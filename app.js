@@ -2515,18 +2515,20 @@ function schRequestClosedMsg() {
   return `🔒 Requests are closed now.\nOpens every Sunday — next opening: ${String(next.getDate()).padStart(2,'0')}/${String(next.getMonth()+1).padStart(2,'0')}`;
 }
 
+
 async function submitSchRequest() {
   if (!isSchRequestOpen()) { customAlert('Closed', schRequestClosedMsg()); return; }
   if (!schCurrentWeek)     { customAlert('Error', 'No draft week available!'); return; }
   if (!schMyAgentId)       { customAlert('Error', 'Agent not found!'); return; }
 
   const agentName = document.getElementById('user-name').innerText.trim();
-  const msg = document.getElementById('sch-request-msg');
+  const msg       = document.getElementById('sch-request-msg');
   const submitBtn = document.querySelector('[onclick="submitSchRequest()"]');
-  /* FIX-5 */ if (submitBtn) setButtonLoading(submitBtn, true, 'Submitting...');
+  if (submitBtn) setButtonLoading(submitBtn, true, 'Submitting...');
   msg.style.color = 'var(--muted)'; msg.innerText = 'Submitting...';
 
   const details = { week_id: schCurrentWeek.id, week_start: schCurrentWeek.week_start, draft: schMyDraft };
+
   const existing = await sbFetchSch(`requests?select=id,details&agent_id=eq.${schMyAgentId}&type=eq.Schedule%20Request&status=eq.Pending&order=created_at.desc&limit=1`);
   let existingId = null;
   if (existing && existing.length) {
@@ -2541,21 +2543,35 @@ async function submitSchRequest() {
     : { agent_id: schMyAgentId, agent_name: agentName, type: 'Schedule Request', details: JSON.stringify(details), status: 'Pending', created_at: new Date().toISOString() }
   );
 
-  const res = await fetch(`${SB_URL_SCH}/rest/v1/requests${existingId ? '?id=eq.'+existingId : ''}`, {
-    method: existingId ? 'PATCH' : 'POST',
-    headers: { 'apikey': SB_KEY_SCH, 'Authorization': `Bearer ${SB_KEY_SCH}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
-    body
-  });
+  try {
+    const res = await fetch(`${SB_URL_SCH}/rest/v1/requests${existingId ? '?id=eq.'+existingId : ''}`, {
+      method:  existingId ? 'PATCH' : 'POST',
+      headers: { 'apikey': SB_KEY_SCH, 'Authorization': `Bearer ${SB_KEY_SCH}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+      body
+    });
 
-  /* FIX-5 */ if (submitBtn) setButtonLoading(submitBtn, false, '📤 Submit Schedule Request');
-  if (res.ok) {
-    msg.style.color = '#10b981'; msg.innerText = '✅ Request submitted!';
-    showToast('✅', 'Schedule Request Submitted!', 'Pending admin review.', 'success', 5000);
-    setTimeout(() => msg.innerText = '', 5000);
-  } else {
-    msg.style.color = 'var(--danger)'; msg.innerText = '❌ Failed. Try again.';
+    const resText = await res.text();
+    console.log('Submit result:', res.status, resText);
+
+    if (submitBtn) setButtonLoading(submitBtn, false, '📤 Submit Schedule Request');
+
+    if (res.ok) {
+      msg.style.color = '#10b981'; msg.innerText = '✅ Request submitted!';
+      showToast('✅', 'Schedule Request Submitted!', 'Pending admin review.', 'success', 5000);
+      setTimeout(() => msg.innerText = '', 5000);
+    } else {
+      console.error('Failed:', res.status, resText);
+      msg.style.color = 'var(--danger)';
+      msg.innerText   = `❌ Failed (${res.status}). Try again.`;
+    }
+  } catch(e) {
+    console.error('Network error:', e);
+    if (submitBtn) setButtonLoading(submitBtn, false, '📤 Submit Schedule Request');
+    msg.style.color = 'var(--danger)';
+    msg.innerText   = '❌ Connection error!';
   }
 }
+
 
 function resetSchDraft() {
   schMyDraft = {};
