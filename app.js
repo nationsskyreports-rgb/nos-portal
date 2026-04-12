@@ -2751,3 +2751,9 @@ async function loadLastTwoCalls(agentName) {
     `).join('');
   } catch(e) { console.warn('loadLastTwoCalls error:', e); }
 }
+function clearStep1Search() {
+  const input = document.getElementById('step1-search-input');
+  const results = document.getElementById('step1-search-results');
+  if (input) input.value = '';
+  if (results) results.innerHTML = '';
+}
