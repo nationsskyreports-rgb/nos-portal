@@ -178,6 +178,7 @@ body::after {
 .pw-toggle {
   position: absolute; right: 14px; top: 50%;
   transform: translateY(-50%);
+  line-height: 1;
   background: none; border: none;
   color: var(--muted); cursor: pointer;
   font-size: 14px; padding: 4px;
@@ -237,9 +238,14 @@ body::after {
 
 <div class="login-wrap">
   <div class="brand">
-    <div class="brand-logo-wrap">
-      <img src="logo.png" alt="NOS Logo">
-    </div>
+<img src="logo.png" alt="NOS Logo" style="
+  width:120px; height:120px;
+  object-fit:contain;
+  display:block;
+  margin:0 auto 20px;
+  filter: invert(40%) sepia(100%) saturate(500%) hue-rotate(190deg) brightness(1.2);
+  animation: float 3s ease-in-out infinite;
+">
     <span class="brand-name">NATIONS OF SKY</span>
     <span class="brand-sub">Admin Panel</span>
   </div>
