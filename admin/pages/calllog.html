@@ -69,8 +69,29 @@
                 oninput="handleSearch(this.value)">
             </div>
             <!-- Date Filter -->
-            <input type="date" id="date-from" class="form-input" style="width:auto;padding:8px 12px;" onchange="loadCalls()">
-            <input type="date" id="date-to" class="form-input" style="width:auto;padding:8px 12px;" onchange="loadCalls()">
+<input type="date" id="date-from" class="form-input" style="width:auto;padding:8px 12px;" onchange="loadCalls()">
+<input type="date" id="date-to" class="form-input" style="width:auto;padding:8px 12px;" onchange="loadCalls()">
+<select id="month-filter" class="form-input" style="width:auto;padding:8px 12px;" onchange="applyMonthFilter()">
+  <option value="">All Months</option>
+  <option value="01">January</option>
+  <option value="02">February</option>
+  <option value="03">March</option>
+  <option value="04">April</option>
+  <option value="05">May</option>
+  <option value="06">June</option>
+  <option value="07">July</option>
+  <option value="08">August</option>
+  <option value="09">September</option>
+  <option value="10">October</option>
+  <option value="11">November</option>
+  <option value="12">December</option>
+</select>
+<select id="year-filter" class="form-input" style="width:auto;padding:8px 12px;" onchange="applyMonthFilter()">
+  <option value="">All Years</option>
+  <option value="2025">2025</option>
+  <option value="2026">2026</option>
+</select>
+            
             <!-- Agent Filter -->
             <select id="agent-filter" class="form-input" style="width:auto;padding:8px 12px;" onchange="loadCalls()">
               <option value="">All Agents</option>
@@ -328,6 +349,27 @@ function updatePagination() {
 function prevPage() { if (currentPage > 0) { currentPage--; loadCalls(); } }
 function nextPage() { currentPage++; loadCalls(); }
 
+function applyMonthFilter() {
+  const month = document.getElementById('month-filter').value;
+  const year  = document.getElementById('year-filter').value;
+
+  if (month && year) {
+    const lastDay = new Date(year, month, 0).getDate();
+    document.getElementById('date-from').value = `${year}-${month}-01`;
+    document.getElementById('date-to').value   = `${year}-${month}-${lastDay}`;
+  } else if (year && !month) {
+    document.getElementById('date-from').value = `${year}-01-01`;
+    document.getElementById('date-to').value   = `${year}-12-31`;
+  } else {
+    document.getElementById('date-from').value = '';
+    document.getElementById('date-to').value   = '';
+  }
+
+  currentPage = 0;
+  loadCalls();
+}
+
+  
 // ── Helpers ──
 function formatDateTime(d) {
   if (!d) return '—';
