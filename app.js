@@ -2309,9 +2309,9 @@ function getSchWeekDates(start, end) {
   const dates = [];
   const [sy,sm,sd] = start.split('-').map(Number);
   const [ey,em,ed] = end.split('-').map(Number);
-  let cur = new Date(sy, sm-1, sd);
-  const endDate = new Date(ey, em-1, ed);
-  while (cur <= endDate) {
+  let cur = new Date(sy, sm-1, sd, 12, 0, 0);
+  const endDate = new Date(ey, em-1, ed, 12, 0, 0);
+   while (cur <= endDate) {
     const iso = `${cur.getFullYear()}-${String(cur.getMonth()+1).padStart(2,'0')}-${String(cur.getDate()).padStart(2,'0')}`;
     dates.push({ iso, dayName: days[cur.getDay()], display: `${String(cur.getDate()).padStart(2,'0')}/${String(cur.getMonth()+1).padStart(2,'0')}` });
     cur.setDate(cur.getDate() + 1);
