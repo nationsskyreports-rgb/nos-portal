@@ -618,55 +618,6 @@ async function loadAgentSchedule() {
     return result;
   }
 
-  function buildWeekHtml(days, label) {
-    if (!days.length) return '';
-    let html = `<div class="week-section"><div class="nos-week-label">${label}</div><div class="nos-days-list">`;
-    days.forEach((d, i) => {
-      const todayClass = d.isToday ? ' nos-today' : '';
-      let badge = '', displayShift = '', shiftClass = '';
-      if (!d.dayType || d.dayType === 'Off') {
-        badge = '<span class="nos-status-badge nos-badge-off">OFF</span>';
-        displayShift = 'Day Off'; shiftClass = ' nos-off';
-      } else if (d.dayType === 'Work' && d.st) {
-        displayShift = d.st.start_time.substring(0,5) + ' - ' + d.st.end_time.substring(0,5);
-        badge = '<span class="nos-status-badge nos-badge-work">Working</span>';
-      } else if (d.dayType === 'Annual') {
-        badge = '<span class="nos-status-badge nos-badge-annual">Annual</span>';
-      } else if (d.dayType === 'Sick') {
-        badge = '<span class="nos-status-badge nos-badge-sick">Sick</span>';
-      } else if (d.dayType === 'Casual') {
-        badge = '<span class="nos-status-badge nos-badge-casual">Casual</span>';
-      } else if (d.dayType === 'PH') {
-        badge = '<span class="nos-status-badge nos-badge-ph">Public Holiday</span>';
-      } else if (d.dayType === 'Task') {
-        badge = '<span class="nos-status-badge nos-badge-task">Task</span>';
-      }
-      html += `<div class="nos-day-card${todayClass}" style="animation-delay:${i*40}ms">
-        <div class="nos-date-block">
-          <div class="nos-day-name">${d.dayName}</div>
-          <div class="nos-day-num">${d.dayNum}</div>
-        </div>
-        <div class="nos-shift-block">
-          ${displayShift ? `<div class="nos-shift-time${shiftClass}">${displayShift}</div>` : ''}
-          ${badge}
-          ${d.isToday ? '<span class="nos-today-badge">TODAY</span>' : ''}
-        </div>
-      </div>`;
-    });
-    html += '</div></div>';
-    return html;
-  }
-
-  const thisWeekDays = buildDays(thisWeekStart, new Date(thisWeekStart.getTime() + 6*24*60*60*1000));
-  const nextWeekDays = buildDays(nextWeekStart, nextWeekEnd);
-
-  container.innerHTML = `<div class="sched-container">
-    ${buildWeekHtml(thisWeekDays, '📅 THIS WEEK')}
-    ${buildWeekHtml(nextWeekDays, '📆 NEXT WEEK')}
-  </div>`;
-}
-
-
 function renderAgentWeek() {
   const weekId = document.getElementById('agent-sched-week').value;
   const week   = (window._agentSchedWeeks||[]).find(w => w.id === weekId);
