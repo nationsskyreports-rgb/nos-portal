@@ -7,6 +7,7 @@
 <link rel="icon" type="image/png" href="logo.png">
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -66,7 +67,6 @@ body::after {
   to   { opacity: 1; transform: translateY(0); }
 }
 
-/* Brand */
 .brand {
   text-align: center;
   margin-bottom: 32px;
@@ -83,13 +83,6 @@ body::after {
   margin: 0 auto 20px;
   box-shadow: 0 8px 32px rgba(59,130,246,0.4);
   animation: float 3s ease-in-out infinite;
-}
-
-.brand-logo-wrap img {
-  width: 70px;
-  height: 70px;
-  object-fit: contain;
-  filter: brightness(0) invert(1);
 }
 
 @keyframes float {
@@ -114,7 +107,6 @@ body::after {
   display: block;
 }
 
-/* Card */
 .card {
   background: var(--surface);
   border: 1px solid var(--border);
@@ -135,7 +127,6 @@ body::after {
   margin-bottom: 28px;
 }
 
-/* Form */
 .form-group { margin-bottom: 18px; }
 
 .form-label {
@@ -186,7 +177,6 @@ body::after {
 }
 .pw-toggle:hover { color: var(--gold); }
 
-/* Button */
 .btn-login {
   width: 100%;
   padding: 14px;
@@ -209,7 +199,6 @@ body::after {
 
 .btn-login:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
 
-/* Error */
 .error-msg {
   display: none;
   background: rgba(239,68,68,0.1);
@@ -222,11 +211,9 @@ body::after {
   text-align: center;
 }
 
-/* Spinner */
 .spinner { animation: spin 0.8s linear infinite; display: inline-block; }
 @keyframes spin { to { transform: rotate(360deg); } }
 
-/* Footer */
 .footer {
   text-align: center;
   margin-top: 24px;
@@ -238,14 +225,14 @@ body::after {
 
 <div class="login-wrap">
   <div class="brand">
-<img src="logo.png" alt="NOS Logo" style="
-  width:120px; height:120px;
-  object-fit:contain;
-  display:block;
-  margin:0 auto 20px;
-  filter: invert(40%) sepia(100%) saturate(500%) hue-rotate(190deg) brightness(1.2);
-  animation: float 3s ease-in-out infinite;
-">
+    <img src="logo.png" alt="NOS Logo" style="
+      width:120px; height:120px;
+      object-fit:contain;
+      display:block;
+      margin:0 auto 20px;
+      filter: invert(40%) sepia(100%) saturate(500%) hue-rotate(190deg) brightness(1.2);
+      animation: float 3s ease-in-out infinite;
+    ">
     <span class="brand-name">NATIONS OF SKY</span>
     <span class="brand-sub">Admin Panel</span>
   </div>
@@ -258,7 +245,7 @@ body::after {
       <label class="form-label">Username</label>
       <div class="input-wrap">
         <i class="fas fa-user"></i>
-        <input type="text" id="username" class="form-input" placeholder="admin" autocomplete="username">
+        <input type="text" id="username" class="form-input" placeholder="username" autocomplete="username">
       </div>
     </div>
 
@@ -286,10 +273,9 @@ body::after {
 </div>
 
 <script>
-const ADMIN_CREDENTIALS = {
-  'admin':  'NOS@Admin2026',
-  'kareem': 'NOS@Admin2026'
-};
+const SUPABASE_URL = 'https://xzxdaupwwwdcwfnqweub.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh6eGRhdXB3d3dkY3dmbnF3ZXViIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUzMTM5NTAsImV4cCI6MjA5MDg4OTk1MH0.KjNZpFvLxh8XfDDoWdpVsIQZAh1PjzGXOrfDmApZ4K8';
+const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 function togglePw() {
   const input = document.getElementById('password');
@@ -298,7 +284,7 @@ function togglePw() {
   icon.className = input.type === 'password' ? 'fas fa-eye' : 'fas fa-eye-slash';
 }
 
-function doLogin() {
+async function doLogin() {
   const username = document.getElementById('username').value.trim().toLowerCase();
   const password = document.getElementById('password').value;
   const btn      = document.getElementById('login-btn');
@@ -314,17 +300,36 @@ function doLogin() {
   btn.innerHTML = '<i class="fas fa-spinner spinner"></i> Signing in...';
   err.style.display = 'none';
 
-  setTimeout(() => {
-    if (ADMIN_CREDENTIALS[username] && ADMIN_CREDENTIALS[username] === password) {
-      sessionStorage.setItem('nos-admin', JSON.stringify({ username, loginTime: Date.now() }));
-      window.location.href = 'index.html';
-    } else {
+  try {
+    const { data, error } = await db
+      .from('admins')
+      .select('*')
+      .eq('username', username)
+      .eq('password_hash', password)
+      .single();
+
+    if (error || !data) {
       btn.disabled = false;
       btn.innerHTML = '<i class="fas fa-sign-in-alt"></i> Sign In';
       err.style.display = 'block';
       err.innerHTML = '<i class="fas fa-times-circle"></i> Invalid credentials. Please try again.';
+      return;
     }
-  }, 800);
+
+    sessionStorage.setItem('nos-admin', JSON.stringify({
+      username: data.username,
+      role:     data.role,
+      loginTime: Date.now()
+    }));
+
+    window.location.href = 'index.html';
+
+  } catch(e) {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fas fa-sign-in-alt"></i> Sign In';
+    err.style.display = 'block';
+    err.innerHTML = '<i class="fas fa-times-circle"></i> Something went wrong. Try again.';
+  }
 }
 
 document.addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
