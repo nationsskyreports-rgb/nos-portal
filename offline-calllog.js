@@ -164,6 +164,40 @@ function setStatusBar(state, msg) {
 }
 
 
+/* ── SUPABASE INSERT HELPER ── */
+function sbInsertCallLog(data, savedAt) {
+  const SB_URL = window.SB_URL_SCH;
+  const SB_KEY = window.SB_KEY_SCH;
+  if (!SB_URL || !SB_KEY) return Promise.resolve();
+
+  const isQ = (data.reason === 'Wrong Number' || data.reason === 'Call Dropped');
+
+  return fetch(`${SB_URL}/rest/v1/call_logs`, {
+    method: 'POST',
+    headers: {
+      'apikey':        SB_KEY,
+      'Authorization': `Bearer ${SB_KEY}`,
+      'Content-Type':  'application/json',
+      'Prefer':        'return=minimal'
+    },
+    body: JSON.stringify({
+      agent_name:            data.agent,
+      customer_name:         isQ ? null : (data.cname  || null),
+      customer_mobile:       isQ ? null : (data.mobile || null),
+      call_reason:           data.reason,
+      communication_channel: isQ ? null : (data.channel   || null),
+      media_source:          isQ ? null : (data.media     || null),
+      business_relativity:   isQ ? null : (data.bizrel    || null),
+      sales_call_requested:  isQ ? null : (data.salescall || null),
+      budget:                isQ ? null : (data.budget    || null),
+      unit_type:             isQ ? null : (data.unit      || null),
+      extra_notes:           data.extra || null,
+      logged_at:             savedAt || new Date().toISOString(),
+    })
+  }).catch(e => console.warn('SB insert failed:', e));
+}
+
+
 /* ── SYNC OFFLINE CALLS ── */
 async function syncOfflineCalls() {
   const calls = getOfflineCalls();
@@ -182,6 +216,10 @@ async function syncOfflineCalls() {
       const action = data._channel === 'whatsapp' ? 'submitWhatsAppLog' : 'submitCallLog';
       delete data._channel;
 
+      // ✅ حفظ في Supabase أولاً — مستقل عن GAS
+      await sbInsertCallLog(data, _savedAt);
+
+      // ✅ ثم GAS
       const res = await gasRun(action, data);
       if (res.status === 'success') {
         removeOfflineCall(_offlineId);
