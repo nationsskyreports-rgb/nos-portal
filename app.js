@@ -420,8 +420,13 @@ function showDashboard(res) {
         }
 
         subscribeTodayBreaks(agentId);
-        loadAgentSchedule();
-      });
+
+sbFetchSch(`agents?select=id&formal_name=eq.${encodeURIComponent(res.name)}&status=eq.Active`)
+  .then(agents => {
+    if (agents && agents.length) schMyAgentId = agents[0].id;
+    loadAgentSchedule();
+  });
+      
 
   } else {
     statusBanner.style.display = 'block';
@@ -444,6 +449,11 @@ function showDashboard(res) {
     if (breakCheckTimer) clearInterval(breakCheckTimer);
     if (swapPollTimer)   clearInterval(swapPollTimer);
     knownSwapStatuses = {};
+     sbFetchSch(`agents?select=id&formal_name=eq.${encodeURIComponent(res.name)}&status=eq.Active`)
+  .then(agents => {
+    if (agents && agents.length) schMyAgentId = agents[0].id;
+    loadAgentSchedule();
+  });
   }
 
   schShiftTypes = [];
