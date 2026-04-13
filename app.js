@@ -691,8 +691,7 @@ async function loadAgentSchedule() {
     return result;
   }
 
-  /* ── Helper: بناء HTML للأسبوع ── */
-  function buildWeekHtml(days, label) {
+function buildWeekHtml(days, label) {
     if (!days.length) return '';
     let html = `<div class="week-section"><div class="nos-week-label">${label}</div><div class="nos-days-list">`;
     days.forEach((d, i) => {
@@ -731,14 +730,15 @@ async function loadAgentSchedule() {
     return html;
   }
 
-const thisWeekEnd = new Date(thisWeekStart.getTime() + 6*24*60*60*1000);
-  const thisWeekDays = buildDays(thisWeekStart, thisWeekEnd);
-  const nextWeekDays = buildDays(nextWeekStart, nextWeekEnd);
+  try {
+    const thisWeekEnd  = new Date(thisWeekStart.getTime() + 6*24*60*60*1000);
+    const thisWeekDays = buildDays(thisWeekStart, thisWeekEnd);
+    const nextWeekDays = buildDays(nextWeekStart, nextWeekEnd);
 
-  container.innerHTML = `<div class="sched-container">
-    ${buildWeekHtml(thisWeekDays, '📅 THIS WEEK')}
-    ${buildWeekHtml(nextWeekDays, '📆 NEXT WEEK')}
-  </div>`;
+    container.innerHTML = `<div class="sched-container">
+      ${buildWeekHtml(thisWeekDays, '📅 THIS WEEK')}
+      ${buildWeekHtml(nextWeekDays, '📆 NEXT WEEK')}
+    </div>`;
 
   } catch(e) {
     console.error('loadAgentSchedule error:', e);
@@ -778,6 +778,7 @@ function renderAgentWeek() {
     } else {
       badge = '<span class="nos-status-badge nos-badge-off">OFF</span>';
     }
+
 
     html += `<div class="nos-day-card${isToday?' nos-today':''}" style="animation-delay:${i*40}ms">
       <div class="nos-date-block">
