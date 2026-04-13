@@ -595,9 +595,9 @@ async function loadAgentSchedule() {
   if (!schMyAgentId) { container.innerHTML = '<div class="empty-state">Schedule not found.</div>'; return; }
 
   /* ── جيب الـ schedule للأسبوعين ── */
-  const records = await sbFetchSch(
-    `schedule?select=*,schedule_weeks(week_start,week_end,status)&agent_id=eq.${schMyAgentId}&shift_date=gte.${thisWeekStartIso}&shift_date=lte.${nextWeekEndIso}`
-  );
+const records = await sbFetchSch(
+  `schedule?select=*&agent_id=eq.${schMyAgentId}&shift_date=gte.${thisWeekStartIso}&shift_date=lte.${nextWeekEndIso}`
+);
 
   const schedMap = {};
   (records||[]).forEach(s => { schedMap[s.shift_date] = s; });
