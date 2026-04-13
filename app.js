@@ -420,6 +420,7 @@ function showDashboard(res) {
         }
 
         subscribeTodayBreaks(agentId);
+        loadAgentSchedule();
       });
 
   } else {
@@ -444,7 +445,6 @@ function showDashboard(res) {
     if (swapPollTimer)   clearInterval(swapPollTimer);
     knownSwapStatuses = {};
   }
-     loadAgentSchedule();
 
   schShiftTypes = [];
   globalScheduleData = res.schedule      || [];
