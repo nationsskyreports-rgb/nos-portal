@@ -66,6 +66,36 @@ function debounce(fn, delay=300) {
 }
 
 // ═══════════════════════════════════════════
+// NOS Admin — Theme Toggle
+// ═══════════════════════════════════════════
+
+// تحميل الـ theme المحفوظ عند أول تحميل الصفحة
+(function initTheme() {
+  const saved = localStorage.getItem('nos-theme') || 'dark';
+  document.documentElement.setAttribute('data-theme', saved);
+})();
+
+function toggleTheme() {
+  const current = document.documentElement.getAttribute('data-theme') || 'dark';
+  const next    = current === 'dark' ? 'light' : 'dark';
+  document.documentElement.setAttribute('data-theme', next);
+  localStorage.setItem('nos-theme', next);
+  // تحديث أيقونة الزرار
+  const btn = document.getElementById('theme-toggle-btn');
+  if (btn) btn.innerHTML = next === 'dark'
+    ? '<i class="fas fa-moon"></i>'
+    : '<i class="fas fa-sun"></i>';
+}
+
+function applyThemeIcon() {
+  const current = document.documentElement.getAttribute('data-theme') || 'dark';
+  const btn = document.getElementById('theme-toggle-btn');
+  if (btn) btn.innerHTML = current === 'dark'
+    ? '<i class="fas fa-moon"></i>'
+    : '<i class="fas fa-sun"></i>';
+}
+
+// ═══════════════════════════════════════════
 // NOS Admin — Sidebar
 // ═══════════════════════════════════════════
 function renderSidebar() {
