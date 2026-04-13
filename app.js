@@ -608,9 +608,14 @@ async function loadAgentSchedule() {
     function buildDays(startDate, endDate) {
       const dayNames = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
       const result = [];
-      let cur = new Date(startDate);
-      while (cur <= endDate) {
-        const iso = `${cur.getFullYear()}-${String(cur.getMonth()+1).padStart(2,'0')}-${String(cur.getDate()).padStart(2,'0')}`;
+
+let cur = new Date(startDate);
+cur.setHours(12, 0, 0, 0);
+const endDateFixed = new Date(endDate);
+endDateFixed.setHours(23, 59, 59, 999);
+while (cur <= endDateFixed) {
+       
+       const iso = `${cur.getFullYear()}-${String(cur.getMonth()+1).padStart(2,'0')}-${String(cur.getDate()).padStart(2,'0')}`;
         const entry   = schedMap[iso];
         const dayType = entry ? entry.day_type : null;
         const stId    = entry ? entry.shift_type_id : null;
