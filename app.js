@@ -449,7 +449,7 @@ sbFetchSch(`agents?select=id&formal_name=eq.${encodeURIComponent(res.name)}&stat
     if (breakCheckTimer) clearInterval(breakCheckTimer);
     if (swapPollTimer)   clearInterval(swapPollTimer);
     knownSwapStatuses = {};
-     sbFetchSch(`agents?select=id&formal_name=eq.${encodeURIComponent(res.name)}&status=eq.Active`)
+    sbFetchSch('agents?select=id&formal_name=eq.' + encodeURIComponent(res.name) + '&status=eq.Active')
   .then(agents => {
     if (agents && agents.length) schMyAgentId = agents[0].id;
     loadAgentSchedule();
