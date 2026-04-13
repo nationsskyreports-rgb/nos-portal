@@ -364,13 +364,14 @@ function copyKPIReport() {
   const blob = new Blob([html], { type: 'text/html' });
   const data = new ClipboardItem({ 'text/html': blob });
   navigator.clipboard.write([data]).then(() => {
-    showToast('📋', 'Report Copied!', 'Paste it directly in Outlook', 'success', 4000);
+    showToast('📋 Report Copied! Paste it directly in Outlook', 'success');
     closePanel();
   }).catch(() => {
-    showToast('❌', 'Copy Failed!', 'Try on Chrome/Edge', 'error', 4000);
+    showToast('Copy Failed! Try on Chrome/Edge', 'error');
   });
 }
-  const now = new Date();
+
+const now = new Date();
 document.getElementById('month-filter').value = String(now.getMonth()+1).padStart(2,'0');
 
 const MONTH_NAMES  = ['','January','February','March','April','May','June','July','August','September','October','November','December'];
@@ -399,7 +400,6 @@ function switchTab(tab, btn) {
   ['kpi','leaves','annual','annualbal'].forEach(t => {
     document.getElementById('tab-'+t).style.display = t===tab ? 'block' : 'none';
   });
-  // Save All button — بيظهر بس في KPI و Annual
   document.getElementById('save-all-btn').style.display = ['kpi','annual'].includes(tab) ? 'flex' : 'none';
   if (tab==='leaves')     loadLeaves();
   if (tab==='annual')     loadAnnual();
@@ -414,9 +414,9 @@ function handleSaveAll() {
 async function loadAll() {
   const month = document.getElementById('month-filter').value;
   const year  = parseInt(document.getElementById('year-filter').value);
-  document.getElementById('kpi-title').innerText          = 'KPI Report — '+MONTH_NAMES[parseInt(month)]+' '+year;
-  document.getElementById('annual-year-label').innerText   = year;
-  document.getElementById('annualbal-year-label').innerText= year;
+  document.getElementById('kpi-title').innerText           = 'KPI Report — '+MONTH_NAMES[parseInt(month)]+' '+year;
+  document.getElementById('annual-year-label').innerText    = year;
+  document.getElementById('annualbal-year-label').innerText = year;
   editedKPIs = {};
   await loadKPIs(MONTH_NAMES[parseInt(month)], year);
 }
@@ -431,7 +431,7 @@ async function loadKPIs(monthName, year) {
     const dateTo   = year+'-'+month+'-'+String(lastDay).padStart(2,'0');
 
     const [perfRes, excusesRes, annualRes, qualityRes] = await Promise.all([
-      db.from('daily_performance').select('agent_id,agent_name,conformance,missing_sec,avg_aht,calls').gte('perf_date',dateFrom).lte('perf_date',dateTo),
+      db.from('daily_performance').select('agent_id,agent_name,conformance,missing_sec,active_sec,target_sec,avg_aht,calls').gte('perf_date',dateFrom).lte('perf_date',dateTo),
       db.from('excuses').select('*').eq('status','Approved').gte('excuse_date',dateFrom).lte('excuse_date',dateTo),
       db.from('annual_leave').select('*').eq('year',year),
       db.from('quality_scores').select('*').eq('month',monthName).eq('year',year),
@@ -450,23 +450,28 @@ async function loadKPIs(monthName, year) {
       if (agentPerf.length) {
         const avgConf = agentPerf.reduce((s,p)=>s+parseFloat(p.conformance||0),0)/agentPerf.length;
         conformance   = avgConf.toFixed(1)+'%';
+
+        // ── حساب الـ Net Missing الصح ──
+        // Total Missing من الـ daily_performance (بعد الـ excuse)
         const totalMissingSec = agentPerf.reduce((s,p)=>s+(p.missing_sec||0),0);
-        missingTime = totalMissingSec<=300 ? 'Full Time' : secToTime(totalMissingSec);
+        // Total Extra = الأيام اللي اشتغل فيها أكتر من الـ target
+        const totalExtraSec   = agentPerf.reduce((s,p)=>s+Math.max(0,(p.active_sec||0)-(p.target_sec||0)),0);
+        // Net Missing = Missing - Extra
+        const netMissingSec   = Math.max(0, totalMissingSec - totalExtraSec);
+        missingTime = netMissingSec <= 300 ? 'Full Time' : secToTime(netMissingSec);
+
         const ahtArr = agentPerf.filter(p=>p.avg_aht>0);
         if (ahtArr.length) avgAHT = secToTime(Math.round(ahtArr.reduce((s,p)=>s+p.avg_aht,0)/ahtArr.length));
         totalCalls = agentPerf.reduce((s,p)=>s+(p.calls||0),0);
       }
 
+      // الـ Excuses للعرض بس (مش للحساب — الحساب اتعمل في xCALLY)
       const agentExcuses = excusesData.filter(e=>e.agent_id===agent.id);
       const excHours     = agentExcuses.length * 2;
       const excStr       = excHours > 0 ? excHours+' Hours' : 'None';
 
-      let netMissing = '—';
-      if (missingTime==='Full Time') { netMissing='Full Time'; }
-      else if (missingTime!=='—') {
-        const netSec = Math.max(0, timeToSec(missingTime) - excHours*3600);
-        netMissing = netSec<=300 ? 'Full Time' : secToTime(netSec);
-      }
+      // Net Missing = missingTime مباشرة (الـ excuse اتخصم خلاص في xCALLY)
+      const netMissing = missingTime;
 
       const ann        = annData.find(a=>a.agent_id===agent.id)||{};
       const annLeft    = ann.remaining !== undefined ? ann.remaining : '—';
@@ -676,7 +681,6 @@ async function saveAllAnnual() {
   loadAnnual();
 }
 
-// ── ANNUAL BALANCE TAB ──
 async function loadAnnualBalance() {
   const year  = parseInt(document.getElementById('year-filter').value);
   const tbody = document.getElementById('annualbal-tbody');
@@ -729,10 +733,8 @@ function openSendPanel() {
   document.getElementById('panel-footer').innerHTML = `
     <button class="btn btn-ghost" onclick="closePanel()">Close</button>
     <button class="btn btn-primary" onclick="copyKPIReport()">
-     <i class="fas fa-copy"></i> Copy Report
-      </button>`;
-  
-  
+      <i class="fas fa-copy"></i> Copy Report
+    </button>`;
   openPanel();
 }
 
@@ -754,15 +756,15 @@ function buildReportData() {
     };
   });
 }
+
 async function sendToAll() {
   const month = MONTH_NAMES[parseInt(document.getElementById('month-filter').value)];
   const year  = document.getElementById('year-filter').value;
   const reports = buildReportData();
-
   reports.forEach(r => {
     if (!r.email) return;
     const subject = `KPI Report — ${month} ${year}`;
-    const body = 
+    const body =
 `Hi ${r.agentName},
 
 Here is your KPI Report for ${month} ${year}:
@@ -776,7 +778,6 @@ Here is your KPI Report for ${month} ${year}:
 Nations of Sky`;
     window.open(`mailto:${r.email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`);
   });
-
   showToast('Emails opened!', 'success');
   closePanel();
 }
@@ -784,12 +785,10 @@ Nations of Sky`;
 async function sendToOne() {
   const agentId = document.getElementById('send-agent-sel').value;
   if (!agentId) { showToast('Select an agent', 'error'); return; }
-
   const month  = MONTH_NAMES[parseInt(document.getElementById('month-filter').value)];
   const year   = document.getElementById('year-filter').value;
   const r      = buildReportData().find(x => x.agentId === agentId);
   if (!r) return;
-
   const subject = `KPI Report — ${month} ${year}`;
   const body =
 `Hi ${r.agentName},
@@ -803,9 +802,7 @@ Here is your KPI Report for ${month} ${year}:
 ⭐ Quality:     ${r.quality}
 
 Nations of Sky`;
-
   const waText = `Hi ${r.agentName}! 👋\n\nYour KPI Report for *${month} ${year}*:\n\n📊 *Conformance:* ${r.conformance}\n⏱ *Missing Time:* ${r.missing}\n🎧 *AHT:* ${r.aht}\n📞 *Calls:* ${r.calls}\n⭐ *Quality:* ${r.quality}\n\n_Nations of Sky_`;
-
   document.getElementById('panel-body').innerHTML += `
     <div style="margin-top:16px;display:flex;flex-direction:column;gap:10px;">
       <button class="btn btn-success" onclick="window.open('mailto:${r.email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}')">
@@ -817,6 +814,10 @@ Nations of Sky`;
     </div>`;
 }
 
+function secToTime(s) {
+  if (!s && s!==0) return '—';
+  return Math.floor(s/3600).toString().padStart(2,'0')+':'+Math.floor((s%3600)/60).toString().padStart(2,'0')+':'+Math.floor(s%60).toString().padStart(2,'0');
+}
 function timeToSec(val) {
   if (!val) return 0;
   const p=val.toString().trim().split(':');
@@ -824,7 +825,6 @@ function timeToSec(val) {
   if (p.length===2) return (+p[0])*60+(+p[1]);
   return 0;
 }
-function secToTime(s) { return Math.floor(s/3600).toString().padStart(2,'0')+':'+Math.floor((s%3600)/60).toString().padStart(2,'0')+':'+Math.floor(s%60).toString().padStart(2,'0'); }
 function formatDate(d) { if (!d) return '—'; return new Date(d+'T00:00:00').toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'}); }
 function openModal(title,msg,onConfirm) { document.getElementById('modal-title').innerText=title; document.getElementById('modal-msg').innerText=msg; document.getElementById('modal-overlay').classList.add('open'); document.getElementById('modal-confirm').onclick=()=>{closeModal();onConfirm();}; }
 function closeModal() { document.getElementById('modal-overlay').classList.remove('open'); }
