@@ -1,8 +1,7 @@
-const CACHE_NAME = 'ns-portal-v6';
+const CACHE_NAME = 'ns-portal-v7';
 const STATIC_ASSETS = [
   '/',
   '/index.html',
-  '/app.js',
   '/styles.css',
   '/mobile.css',
   '/manifest.json',
@@ -14,7 +13,6 @@ self.addEventListener('install', e => {
   e.waitUntil(
     caches.open(CACHE_NAME).then(cache => cache.addAll(STATIC_ASSETS).catch(() => {}))
   );
-  // لا تعمل skipWaiting هنا — خلي الـ notification تظهر أول
 });
 
 self.addEventListener('activate', e => {
@@ -29,6 +27,15 @@ self.addEventListener('activate', e => {
 self.addEventListener('fetch', e => {
   if (e.request.url.includes('script.google.com')) return;
   if (e.request.url.includes('supabase.co')) return;
+
+  // app.js و offline-calllog.js — دايماً من السيرفر مش من الـ cache
+  if (e.request.url.includes('app.js') || e.request.url.includes('offline-calllog.js')) {
+    e.respondWith(
+      fetch(e.request).catch(() => caches.match(e.request))
+    );
+    return;
+  }
+
   if (e.request.destination === 'script' ||
       e.request.destination === 'style'  ||
       e.request.destination === 'document') {
@@ -43,12 +50,12 @@ self.addEventListener('fetch', e => {
     );
     return;
   }
+
   e.respondWith(
     caches.match(e.request).then(cached => cached || fetch(e.request).catch(() => caches.match('/index.html')))
   );
 });
 
-// استقبل رسالة SKIP_WAITING من الـ app
 self.addEventListener('message', e => {
   if (e.data && e.data.type === 'SKIP_WAITING') {
     self.skipWaiting();
