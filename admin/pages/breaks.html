@@ -830,17 +830,40 @@ function canPlace(slotMins, duration, agentStart, agentEnd, assignments) {
   }
   return true;
 }
+
 function findBestSlot(ideal, duration, agentStart, agentEnd, assignments) {
   const r = roundToQuarter(ideal);
-  if (canPlace(r, duration, agentStart, agentEnd, assignments)) return r;
+  function slotTaken(slot) {
+    const agents = assignments._agents || [];
+    for (const agentId of Object.keys(assignments)) {
+      if (agentId === '_agents') continue;
+      const otherAgent = agents.find(a => a.agent_id === agentId);
+      if (!otherAgent) continue;
+      // لو نفس الشيفت بالظبط
+      if (otherAgent.startMins === agentStart && otherAgent.endMins === agentEnd) {
+        for (const brk of assignments[agentId]) {
+          if (brk.duration === duration && brk.start === slot) return true;
+        }
+      }
+    }
+    return false;
+  }
+
+  if (canPlace(r, duration, agentStart, agentEnd, assignments) && !slotTaken(r)) return r;
+
   for (let d = 15; d <= 180; d += 15) {
     const fwd = r+d, bwd = r-d;
-    if (fwd <= agentEnd-60-duration && canPlace(fwd,duration,agentStart,agentEnd,assignments)) return fwd;
-    if (bwd >= agentStart+60        && canPlace(bwd,duration,agentStart,agentEnd,assignments)) return bwd;
+    if (fwd <= agentEnd-60-duration &&
+        canPlace(fwd,duration,agentStart,agentEnd,assignments) &&
+        !slotTaken(fwd)) return fwd;
+    if (bwd >= agentStart+60 &&
+        canPlace(bwd,duration,agentStart,agentEnd,assignments) &&
+        !slotTaken(bwd)) return bwd;
   }
   return r;
 }
-function registerBreak(assignments, agentId, startMins, duration) {
+  
+  function registerBreak(assignments, agentId, startMins, duration) {
   if (!assignments[agentId]) assignments[agentId] = [];
   assignments[agentId].push({ start: startMins, duration });
 }
@@ -884,7 +907,6 @@ function calculateBreaks(schedules, date) {
     };
   });
 }
-
 
 // ── HELPERS ──
 function timeToMins(t) { if(!t)return 0; const p=t.substring(0,5).split(':'); return (+p[0])*60+(+p[1]); }
