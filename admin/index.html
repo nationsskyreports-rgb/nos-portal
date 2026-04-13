@@ -199,13 +199,17 @@ async function loadKPIs() {
     const today = new Date().toISOString().split('T')[0];
     const month = new Date().toISOString().slice(0, 7);
 
-    // Agents
-    const { data: agents } = await db.from('agents').select('id, status');
-    const total  = agents?.length || 0;
-    const active = agents?.filter(a => a.status === 'Active').length || 0;
-    document.getElementById('kpi-agents').innerText = total;
-    document.getElementById('kpi-agents-sub').innerText = `${active} active`;
-    document.getElementById('kpi-active').innerText = active;
+const today = new Date().toISOString().split('T')[0];
+const { data: agents } = await db.from('agents').select('id, status');
+const total  = agents?.length || 0;
+const active = agents?.filter(a => a.status === 'Active').length || 0;
+document.getElementById('kpi-agents').innerText = total;
+document.getElementById('kpi-agents-sub').innerText = `${active} active`;
+const { count: workingToday } = await db.from('schedule')
+  .select('*', { count: 'exact', head: true })
+  .eq('shift_date', today)
+  .eq('day_type', 'Work');
+document.getElementById('kpi-active').innerText = workingToday || 0;
 
     // Calls today
     const { count: callsToday } = await db.from('call_logs')
