@@ -84,6 +84,7 @@
         <button class="btn btn-ghost btn-sm" onclick="loadData()">
           <i class="fas fa-sync-alt"></i> Refresh
         </button>
+        <button class="theme-toggle" id="theme-toggle-btn" onclick="toggleTheme()" title="Toggle Theme"><i class="fas fa-moon"></i></button>
         <div class="admin-chip">
           <div class="admin-avatar" id="admin-avatar">AD</div>
           <span class="admin-name" id="admin-name">Admin</span>
@@ -176,6 +177,7 @@
 <script src="../js/ui.js"></script>
 <script>
 renderSidebar();
+applyThemeIcon();
 const session = checkAuth();
 if (session) {
   document.getElementById('admin-name').innerText  = session.username || 'Admin';
