@@ -767,58 +767,25 @@ async function sendToAll() {
   const year    = document.getElementById('year-filter').value;
   const reports = buildReportData();
 
+  // ← الإيميلات كلها في TO
+  const allEmails = reports
+    .filter(r => r.email && r.email.trim() !== '' && r.email !== 'no email')
+    .map(r => r.email.trim())
+    .join(',');
+
+  if (!allEmails) {
+    showToast('No valid emails found!', 'error');
+    return;
+  }
+
   const subject = `KPI Report — ${month} ${year}`;
-  const body =
-`Hi Team,
 
-Kindly find your MTD performance for ${month} ${year}:
-
-` + reports.map(r =>
-`👤 ${r.agentName}
-📊 Conformance:  ${r.conformance}
-⏱ Missing Time: ${r.missing}
-🎧 AHT:         ${r.aht}
-📞 Calls:       ${r.calls}
-⭐ Quality:     ${r.quality}`
-).join('\n\n──────────────\n\n') +
-`\n\nBest Regards,\nNations of Sky`;
-
-  window.open(`mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`);
+  // ← TO مليان + السبجيكت + Body فاضي
+  window.open(`mailto:${encodeURIComponent(allEmails)}?subject=${encodeURIComponent(subject)}`);
+  
   showToast('Email opened!', 'success');
 }
-
-async function sendToOne() {
-  const agentId = document.getElementById('send-agent-sel').value;
-  if (!agentId) { showToast('Select an agent', 'error'); return; }
-  const month  = MONTH_NAMES[parseInt(document.getElementById('month-filter').value)];
-  const year   = document.getElementById('year-filter').value;
-  const r      = buildReportData().find(x => x.agentId === agentId);
-  if (!r) return;
-  const subject = `KPI Report — ${month} ${year}`;
-  const body =
-`Hi ${r.agentName},
-
-Here is your KPI Report for ${month} ${year}:
-
-📊 Conformance:  ${r.conformance}
-⏱ Missing Time: ${r.missing}
-🎧 AHT:         ${r.aht}
-📞 Calls:       ${r.calls}
-⭐ Quality:     ${r.quality}
-
-Nations of Sky`;
-  const waText = `Hi ${r.agentName}! 👋\n\nYour KPI Report for *${month} ${year}*:\n\n📊 *Conformance:* ${r.conformance}\n⏱ *Missing Time:* ${r.missing}\n🎧 *AHT:* ${r.aht}\n📞 *Calls:* ${r.calls}\n⭐ *Quality:* ${r.quality}\n\n_Nations of Sky_`;
-  document.getElementById('panel-body').innerHTML += `
-    <div style="margin-top:16px;display:flex;flex-direction:column;gap:10px;">
-      <button class="btn btn-success" onclick="window.open('mailto:${r.email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}')">
-        <i class="fas fa-envelope"></i> Send via Email
-      </button>
-      <button class="btn btn-primary" onclick="window.open('https://wa.me/?text=${encodeURIComponent(waText)}')">
-        <i class="fab fa-whatsapp"></i> Send via WhatsApp
-      </button>
-    </div>`;
-}
-
+  
 function secToTime(s) {
   if (!s && s!==0) return '—';
   return Math.floor(s/3600).toString().padStart(2,'0')+':'+Math.floor((s%3600)/60).toString().padStart(2,'0')+':'+Math.floor(s%60).toString().padStart(2,'0');
