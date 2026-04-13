@@ -444,8 +444,8 @@ function showDashboard(res) {
     if (breakCheckTimer) clearInterval(breakCheckTimer);
     if (swapPollTimer)   clearInterval(swapPollTimer);
     knownSwapStatuses = {};
-     loadAgentSchedule();
   }
+     loadAgentSchedule();
 
   schShiftTypes = [];
   loadMyRequests();
