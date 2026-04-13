@@ -578,8 +578,13 @@ async function loadAgentSchedule() {
   const container = document.getElementById('schedule-content');
   if (!schMyAgentId) { container.innerHTML = '<div class="empty-state">Schedule not found.</div>'; return; }
 
-  const records = await sbFetchSch(`schedule?select=*,schedule_weeks(week_start,week_end,status)&agent_id=eq.${schMyAgentId}`);
 
+const thisWeekStartIso = `${thisWeekStart.getFullYear()}-${String(thisWeekStart.getMonth()+1).padStart(2,'0')}-${String(thisWeekStart.getDate()).padStart(2,'0')}`;
+const nextWeekEndIso   = `${nextWeekEnd.getFullYear()}-${String(nextWeekEnd.getMonth()+1).padStart(2,'0')}-${String(nextWeekEnd.getDate()).padStart(2,'0')}`;
+
+const records = await sbFetchSch(`schedule?select=*,schedule_weeks(week_start,week_end,status)&agent_id=eq.${schMyAgentId}&shift_date=gte.${thisWeekStartIso}&shift_date=lte.${nextWeekEndIso}`);
+
+   
   const today = new Date(); today.setHours(0,0,0,0);
   const todayIso = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
 
