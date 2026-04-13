@@ -447,7 +447,6 @@ function showDashboard(res) {
      loadAgentSchedule();
 
   schShiftTypes = [];
-  loadMyRequests();
   globalScheduleData = res.schedule      || [];
   globalTeamData     = res.allStaffBreaks || [];
   populateSwapForm();
