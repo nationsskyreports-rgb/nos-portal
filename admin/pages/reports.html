@@ -20,7 +20,6 @@
         <div class="breadcrumb"><i class="fas fa-circle" style="font-size:5px;color:var(--gold)"></i> Analytics & Insights</div>
       </div>
       <div class="topbar-right">
-        <!-- Month/Year -->
         <select id="month-filter" class="form-input" style="width:auto;padding:8px 12px;" onchange="loadAll()">
           <option value="01">January</option><option value="02">February</option>
           <option value="03">March</option><option value="04">April</option>
@@ -57,8 +56,6 @@
 
       <!-- CHARTS ROW 1 -->
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;">
-
-        <!-- Calls by Reason -->
         <div class="section-card fade-up">
           <div class="section-header">
             <div class="section-title"><i class="fas fa-chart-pie" style="color:var(--gold)"></i> Calls by Reason</div>
@@ -68,8 +65,6 @@
             <canvas id="reason-chart"></canvas>
           </div>
         </div>
-
-        <!-- Calls by Agent -->
         <div class="section-card fade-up">
           <div class="section-header">
             <div class="section-title"><i class="fas fa-users" style="color:var(--gold)"></i> Calls by Agent</div>
@@ -78,13 +73,10 @@
             <canvas id="agent-chart"></canvas>
           </div>
         </div>
-
       </div>
 
       <!-- CHARTS ROW 2 -->
       <div style="display:grid;grid-template-columns:2fr 1fr;gap:16px;margin-bottom:16px;">
-
-        <!-- Daily Trend -->
         <div class="section-card fade-up">
           <div class="section-header">
             <div class="section-title"><i class="fas fa-chart-line" style="color:var(--gold)"></i> Daily Call Trend</div>
@@ -93,8 +85,6 @@
             <canvas id="trend-chart"></canvas>
           </div>
         </div>
-
-        <!-- Requests Breakdown -->
         <div class="section-card fade-up">
           <div class="section-header">
             <div class="section-title"><i class="fas fa-file-alt" style="color:var(--gold)"></i> Requests</div>
@@ -103,7 +93,6 @@
             <canvas id="requests-chart"></canvas>
           </div>
         </div>
-
       </div>
 
       <!-- KPI TABLE -->
@@ -119,15 +108,17 @@
                 <tr>
                   <th>Agent</th>
                   <th>Conformance</th>
-                  <th>Missing</th>
+                  <th>Missing Time</th>
+                  <th>Net Missing</th>
                   <th>AHT</th>
                   <th>Calls</th>
+                  <th>Excuses</th>
                   <th>Quality</th>
                   <th>Annual Left</th>
                 </tr>
               </thead>
               <tbody id="kpi-table-body">
-                <tr><td colspan="7"><div class="loading-wrap"><div class="spinner"></div></div></td></tr>
+                <tr><td colspan="9"><div class="loading-wrap"><div class="spinner"></div></div></td></tr>
               </tbody>
             </table>
           </div>
@@ -151,19 +142,19 @@ if (session) {
   document.getElementById('admin-name').innerText = session.username||'Admin';
   document.getElementById('admin-avatar').innerText = initials(session.username||'Admin');
 }
-// Set current month
+
 const now = new Date();
 document.getElementById('month-filter').value = String(now.getMonth()+1).padStart(2,'0');
 
 const CHART_COLORS = ['#D4AF37','#10B981','#3B82F6','#8B5CF6','#EF4444','#F59E0B','#EC4899','#14B8A6','#F97316','#6366F1'];
+const MONTH_NAMES  = ['','January','February','March','April','May','June','July','August','September','October','November','December'];
+const MONTHS_SHORT = ['jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec'];
 
 let reasonChart, agentChart, trendChart, requestsChart;
 
-const MONTH_NAMES = ['','January','February','March','April','May','June','July','August','September','October','November','December'];
-
 async function loadAll() {
-  const month = document.getElementById('month-filter').value;
-  const year  = parseInt(document.getElementById('year-filter').value);
+  const month     = document.getElementById('month-filter').value;
+  const year      = parseInt(document.getElementById('year-filter').value);
   const monthName = MONTH_NAMES[parseInt(month)];
   const dateFrom  = `${year}-${month}-01T00:00:00`;
   const dateTo    = `${year}-${month}-31T23:59:59`;
@@ -222,48 +213,101 @@ async function loadCallStats(dateFrom, dateTo, monthName, year) {
   drawLine('trend-chart', sortedDays.map(e=>e[0].slice(5)), sortedDays.map(e=>e[1]), trendChart, c=>trendChart=c);
 }
 
-// ── KPI Table ──
+// ── KPI Table — reads from daily_performance + quality_scores + annual_leave ──
 async function loadKPITable(monthName, year) {
-  const tbody = document.getElementById('kpi-table-body');
-  const { data: agents } = await db.from('agents').select('id,formal_name').eq('status','Active').order('formal_name');
-  const { data: kpis }   = await db.from('kpis').select('*').eq('month',monthName).eq('year',year);
+  const tbody  = document.getElementById('kpi-table-body');
+  const month  = document.getElementById('month-filter').value;
+  const dateFrom = year+'-'+month+'-01';
+  const lastDay  = new Date(year, parseInt(month), 0).getDate();
+  const dateTo   = year+'-'+month+'-'+String(lastDay).padStart(2,'0');
 
-  // Avg conformance
-  const confs = (kpis||[]).map(k=>parseFloat(k.conformance)||0).filter(v=>v>0);
-  document.getElementById('r-conf').innerText = confs.length ? (confs.reduce((a,b)=>a+b,0)/confs.length).toFixed(0)+'%' : '—';
-  document.getElementById('r-aht').innerText  = (kpis||[]).find(k=>k.avg_aht)?.avg_aht?.slice(0,7) || '—';
+  tbody.innerHTML = `<tr><td colspan="9"><div class="loading-wrap"><div class="spinner"></div></div></td></tr>`;
 
-  if (!agents?.length) {
-    tbody.innerHTML = `<tr><td colspan="7"><div class="empty-state"><span class="empty-icon">👥</span>No agents</div></td></tr>`;
-    return;
+  try {
+    const [agentsRes, perfRes, excusesRes, annualRes, qualityRes] = await Promise.all([
+      db.from('agents').select('id,formal_name').eq('status','Active').order('formal_name'),
+      db.from('daily_performance').select('agent_id,conformance,missing_sec,active_sec,target_sec,avg_aht,calls').gte('perf_date',dateFrom).lte('perf_date',dateTo),
+      db.from('excuses').select('agent_id').eq('status','Approved').gte('excuse_date',dateFrom).lte('excuse_date',dateTo),
+      db.from('annual_leave').select('*').eq('year',year),
+      db.from('quality_scores').select('*').eq('month',monthName).eq('year',year),
+    ]);
+
+    const agents      = agentsRes.data  || [];
+    const perfData    = perfRes.data    || [];
+    const excusesData = excusesRes.data || [];
+    const annData     = annualRes.data  || [];
+    const qualityData = qualityRes.data || [];
+
+    // Avg conformance for KPI card
+    const confs = perfData.map(p => parseFloat(p.conformance||0)).filter(v=>v>0);
+    document.getElementById('r-conf').innerText = confs.length ? (confs.reduce((a,b)=>a+b,0)/confs.length).toFixed(0)+'%' : '—';
+
+    // Avg AHT for KPI card
+    const ahtArr = perfData.filter(p=>p.avg_aht>0);
+    document.getElementById('r-aht').innerText = ahtArr.length ? secToTime(Math.round(ahtArr.reduce((s,p)=>s+p.avg_aht,0)/ahtArr.length)) : '—';
+
+    if (!agents.length) {
+      tbody.innerHTML = `<tr><td colspan="9"><div class="empty-state"><span class="empty-icon">👥</span>No agents</div></td></tr>`;
+      return;
+    }
+
+    tbody.innerHTML = agents.map(agent => {
+      const agentPerf = perfData.filter(p => p.agent_id === agent.id);
+      let conformance = '—', missingTime = '—', netMissing = '—', avgAHT = '—', totalCalls = 0;
+
+      if (agentPerf.length) {
+        const avgConf = agentPerf.reduce((s,p)=>s+parseFloat(p.conformance||0),0)/agentPerf.length;
+        conformance   = avgConf.toFixed(1)+'%';
+
+        const totalMissingSec = agentPerf.reduce((s,p)=>s+(p.missing_sec||0),0);
+        const totalExtraSec   = agentPerf.reduce((s,p)=>s+Math.max(0,(p.active_sec||0)-(p.target_sec||0)),0);
+        const netMissingSec   = Math.max(0, totalMissingSec - totalExtraSec);
+
+        missingTime = totalMissingSec <= 300 ? 'Full Time' : secToTime(totalMissingSec);
+        netMissing  = netMissingSec   <= 300 ? 'Full Time' : secToTime(netMissingSec);
+
+        const ahtArr = agentPerf.filter(p=>p.avg_aht>0);
+        if (ahtArr.length) avgAHT = secToTime(Math.round(ahtArr.reduce((s,p)=>s+p.avg_aht,0)/ahtArr.length));
+        totalCalls = agentPerf.reduce((s,p)=>s+(p.calls||0),0);
+      }
+
+      const agentExcuses = excusesData.filter(e=>e.agent_id===agent.id);
+      const excHours     = agentExcuses.length * 2;
+      const excStr       = excHours > 0 ? excHours+' hrs' : 'None';
+
+      const ann        = annData.find(a=>a.agent_id===agent.id)||{};
+      const annLeft    = ann.remaining !== undefined ? ann.remaining : '—';
+      const quality    = qualityData.find(q=>q.agent_id===agent.id);
+      const confNum    = parseFloat(conformance)||0;
+      const confColor  = confNum>=98?'#10B981':confNum>=90?'#F59E0B':'#EF4444';
+
+      return `
+        <tr>
+          <td>
+            <div style="display:flex;align-items:center;gap:8px;">
+              <div class="agent-avatar" style="width:26px;height:26px;font-size:9px;">${initials(agent.formal_name)}</div>
+              <span style="font-weight:700;font-size:13px;">${agent.formal_name}</span>
+            </div>
+          </td>
+          <td style="font-weight:800;color:${confColor};">${conformance}</td>
+          <td style="font-size:12px;color:${missingTime==='Full Time'?'#10B981':'#EF4444'};font-weight:700;">${missingTime}</td>
+          <td style="font-size:12px;color:${netMissing==='Full Time'?'#10B981':'#EF4444'};font-weight:700;">${netMissing}</td>
+          <td style="font-family:monospace;font-size:12px;">${avgAHT}</td>
+          <td style="font-weight:700;">${totalCalls}</td>
+          <td style="color:#F59E0B;font-size:12px;">${excStr}</td>
+          <td style="color:${quality?'var(--gold)':'var(--muted)'};">${quality?.score||'—'}</td>
+          <td>
+            ${annLeft!=='—'
+              ?`<span class="badge ${annLeft<=3?'badge-danger':'badge-success'}">${annLeft} days</span>`
+              :'<span style="color:var(--muted);">—</span>'}
+          </td>
+        </tr>`;
+    }).join('');
+
+  } catch(e) {
+    tbody.innerHTML = `<tr><td colspan="9"><div class="empty-state"><span class="empty-icon">❌</span>Failed: ${e.message}</div></td></tr>`;
+    showToast('Failed: '+e.message, 'error');
   }
-
-  tbody.innerHTML = agents.map(agent => {
-    const kpi = (kpis||[]).find(k=>k.agent_id===agent.id) || {};
-    const conf = parseFloat(kpi.conformance) || 0;
-    const confColor = conf>=98?'#10B981':conf>=90?'#F59E0B':'#EF4444';
-
-    return `
-      <tr>
-        <td>
-          <div style="display:flex;align-items:center;gap:8px;">
-            <div class="agent-avatar" style="width:26px;height:26px;font-size:9px;">${initials(agent.formal_name)}</div>
-            <span style="font-weight:700;font-size:13px;">${agent.formal_name}</span>
-          </div>
-        </td>
-        <td style="font-weight:800;color:${confColor};">${kpi.conformance||'—'}</td>
-        <td style="font-size:12px;">${kpi.missing_time||'—'}</td>
-        <td style="font-family:'JetBrains Mono',monospace;font-size:12px;">${kpi.avg_aht||'—'}</td>
-        <td style="font-weight:700;">${kpi.total_calls||'—'}</td>
-        <td style="color:${kpi.quality?'var(--gold)':'var(--muted)'};">${kpi.quality||'—'}</td>
-        <td>
-          ${kpi.annual_left!==undefined&&kpi.annual_left!==null
-            ?`<span class="badge ${kpi.annual_left<=3?'badge-danger':'badge-success'}">${kpi.annual_left}d</span>`
-            :'<span style="color:var(--muted);">—</span>'}
-        </td>
-      </tr>
-    `;
-  }).join('');
 }
 
 // ── Requests Chart ──
@@ -335,10 +379,8 @@ function drawLine(id, labels, data, instance, setter) {
         data,
         borderColor:'#D4AF37',
         backgroundColor:'rgba(212,175,55,0.08)',
-        fill:true,
-        tension:0.4,
-        pointBackgroundColor:'#D4AF37',
-        pointRadius:3,
+        fill:true, tension:0.4,
+        pointBackgroundColor:'#D4AF37', pointRadius:3,
       }]
     },
     options: {
@@ -350,6 +392,13 @@ function drawLine(id, labels, data, instance, setter) {
       }
     }
   }));
+}
+
+function secToTime(s) {
+  if (!s && s!==0) return '—';
+  return Math.floor(s/3600).toString().padStart(2,'0')+':'+
+         Math.floor((s%3600)/60).toString().padStart(2,'0')+':'+
+         Math.floor(s%60).toString().padStart(2,'0');
 }
 
 loadAll();
