@@ -565,15 +565,22 @@ function renderSchedule(scheduleData) {
   container.innerHTML = `<div class="sched-container">${buildWeekHtml(thisWeek,'📅 THIS WEEK')}${buildWeekHtml(nextWeek,'📆 NEXT WEEK')}</div>`;
 }
 
+
 async function loadAgentSchedule() {
   const agentName = document.getElementById('user-name').innerText.trim();
-  const [agents, shifts] = await Promise.all([
-    sbFetchSch('agents?select=id,formal_name&status=eq.Active'),
-    sbFetchSch('shift_types?select=id,name,start_time,end_time&is_active=eq.true')
-  ]);
-  schShiftTypes = shifts || [];
-  const me = (agents||[]).find(a => a.formal_name.toLowerCase() === agentName.toLowerCase());
-  if (me) schMyAgentId = me.id;
+
+  if (!schMyAgentId) {
+    const [agents, shifts] = await Promise.all([
+      sbFetchSch('agents?select=id,formal_name&status=eq.Active'),
+      sbFetchSch('shift_types?select=id,name,start_time,end_time&is_active=eq.true')
+    ]);
+    schShiftTypes = shifts || [];
+    const me = (agents||[]).find(a => a.formal_name.toLowerCase() === agentName.toLowerCase());
+    if (me) schMyAgentId = me.id;
+  } else {
+    const shifts = await sbFetchSch('shift_types?select=id,name,start_time,end_time&is_active=eq.true');
+    schShiftTypes = shifts || [];
+  }
 
   const container = document.getElementById('schedule-content');
   if (!schMyAgentId) { container.innerHTML = '<div class="empty-state">Schedule not found.</div>'; return; }
