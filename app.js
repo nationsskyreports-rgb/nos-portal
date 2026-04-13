@@ -444,19 +444,13 @@ function showDashboard(res) {
 
     if (breakCheckTimer) clearInterval(breakCheckTimer);
     if (swapPollTimer)   clearInterval(swapPollTimer);
-
-knownSwapStatuses = {};
-
-    sbFetchSch('agents?select=id&formal_name=eq.' + encodeURIComponent(res.name) + '&status=eq.Active')
-      .then(agents => {
-        if (agents && agents.length) schMyAgentId = agents[0].id;
-        loadAgentSchedule();
-      });
+    knownSwapStatuses = {};
   }
 
   schShiftTypes = [];
-
-    globalScheduleData = res.schedule      || [];
+  loadAgentSchedule();
+  loadMyRequests();
+  globalScheduleData = res.schedule      || [];
   globalTeamData     = res.allStaffBreaks || [];
   populateSwapForm();
 
@@ -1411,7 +1405,8 @@ function submitCallLogForm() {
   const gasAction = (_activeChannel === 'whatsapp') ? 'submitWhatsAppLog' : 'submitCallLog';
 
 
-// حفظ في Supabase دايماً — سواء مكالمة عادية أو Wrong Number أو Call Dropped
+   // حفظ في Supabase بالتوازي مع GAS
+if (!isQ) {
   fetch(`${SB_URL_SCH}/rest/v1/call_logs`, {
     method: 'POST',
     headers: {
@@ -1422,21 +1417,21 @@ function submitCallLogForm() {
     },
     body: JSON.stringify({
       agent_name:            data.agent,
-      customer_name:         isQ ? null : data.cname,
-      customer_mobile:       isQ ? null : data.mobile,
+      customer_name:         data.cname,
+      customer_mobile:       data.mobile,
       call_reason:           data.reason,
-      communication_channel: isQ ? null : data.channel,
-      media_source:          isQ ? null : data.media,
-      business_relativity:   isQ ? null : data.bizrel,
-      sales_call_requested:  isQ ? null : data.salescall,
-      budget:                isQ ? null : data.budget,
-      unit_type:             isQ ? null : data.unit,
-      extra_notes:           data.extra || null,
+      communication_channel: data.channel,
+      media_source:          data.media,
+      business_relativity:   data.bizrel,
+      sales_call_requested:  data.salescall,
+      budget:                data.budget,
+      unit_type:             data.unit,
+      extra_notes:           data.extra,
       logged_at:             new Date().toISOString(),
     })
   }).catch(e => console.warn('SB call log failed:', e));
+}
 
-   
 gasRun(gasAction, data).then(res => {
    
    
