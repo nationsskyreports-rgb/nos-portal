@@ -731,7 +731,7 @@ async function loadAgentSchedule() {
     return html;
   }
 
-  const thisWeekEnd = new Date(thisWeekStart.getTime() + 6*24*60*60*1000);
+const thisWeekEnd = new Date(thisWeekStart.getTime() + 6*24*60*60*1000);
   const thisWeekDays = buildDays(thisWeekStart, thisWeekEnd);
   const nextWeekDays = buildDays(nextWeekStart, nextWeekEnd);
 
@@ -739,18 +739,20 @@ async function loadAgentSchedule() {
     ${buildWeekHtml(thisWeekDays, '📅 THIS WEEK')}
     ${buildWeekHtml(nextWeekDays, '📆 NEXT WEEK')}
   </div>`;
-}
 
+  } catch(e) {
+    console.error('loadAgentSchedule error:', e);
+    container.innerHTML = '<div class="empty-state">⚠️ Failed to load schedule. Please refresh.</div>';
+  }
+}
 
 function renderAgentWeek() {
   const weekId = document.getElementById('agent-sched-week').value;
   const week   = (window._agentSchedWeeks||[]).find(w => w.id === weekId);
   if (!week) return;
-
   const dates  = getSchWeekDates(week.week_start, week.week_end);
   const today  = `${new Date().getFullYear()}-${String(new Date().getMonth()+1).padStart(2,'0')}-${String(new Date().getDate()).padStart(2,'0')}`;
   const daysEl = document.getElementById('agent-sched-days');
-
   let html = '<div class="nos-days-list">';
   dates.forEach((d, i) => {
     const entry   = (window._agentSchedMap||{})[d.iso];
@@ -758,7 +760,6 @@ function renderAgentWeek() {
     const stId    = entry ? entry.shift_type_id : null;
     const st      = schShiftTypes.find(s => s.id === stId);
     const isToday = d.iso === today;
-
     let shift = 'Day Off', badge = '', shiftClass = ' nos-off';
     if (dayType === 'Work' && st) {
       shift = st.start_time.substring(0,5) + ' - ' + st.end_time.substring(0,5);
