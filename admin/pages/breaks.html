@@ -63,6 +63,7 @@
         <div style="font-size:13px;color:var(--muted);">
           Breaks are auto-generated when you Publish a schedule. Use <strong style="color:var(--text);">Regenerate</strong> if you change the schedule after publishing.
           <strong style="color:var(--text);">Break 1 = 15 min · Lunch = 30 min · Break 2 = 15 min</strong>
+          — Algorithm ensures minimum <strong style="color:var(--text);">2 agents on queue</strong> at all times (1 if only 3 working).
         </div>
       </div>
 
@@ -206,7 +207,6 @@ async function loadBreaks() {
     }
 
     const { data: breaks } = await db.from('breaks').select('*').eq('break_date', date);
-
     breaksData = {};
     (breaks || []).forEach(b => { breaksData[b.agent_id] = b; });
 
@@ -248,16 +248,13 @@ function clearRow(agentId) {
     editRows[agentId].lunch  = '';
     editRows[agentId].break2 = '';
   }
-
-const rows = document.querySelectorAll('#breaks-tbody tr');
-rows.forEach(row => {
-  // ✅ بندور على data-agent بدل innerHTML
-  const btn = row.querySelector(`button[onclick="clearRow('${agentId}')"]`);
-  if (btn) {
-    row.querySelectorAll('input').forEach(inp => inp.value = '');
-  }
-});
+  const rows = document.querySelectorAll('#breaks-tbody tr');
+  rows.forEach(row => {
+    const btn = row.querySelector(`button[onclick="clearRow('${agentId}')"]`);
+    if (btn) row.querySelectorAll('input').forEach(inp => inp.value = '');
+  });
 }
+
 // ── SAVE ALL ──
 async function saveAllBreaks() {
   const date = document.getElementById('date-picker').value;
@@ -307,8 +304,7 @@ async function copyFromYesterday() {
     });
     const rows = document.querySelectorAll('#breaks-tbody tr');
     workingAgents.forEach((agent, idx) => {
-      const row = rows[idx];
-      if (!row) return;
+      const row = rows[idx]; if (!row) return;
       const inputs = row.querySelectorAll('input');
       if (inputs.length >= 3) {
         inputs[0].value = editRows[agent.id].break1;
@@ -335,14 +331,10 @@ async function regenerateBreaks() {
           .select('agent_id, shift_type_id, shift_types(name,start_time,end_time)')
           .eq('shift_date', date)
           .eq('day_type', 'Work');
-
         if (!schedules || !schedules.length) {
-          showToast('No working agents found for this day', 'warning');
-          return;
+          showToast('No working agents found for this day', 'warning'); return;
         }
-
         const upserts = calculateBreaks(schedules, date);
-
         if (upserts.length) {
           const { error } = await db.from('breaks').upsert(upserts, { onConflict: 'agent_id,break_date' });
           if (error) throw error;
@@ -358,62 +350,154 @@ async function regenerateBreaks() {
   );
 }
 
-// ── CORE BREAK CALCULATION ──
+
+// ════════════════════════════════════════════════════════════════
+//  STAGGERED BREAK SCHEDULING ALGORITHM  v2.0
+//
+//  القواعد:
+//  ┌──────────────────────────────────────────────────┐
+//  │ available >= 4 agents → لازم يفضل 2 على الكيو  │
+//  │ available == 3 agents → لازم يفضل 1 على الكيو  │
+//  │ available <= 2 agents → مفيش قيد               │
+//  └──────────────────────────────────────────────────┘
+//  "available at time T" = الـ agents اللي شيفتهم بتغطي T
+// ════════════════════════════════════════════════════════════════
+
+// كام agent شيفتهم بتغطي الوقت T
+function availableAt(agents, timeMins) {
+  return agents.filter(a => timeMins >= a.startMins && timeMins < a.endMins).length;
+}
+
+// الحد الأدنى من الـ agents اللي لازم يفضلوا على الكيو
+function minCoverage(availableCount) {
+  if (availableCount >= 4) return 2;
+  if (availableCount === 3) return 1;
+  return 0;
+}
+
+// كام agent على بريك في الوقت T بناءً على الـ assignments الحالية
+function onBreakAt(assignments, timeMins) {
+  let count = 0;
+  for (const agentId of Object.keys(assignments)) {
+    if (agentId === '_agents') continue;
+    for (const brk of assignments[agentId]) {
+      if (timeMins >= brk.start && timeMins < brk.start + brk.duration) {
+        count++; break;
+      }
+    }
+  }
+  return count;
+}
+
+// هل ممكن نحط بريك مدته `duration` دقيقة في الوقت `slotMins`؟
+function canPlace(slotMins, duration, agentStart, agentEnd, assignments) {
+  // لازم يكون جوه نطاق الشيفت مع buffer ساعة من الأول والآخر
+  const earliest = agentStart + 60;
+  const latest   = agentEnd   - 60 - duration;
+  if (slotMins < earliest || slotMins > latest) return false;
+
+  const agents = assignments._agents || [];
+
+  // اتحقق من كل دقيقة في مدة البريك
+  for (let t = slotMins; t < slotMins + duration; t++) {
+    const avail   = availableAt(agents, t);
+    const onBreak = onBreakAt(assignments, t);
+    // لو حطينا البريك ده → onBreak + 1
+    // الباقي على الكيو = avail - (onBreak + 1)
+    if (avail - (onBreak + 1) < minCoverage(avail)) return false;
+  }
+  return true;
+}
+
+// دور على أقرب slot متاح حول `ideal` بخطوات 15 دقيقة
+function findBestSlot(ideal, duration, agentStart, agentEnd, assignments) {
+  const rounded = roundToQuarter(ideal);
+
+  if (canPlace(rounded, duration, agentStart, agentEnd, assignments)) return rounded;
+
+  for (let r = 15; r <= 180; r += 15) {
+    const fwd = rounded + r;
+    const bwd = rounded - r;
+    if (fwd <= agentEnd - 60 - duration &&
+        canPlace(fwd, duration, agentStart, agentEnd, assignments)) return fwd;
+    if (bwd >= agentStart + 60 &&
+        canPlace(bwd, duration, agentStart, agentEnd, assignments)) return bwd;
+  }
+
+  // Fallback — رجع الـ ideal حتى لو في violation
+  // أحسن من إن الـ agent ميأخدش بريك
+  return rounded;
+}
+
+// سجّل بريك في الـ assignments
+function registerBreak(assignments, agentId, startMins, duration) {
+  if (!assignments[agentId]) assignments[agentId] = [];
+  assignments[agentId].push({ start: startMins, duration });
+}
+
+// ── MAIN ──
 function calculateBreaks(schedules, date) {
+  // 1. Build agents list
   const agents = schedules
     .filter(s => s.shift_types)
     .map(s => ({
-      agent_id:   s.agent_id,
-      start_time: s.shift_types.start_time,
-      end_time:   s.shift_types.end_time,
-      startMins:  timeToMins(s.shift_types.start_time),
-      endMins:    timeToMins(s.shift_types.end_time),
+      agent_id:  s.agent_id,
+      start_str: s.shift_types.start_time.substring(0, 5),
+      end_str:   s.shift_types.end_time.substring(0, 5),
+      startMins: timeToMins(s.shift_types.start_time),
+      endMins:   timeToMins(s.shift_types.end_time),
     }));
 
-  // رتب بوقت البداية
+  if (!agents.length) return [];
+
+  // رتب بوقت البداية — الأبكر أولاً يأخد الأولوية
   agents.sort((a, b) => a.startMins - b.startMins);
 
-  // global used slots لكل نوع بريك
-  const usedBreak1 = new Set();
-  const usedLunch  = new Set();
-  const usedBreak2 = new Set();
+  // 2. Assignments tracker
+  const assignments = { _agents: agents };
 
-  const upserts = [];
+  // 3. أنواع البريكات مع نسبة موقعها في نافذة الشيفت
+  //    Break 1 → 30% من النافذة
+  //    Lunch   → 55% من النافذة
+  //    Break 2 → 80% من النافذة
+  const BREAK_TYPES = [
+    { key: 'break1', duration: 15, ratio: 0.30 },
+    { key: 'lunch',  duration: 30, ratio: 0.55 },
+    { key: 'break2', duration: 15, ratio: 0.80 },
+  ];
 
-  agents.forEach(agent => {
-    const noBreakStart = agent.startMins + 60;
-    const noBreakEnd   = agent.endMins   - 60;
-    const availableMins = noBreakEnd - noBreakStart;
-    const windowThird   = Math.floor(availableMins / 3);
+  const result = {};
 
-    // الأوقات المثالية بناءً على شيفت الـ agent
-    const idealBreak1 = roundToQuarter(noBreakStart + Math.floor(windowThird * 0.3));
-    const idealLunch  = roundToQuarter(noBreakStart + windowThird + Math.floor(windowThird * 0.3));
-    const idealBreak2 = roundToQuarter(noBreakStart + windowThird * 2 + Math.floor(windowThird * 0.3));
+  // 4. عالج كل نوع بريك لكل الـ agents قبل ما تنتقل للنوع الجاي
+  //    ده بيضمن توزيع عادل ومنع التكدس
+  for (const bt of BREAK_TYPES) {
+    for (const agent of agents) {
+      const window  = (agent.endMins - 60) - (agent.startMins + 60);
+      const ideal   = agent.startMins + 60 + Math.floor(window * bt.ratio);
+      const slot    = findBestSlot(ideal, bt.duration, agent.startMins, agent.endMins, assignments);
 
-    // دور على أقرب slot متاح جوه window الشيفت
-    const b1 = findSlot(idealBreak1, noBreakStart, noBreakEnd - 15, usedBreak1);
-    const ln = findSlot(idealLunch,  noBreakStart, noBreakEnd - 30, usedLunch);
-    const b2 = findSlot(idealBreak2, noBreakStart, noBreakEnd - 15, usedBreak2);
+      registerBreak(assignments, agent.agent_id, slot, bt.duration);
 
-    // احجز الـ slots
-    usedBreak1.add(b1);
-    usedLunch.add(ln);
-    usedBreak2.add(b2);
+      if (!result[agent.agent_id]) result[agent.agent_id] = {};
+      result[agent.agent_id][bt.key] = slot;
+    }
+  }
 
-    upserts.push({
+  // 5. Build upsert array
+  return agents.map(agent => {
+    const r = result[agent.agent_id] || {};
+    return {
       agent_id:   agent.agent_id,
       break_date: date,
-      shift_time: agent.start_time.substring(0,5) + ' - ' + agent.end_time.substring(0,5),
-      break1:     minsToTime(b1),
-      lunch:      minsToTime(ln),
-      break2:     minsToTime(b2),
+      shift_time: agent.start_str + ' - ' + agent.end_str,
+      break1:     r.break1 != null ? minsToTime(r.break1) : null,
+      lunch:      r.lunch  != null ? minsToTime(r.lunch)  : null,
+      break2:     r.break2 != null ? minsToTime(r.break2) : null,
       updated_at: new Date().toISOString(),
-    });
+    };
   });
-
-  return upserts;
 }
+
 
 // ── WEEKLY VIEW ──
 function switchBreakTab(tab, btn) {
@@ -429,8 +513,9 @@ async function loadWeekSelectOptions() {
   if (sel.options.length > 1) return;
   try {
     const { data } = await db.from('schedule_weeks').select('*').order('week_start',{ascending:false});
-    (data||[]).forEach((w,idx) => {
-      const weekNum = getISOWeek(new Date(w.week_start + 'T00:00:00')); const opt = new Option('Week '+weekNum+'  ('+formatDateShort(w.week_start)+' → '+formatDateShort(w.week_end)+')', w.id);
+    (data||[]).forEach(w => {
+      const weekNum = getISOWeek(new Date(w.week_start + 'T00:00:00'));
+      const opt = new Option('Week '+weekNum+'  ('+formatDateShort(w.week_start)+' → '+formatDateShort(w.week_end)+')', w.id);
       opt.dataset.start = w.week_start;
       opt.dataset.end   = w.week_end;
       sel.add(opt);
@@ -501,48 +586,26 @@ async function loadWeeklyBreaks() {
 
 // ── HELPERS ──
 function timeToMins(t) { if(!t)return 0; const p=t.substring(0,5).split(':'); return (+p[0])*60+(+p[1]); }
-function minsToTime(m) { const h=Math.floor(m/60).toString().padStart(2,'0'); const mn=(m%60).toString().padStart(2,'0'); return h+':'+mn+':00'; }
-function roundToQuarter(mins) { return Math.round(mins / 15) * 15; }
-function findSlot(ideal, min, max, usedSet) {
-  if (!usedSet.has(ideal) && ideal >= min && ideal <= max) return ideal;
-  for (let i = 15; i <= 120; i += 15) {
-    const fwd = ideal + i;
-    const bwd = ideal - i;
-    if (fwd <= max && !usedSet.has(fwd)) return fwd;
-    if (bwd >= min && !usedSet.has(bwd)) return bwd;
-  }
-  return Math.min(Math.max(ideal, min), max);
-}
+function minsToTime(m) { return Math.floor(m/60).toString().padStart(2,'0')+':'+(m%60).toString().padStart(2,'0')+':00'; }
+function roundToQuarter(mins) { return Math.round(mins/15)*15; }
 function fmtTime(val) { if(!val)return ''; const m=val.match(/^(\d{1,2}):(\d{2})/); if(!m)return val; return String(parseInt(m[1])).padStart(2,'0')+':'+m[2]; }
 function formatDate(d) { if(!d)return '—'; return new Date(d+'T00:00:00').toLocaleDateString('en-GB',{weekday:'long',day:'2-digit',month:'long',year:'numeric'}); }
 function formatTime(t) { return t?t.substring(0,5):'—'; }
 function formatDateShort(d) { if(!d)return '—'; const dt=new Date(d+'T00:00:00'); return String(dt.getDate()).padStart(2,'0')+'/'+String(dt.getMonth()+1).padStart(2,'0'); }
 function getWeekDates(start, end) {
-  const dates = [];
-  const days  = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
-  let cur     = new Date(start + 'T00:00:00');
-  const endDate = new Date(end + 'T00:00:00');
-  while (cur <= endDate) {
-    const iso = `${cur.getFullYear()}-${String(cur.getMonth()+1).padStart(2,'0')}-${String(cur.getDate()).padStart(2,'0')}`;
-    dates.push({
-      iso,
-      dayName: days[cur.getDay()],
-      display: String(cur.getDate()).padStart(2,'0') + '/' + String(cur.getMonth()+1).padStart(2,'0')
-    });
-    cur.setDate(cur.getDate() + 1);
+  const dates=[]; const days=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  let cur=new Date(start+'T00:00:00'); const endDate=new Date(end+'T00:00:00');
+  while(cur<=endDate){
+    const iso=`${cur.getFullYear()}-${String(cur.getMonth()+1).padStart(2,'0')}-${String(cur.getDate()).padStart(2,'0')}`;
+    dates.push({iso,dayName:days[cur.getDay()],display:String(cur.getDate()).padStart(2,'0')+'/'+String(cur.getMonth()+1).padStart(2,'0')});
+    cur.setDate(cur.getDate()+1);
   }
   return dates;
 }
 function openModal(title,msg,onConfirm){document.getElementById('modal-title').innerText=title;document.getElementById('modal-msg').innerText=msg;document.getElementById('modal-overlay').classList.add('open');document.getElementById('modal-confirm').onclick=()=>{closeModal();onConfirm();};}
 function closeModal(){document.getElementById('modal-overlay').classList.remove('open');}
-function getISOWeek(date) {
-  const d = new Date(date);
-  d.setHours(0,0,0,0);
-  d.setDate(d.getDate() + 3 - (d.getDay() + 6) % 7);
-  const week1 = new Date(d.getFullYear(), 0, 4);
-  return 1 + Math.round(((d - week1) / 86400000 - 3 + (week1.getDay() + 6) % 7) / 7);
-}
-  
+function getISOWeek(date){const d=new Date(date);d.setHours(0,0,0,0);d.setDate(d.getDate()+3-(d.getDay()+6)%7);const week1=new Date(d.getFullYear(),0,4);return 1+Math.round(((d-week1)/86400000-3+(week1.getDay()+6)%7)/7);}
+
 init();
 </script>
 </body>
