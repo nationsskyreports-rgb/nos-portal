@@ -136,7 +136,7 @@ body::after {
   color: var(--muted); margin-bottom: 8px;
 }
 
-.input-wrap { position: relative; overflow: hidden; }
+.input-wrap { position: relative; }
 
 .input-wrap i {
   position: absolute; left: 14px; top: 50%;
@@ -167,17 +167,16 @@ body::after {
 .form-input::placeholder { color: rgba(107,122,153,0.5); }
 
 .pw-toggle {
-  position: absolute; right: 14px; top: 50%;
+  position: absolute; right: 12px; top: 50%;
   transform: translateY(-50%);
-  background: transparent;
-  z-index: 2;
   line-height: 1;
-  background: none; border: none;
+  background: var(--surface2); border: none;
   color: var(--muted); cursor: pointer;
   font-size: 14px; padding: 4px;
   transition: color 0.2s;
+  z-index: 2;
 }
-.pw-toggle:hover { color: var(--gold); }
+  .pw-toggle:hover { color: var(--gold); }
 
 .btn-login {
   width: 100%;
