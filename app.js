@@ -573,7 +573,7 @@ async function loadAgentSchedule() {
     const curDay = today.getDay();
     const thisWeekStart = new Date(today); thisWeekStart.setDate(today.getDate() - curDay);
     const nextWeekStart = new Date(thisWeekStart); nextWeekStart.setDate(thisWeekStart.getDate() + 7);
-    const nextWeekEnd   = new Date(nextWeekStart); nextWeekEnd.setDate(nextWeekStart.getDate() + 6);
+    const nextWeekEnd = new Date(nextWeekStart); nextWeekEnd.setDate(nextWeekStart.getDate() + 6); nextWeekEnd.setHours(23,59,59,999);
     const thisWeekStartIso = `${thisWeekStart.getFullYear()}-${String(thisWeekStart.getMonth()+1).padStart(2,'0')}-${String(thisWeekStart.getDate()).padStart(2,'0')}`;
     const nextWeekEndIso   = `${nextWeekEnd.getFullYear()}-${String(nextWeekEnd.getMonth()+1).padStart(2,'0')}-${String(nextWeekEnd.getDate()).padStart(2,'0')}`;
 
