@@ -566,41 +566,113 @@ function renderSchedule(scheduleData) {
 
 async function loadAgentSchedule() {
   const agentName = document.getElementById('user-name').innerText.trim();
-
-  /* ── حساب التواريخ ── */
-  const today = new Date(); today.setHours(0,0,0,0);
-  const todayIso = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
-  const curDay = today.getDay();
-  const thisWeekStart = new Date(today); thisWeekStart.setDate(today.getDate() - curDay);
-  const nextWeekStart = new Date(thisWeekStart); nextWeekStart.setDate(thisWeekStart.getDate() + 7);
-  const nextWeekEnd   = new Date(nextWeekStart); nextWeekEnd.setDate(nextWeekStart.getDate() + 6);
-  const thisWeekStartIso = `${thisWeekStart.getFullYear()}-${String(thisWeekStart.getMonth()+1).padStart(2,'0')}-${String(thisWeekStart.getDate()).padStart(2,'0')}`;
-  const nextWeekEndIso   = `${nextWeekEnd.getFullYear()}-${String(nextWeekEnd.getMonth()+1).padStart(2,'0')}-${String(nextWeekEnd.getDate()).padStart(2,'0')}`;
-
-  /* ── جيب الـ agent ID لو مش موجود ── */
-  if (!schMyAgentId) {
-    const [agents, shifts] = await Promise.all([
-      sbFetchSch('agents?select=id,formal_name&status=eq.Active'),
-      sbFetchSch('shift_types?select=id,name,start_time,end_time&is_active=eq.true')
-    ]);
-    schShiftTypes = shifts || [];
-    const me = (agents||[]).find(a => a.formal_name.toLowerCase() === agentName.toLowerCase());
-    if (me) schMyAgentId = me.id;
-  } else {
-    const shifts = await sbFetchSch('shift_types?select=id,name,start_time,end_time&is_active=eq.true');
-    schShiftTypes = shifts || [];
-  }
-
   const container = document.getElementById('schedule-content');
-  if (!schMyAgentId) { container.innerHTML = '<div class="empty-state">Schedule not found.</div>'; return; }
 
-  /* ── جيب الـ schedule للأسبوعين ── */
-const records = await sbFetchSch(
-  `schedule?select=*&agent_id=eq.${schMyAgentId}&shift_date=gte.${thisWeekStartIso}&shift_date=lte.${nextWeekEndIso}`
-);
+  try {
+    const today = new Date(); today.setHours(0,0,0,0);
+    const todayIso = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
+    const curDay = today.getDay();
+    const thisWeekStart = new Date(today); thisWeekStart.setDate(today.getDate() - curDay);
+    const nextWeekStart = new Date(thisWeekStart); nextWeekStart.setDate(thisWeekStart.getDate() + 7);
+    const nextWeekEnd   = new Date(nextWeekStart); nextWeekEnd.setDate(nextWeekStart.getDate() + 6);
+    const thisWeekStartIso = `${thisWeekStart.getFullYear()}-${String(thisWeekStart.getMonth()+1).padStart(2,'0')}-${String(thisWeekStart.getDate()).padStart(2,'0')}`;
+    const nextWeekEndIso   = `${nextWeekEnd.getFullYear()}-${String(nextWeekEnd.getMonth()+1).padStart(2,'0')}-${String(nextWeekEnd.getDate()).padStart(2,'0')}`;
 
-  const schedMap = {};
-  (records||[]).forEach(s => { schedMap[s.shift_date] = s; });
+    if (!schMyAgentId) {
+      const [agents, shifts] = await Promise.all([
+        sbFetchSch('agents?select=id,formal_name&status=eq.Active'),
+        sbFetchSch('shift_types?select=id,name,start_time,end_time&is_active=eq.true')
+      ]);
+      schShiftTypes = shifts || [];
+      const me = (agents||[]).find(a => a.formal_name.toLowerCase() === agentName.toLowerCase());
+      if (me) schMyAgentId = me.id;
+    } else {
+      const shifts = await sbFetchSch('shift_types?select=id,name,start_time,end_time&is_active=eq.true');
+      schShiftTypes = shifts || [];
+    }
+
+    if (!schMyAgentId) {
+      container.innerHTML = '<div class="empty-state">Schedule not found.</div>';
+      return;
+    }
+
+    /* ✅ بدون join */
+    const records = await sbFetchSch(
+      `schedule?select=*&agent_id=eq.${schMyAgentId}&shift_date=gte.${thisWeekStartIso}&shift_date=lte.${nextWeekEndIso}`
+    );
+
+    const schedMap = {};
+    (records||[]).forEach(s => { schedMap[s.shift_date] = s; });
+
+    function buildDays(startDate, endDate) {
+      const dayNames = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+      const result = [];
+      let cur = new Date(startDate);
+      while (cur <= endDate) {
+        const iso = `${cur.getFullYear()}-${String(cur.getMonth()+1).padStart(2,'0')}-${String(cur.getDate()).padStart(2,'0')}`;
+        const entry   = schedMap[iso];
+        const dayType = entry ? entry.day_type : null;
+        const stId    = entry ? entry.shift_type_id : null;
+        const st      = schShiftTypes.find(s => s.id === stId);
+        result.push({ iso, dayName: dayNames[cur.getDay()], dayNum: String(cur.getDate()).padStart(2,'0'), dayType, st, isToday: iso === todayIso });
+        cur.setDate(cur.getDate() + 1);
+      }
+      return result;
+    }
+
+    function buildWeekHtml(days, label) {
+      if (!days.length) return '';
+      let html = `<div class="week-section"><div class="nos-week-label">${label}</div><div class="nos-days-list">`;
+      days.forEach((d, i) => {
+        const todayClass = d.isToday ? ' nos-today' : '';
+        let badge = '', displayShift = '', shiftClass = '';
+        if (!d.dayType || d.dayType === 'Off') {
+          badge = '<span class="nos-status-badge nos-badge-off">OFF</span>';
+          displayShift = 'Day Off'; shiftClass = ' nos-off';
+        } else if (d.dayType === 'Work' && d.st) {
+          displayShift = d.st.start_time.substring(0,5) + ' - ' + d.st.end_time.substring(0,5);
+          badge = '<span class="nos-status-badge nos-badge-work">Working</span>';
+        } else if (d.dayType === 'Annual') {
+          badge = '<span class="nos-status-badge nos-badge-annual">Annual</span>';
+        } else if (d.dayType === 'Sick') {
+          badge = '<span class="nos-status-badge nos-badge-sick">Sick</span>';
+        } else if (d.dayType === 'Casual') {
+          badge = '<span class="nos-status-badge nos-badge-casual">Casual</span>';
+        } else if (d.dayType === 'PH') {
+          badge = '<span class="nos-status-badge nos-badge-ph">Public Holiday</span>';
+        } else if (d.dayType === 'Task') {
+          badge = '<span class="nos-status-badge nos-badge-task">Task</span>';
+        }
+        html += `<div class="nos-day-card${todayClass}" style="animation-delay:${i*40}ms">
+          <div class="nos-date-block">
+            <div class="nos-day-name">${d.dayName}</div>
+            <div class="nos-day-num">${d.dayNum}</div>
+          </div>
+          <div class="nos-shift-block">
+            ${displayShift ? `<div class="nos-shift-time${shiftClass}">${displayShift}</div>` : ''}
+            ${badge}
+            ${d.isToday ? '<span class="nos-today-badge">TODAY</span>' : ''}
+          </div>
+        </div>`;
+      });
+      html += '</div></div>';
+      return html;
+    }
+
+    const thisWeekEnd  = new Date(thisWeekStart.getTime() + 6*24*60*60*1000);
+    const thisWeekDays = buildDays(thisWeekStart, thisWeekEnd);
+    const nextWeekDays = buildDays(nextWeekStart, nextWeekEnd);
+
+    container.innerHTML = `<div class="sched-container">
+      ${buildWeekHtml(thisWeekDays, '📅 THIS WEEK')}
+      ${buildWeekHtml(nextWeekDays, '📆 NEXT WEEK')}
+    </div>`;
+
+  } catch(e) {
+    console.error('loadAgentSchedule error:', e);
+    container.innerHTML = '<div class="empty-state">⚠️ Failed to load schedule. Please refresh.</div>';
+  }
+}
 
   /* ── Helper: بناء مصفوفة الأيام ── */
   function buildDays(startDate, endDate) {
