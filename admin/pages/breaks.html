@@ -600,7 +600,7 @@ function canPlace(slotMins,duration,agentStart,agentEnd,assignments){
   for(let t=slotMins;t<slotMins+duration;t++){
     const avail=availableAt(agents,t);
     const onBreak=onBreakAt(assignments,t);
-    if(avail-(onBreak+1)<minCoverage(avail))return false;
+    if(avail-(onBreak+1)<minCoverage(avail)+1)return false;
   }
   return true;
 }
