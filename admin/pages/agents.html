@@ -225,6 +225,7 @@
 <script>
 // ── Init ──
 renderSidebar();
+applyThemeIcon();
 const session = checkAuth();
 if (session) {
   document.getElementById('admin-name').innerText = session.username || 'Admin';
