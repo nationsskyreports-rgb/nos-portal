@@ -371,8 +371,8 @@ function applyAgentRequest(agentId, draft, agentName) {
     const sel = document.querySelector(`select[data-agent="${agentId}"][data-date="${date}"]`);
     if (sel) { sel.value = val; onShiftChange(sel); applied++; }
   });
-  if (applied) showToast('✅ تم تطبيق طلب ' + agentName + ' — اضغط Save', 'success');
-  else showToast('لم يتم تطبيق أي تغيير', 'warning');
+showToast('✅ Applied ' + agentName + '\'s request — Press Save', 'success');
+showToast('No changes applied', 'warning');
 }
 
 // ── Load Schedule Grid ──
@@ -874,7 +874,7 @@ function openTemplatePanel() {
   const dates = getWeekDates(currentWeek.week_start, currentWeek.week_end);
   document.getElementById('panel-title').innerText = 'Apply Shift Template';
   document.getElementById('panel-body').innerHTML = `
-    <div style="font-size:13px;color:var(--muted);margin-bottom:16px;">اختار موظف ويوم وشيفت — وهيتطبق على الجدول.</div>
+    <div style="font-size:13px;color:var(--muted);margin-bottom:16px;">Select agent, day and shift — will be applied to the schedule.</div>
     <div class="form-grid form-grid-3" style="margin-bottom:16px;">
       <div class="form-group"><label class="form-label">Agent</label>
         <select id="tmpl-agent" class="form-input"><option value="all">All Agents</option>${allAgents.map(a=>`<option value="${a.id}">${a.formal_name}</option>`).join('')}</select></div>
