@@ -349,7 +349,7 @@ function showDashboard(res) {
   document.getElementById('nav-avatar').innerText  = initials;
   document.getElementById('user-name').innerText   = res.name;
   document.getElementById('f-agent').value         = res.name;
-  loadLastTwoCalls(res.name);
+  loadLastTwoCalls(res.name); 
 
   if (checkDataAvailability(res.data)) {
     currentAnnualData.left = res.data.annual   || 0;
@@ -374,26 +374,28 @@ function showDashboard(res) {
 
     /* ── FIX-1: عرض الشيفت كامل بدون تقطيع ── */
     const statusTextEl = document.getElementById('status-text');
-    statusTextEl.innerText          = shift;
-    statusTextEl.style.color        = 'var(--primary)';
-    statusTextEl.style.whiteSpace   = 'nowrap';
-    statusTextEl.style.overflow     = 'hidden';
-    statusTextEl.style.textOverflow = 'ellipsis';
-    statusTextEl.style.fontSize     = 'clamp(11px, 3vw, 18px)';
-    statusTextEl.style.maxWidth     = '100%';
-    statusTextEl.style.display      = 'block';
-
+    statusTextEl.innerText   = shift;
+    statusTextEl.style.color = 'var(--primary)';
+    /* إضافة CSS يمنع الاقتطاع */
+    statusTextEl.style.whiteSpace  = 'nowrap';
+    statusTextEl.style.overflow    = 'visible';
+   statusTextEl.style.fontSize     = 'clamp(11px, 3vw, 18px)';
+   statusTextEl.style.maxWidth     = '100%';
+   statusTextEl.style.overflow     = 'hidden';
+   statusTextEl.style.textOverflow = 'ellipsis';
+   statusTextEl.style.display      = 'block';
+  
     document.getElementById('status-sub-text').innerText = 'Enjoy your shift!';
 
     /* FIX-1: br-shift بدون تقطيع */
     const brShiftEl = document.getElementById('br-shift');
     if (brShiftEl) {
-      brShiftEl.innerText          = 'SHIFT: ' + shift;
-      brShiftEl.style.whiteSpace   = 'nowrap';
-      brShiftEl.style.overflow     = 'hidden';
-      brShiftEl.style.textOverflow = 'ellipsis';
-      brShiftEl.style.maxWidth     = '200px';
-      brShiftEl.title              = shift;
+      brShiftEl.innerText         = 'SHIFT: ' + shift;
+      brShiftEl.style.whiteSpace  = 'nowrap';
+      brShiftEl.style.overflow    = 'hidden';
+      brShiftEl.style.textOverflow= 'ellipsis';
+      brShiftEl.style.maxWidth    = '200px';
+      brShiftEl.title             = shift; // tooltip كامل
     }
 
     try {
@@ -420,13 +422,7 @@ function showDashboard(res) {
         }
 
         subscribeTodayBreaks(agentId);
-
-sbFetchSch(`agents?select=id&formal_name=eq.${encodeURIComponent(res.name)}&status=eq.Active`)
-  .then(agents => {
-    if (agents && agents.length) schMyAgentId = agents[0].id;
-    loadAgentSchedule();
-  });
-      
+      });
 
   } else {
     statusBanner.style.display = 'block';
@@ -448,22 +444,26 @@ sbFetchSch(`agents?select=id&formal_name=eq.${encodeURIComponent(res.name)}&stat
 
     if (breakCheckTimer) clearInterval(breakCheckTimer);
     if (swapPollTimer)   clearInterval(swapPollTimer);
-    knownSwapStatuses = {};
+
+knownSwapStatuses = {};
+
     sbFetchSch('agents?select=id&formal_name=eq.' + encodeURIComponent(res.name) + '&status=eq.Active')
-  .then(agents => {
-    if (agents && agents.length) schMyAgentId = agents[0].id;
-    loadAgentSchedule();
-  });
+      .then(agents => {
+        if (agents && agents.length) schMyAgentId = agents[0].id;
+        loadAgentSchedule();
+      });
   }
 
   schShiftTypes = [];
-  globalScheduleData = res.schedule      || [];
+
+    globalScheduleData = res.schedule      || [];
   globalTeamData     = res.allStaffBreaks || [];
   populateSwapForm();
 
   /* ── FIX-4: التايم اوف مفتوح علطول ── */
-const tof = document.getElementById('time-off-form');
+  const tof = document.getElementById('time-off-form');
   if (tof) tof.style.display = 'block';
+
   document.getElementById('app-preloader').classList.add('hidden');
 }
 
@@ -571,127 +571,107 @@ function renderSchedule(scheduleData) {
   container.innerHTML = `<div class="sched-container">${buildWeekHtml(thisWeek,'📅 THIS WEEK')}${buildWeekHtml(nextWeek,'📆 NEXT WEEK')}</div>`;
 }
 
-
 async function loadAgentSchedule() {
   const agentName = document.getElementById('user-name').innerText.trim();
+  const [agents, shifts] = await Promise.all([
+    sbFetchSch('agents?select=id,formal_name&status=eq.Active'),
+    sbFetchSch('shift_types?select=id,name,start_time,end_time&is_active=eq.true')
+  ]);
+  schShiftTypes = shifts || [];
+  const me = (agents||[]).find(a => a.formal_name.toLowerCase() === agentName.toLowerCase());
+  if (me) schMyAgentId = me.id;
+
   const container = document.getElementById('schedule-content');
+  if (!schMyAgentId) { container.innerHTML = '<div class="empty-state">Schedule not found.</div>'; return; }
 
-  try {
-    const today = new Date(); today.setHours(0,0,0,0);
-    const todayIso = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
-    const curDay = today.getDay();
-    const thisWeekStart = new Date(today); thisWeekStart.setDate(today.getDate() - curDay);
-    const nextWeekStart = new Date(thisWeekStart); nextWeekStart.setDate(thisWeekStart.getDate() + 7);
-    const nextWeekEnd = new Date(nextWeekStart); nextWeekEnd.setDate(nextWeekStart.getDate() + 6); nextWeekEnd.setHours(23,59,59,999);
-    const thisWeekStartIso = `${thisWeekStart.getFullYear()}-${String(thisWeekStart.getMonth()+1).padStart(2,'0')}-${String(thisWeekStart.getDate()).padStart(2,'0')}`;
-    const nextWeekEndIso   = `${nextWeekEnd.getFullYear()}-${String(nextWeekEnd.getMonth()+1).padStart(2,'0')}-${String(nextWeekEnd.getDate()).padStart(2,'0')}`;
+  const records = await sbFetchSch(`schedule?select=*,schedule_weeks(week_start,week_end,status)&agent_id=eq.${schMyAgentId}`);
 
-    if (!schMyAgentId) {
-      const [agents, shifts] = await Promise.all([
-        sbFetchSch('agents?select=id,formal_name&status=eq.Active'),
-        sbFetchSch('shift_types?select=id,name,start_time,end_time&is_active=eq.true')
-      ]);
-      schShiftTypes = shifts || [];
-      const me = (agents||[]).find(a => a.formal_name.toLowerCase() === agentName.toLowerCase());
-      if (me) schMyAgentId = me.id;
-    } else {
-      const shifts = await sbFetchSch('shift_types?select=id,name,start_time,end_time&is_active=eq.true');
-      schShiftTypes = shifts || [];
+  const today = new Date(); today.setHours(0,0,0,0);
+  const todayIso = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
+
+  const curDay = today.getDay();
+  const thisWeekStart = new Date(today); thisWeekStart.setDate(today.getDate() - curDay);
+  const nextWeekStart = new Date(thisWeekStart); nextWeekStart.setDate(thisWeekStart.getDate() + 7);
+  const nextWeekEnd   = new Date(nextWeekStart); nextWeekEnd.setDate(nextWeekStart.getDate() + 6);
+
+  const schedMap = {};
+  (records||[]).forEach(s => { schedMap[s.shift_date] = s; });
+
+  function buildDays(startDate, endDate) {
+    const days = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+    const result = [];
+    let cur = new Date(startDate);
+    while (cur <= endDate) {
+      const iso = `${cur.getFullYear()}-${String(cur.getMonth()+1).padStart(2,'0')}-${String(cur.getDate()).padStart(2,'0')}`;
+      const entry   = schedMap[iso];
+      const dayType = entry ? entry.day_type : null;
+      const stId    = entry ? entry.shift_type_id : null;
+      const st      = schShiftTypes.find(s => s.id === stId);
+      result.push({ iso, dayName: days[cur.getDay()], dayNum: String(cur.getDate()).padStart(2,'0'), dayType, st, isToday: iso === todayIso });
+      cur.setDate(cur.getDate() + 1);
     }
-
-    if (!schMyAgentId) {
-      container.innerHTML = '<div class="empty-state">Schedule not found.</div>';
-      return;
-    }
-
-    const records = await sbFetchSch(
-      `schedule?select=*&agent_id=eq.${schMyAgentId}&shift_date=gte.${thisWeekStartIso}&shift_date=lte.${nextWeekEndIso}`
-    );
-
-    const schedMap = {};
-    (records||[]).forEach(s => { schedMap[s.shift_date] = s; });
-
-    function buildDays(startDate, endDate) {
-      const dayNames = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
-      const result = [];
-      let cur = new Date(startDate);
-      cur.setHours(12, 0, 0, 0);
-      const endDateFixed = new Date(endDate);
-      endDateFixed.setHours(23, 59, 59, 999);
-      while (cur <= endDateFixed) {
-        const iso = `${cur.getFullYear()}-${String(cur.getMonth()+1).padStart(2,'0')}-${String(cur.getDate()).padStart(2,'0')}`;
-        const entry   = schedMap[iso];
-        const dayType = entry ? entry.day_type : null;
-        const stId    = entry ? entry.shift_type_id : null;
-        const st      = schShiftTypes.find(s => s.id === stId);
-        result.push({ iso, dayName: dayNames[cur.getDay()], dayNum: String(cur.getDate()).padStart(2,'0'), dayType, st, isToday: iso === todayIso });
-        cur.setDate(cur.getDate() + 1);
-      }
-      return result;
-    }
-
-    function buildWeekHtml(days, label) {
-      if (!days.length) return '';
-      let html = `<div class="week-section"><div class="nos-week-label">${label}</div><div class="nos-days-list">`;
-      days.forEach((d, i) => {
-        const todayClass = d.isToday ? ' nos-today' : '';
-        let badge = '', displayShift = '', shiftClass = '';
-        if (!d.dayType || d.dayType === 'Off') {
-          badge = '<span class="nos-status-badge nos-badge-off">OFF</span>';
-          displayShift = 'Day Off'; shiftClass = ' nos-off';
-        } else if (d.dayType === 'Work' && d.st) {
-          displayShift = d.st.start_time.substring(0,5) + ' - ' + d.st.end_time.substring(0,5);
-          badge = '<span class="nos-status-badge nos-badge-work">Working</span>';
-        } else if (d.dayType === 'Annual') {
-          badge = '<span class="nos-status-badge nos-badge-annual">Annual</span>';
-        } else if (d.dayType === 'Sick') {
-          badge = '<span class="nos-status-badge nos-badge-sick">Sick</span>';
-        } else if (d.dayType === 'Casual') {
-          badge = '<span class="nos-status-badge nos-badge-casual">Casual</span>';
-        } else if (d.dayType === 'PH') {
-          badge = '<span class="nos-status-badge nos-badge-ph">Public Holiday</span>';
-        } else if (d.dayType === 'Task') {
-          badge = '<span class="nos-status-badge nos-badge-task">Task</span>';
-        }
-        html += `<div class="nos-day-card${todayClass}" style="animation-delay:${i*40}ms">
-          <div class="nos-date-block">
-            <div class="nos-day-name">${d.dayName}</div>
-            <div class="nos-day-num">${d.dayNum}</div>
-          </div>
-          <div class="nos-shift-block">
-            ${displayShift ? `<div class="nos-shift-time${shiftClass}">${displayShift}</div>` : ''}
-            ${badge}
-            ${d.isToday ? '<span class="nos-today-badge">TODAY</span>' : ''}
-          </div>
-        </div>`;
-      });
-      html += '</div></div>';
-      return html;
-    }
-
-    const thisWeekEnd  = new Date(thisWeekStart.getTime() + 6*24*60*60*1000);
-    const thisWeekDays = buildDays(thisWeekStart, thisWeekEnd);
-    const nextWeekDays = buildDays(nextWeekStart, nextWeekEnd);
-
-    container.innerHTML = `<div class="sched-container">
-      ${buildWeekHtml(thisWeekDays, '📅 THIS WEEK')}
-      ${buildWeekHtml(nextWeekDays, '📆 NEXT WEEK')}
-    </div>`;
-
-  } catch(e) {
-    console.error('loadAgentSchedule error:', e);
-    container.innerHTML = '<div class="empty-state">⚠️ Failed to load schedule. Please refresh.</div>';
+    return result;
   }
-}
 
+  function buildWeekHtml(days, label) {
+    if (!days.length) return '';
+    let html = `<div class="week-section"><div class="nos-week-label">${label}</div><div class="nos-days-list">`;
+    days.forEach((d, i) => {
+      const todayClass = d.isToday ? ' nos-today' : '';
+      let badge = '', displayShift = '', shiftClass = '';
+
+      if (!d.dayType || d.dayType === 'Off') {
+        badge = '<span class="nos-status-badge nos-badge-off">OFF</span>';
+        displayShift = 'Day Off'; shiftClass = ' nos-off';
+      } else if (d.dayType === 'Work' && d.st) {
+        displayShift = d.st.start_time.substring(0,5) + ' - ' + d.st.end_time.substring(0,5);
+        badge = '<span class="nos-status-badge nos-badge-work">Working</span>';
+      } else if (d.dayType === 'Annual') {
+        badge = '<span class="nos-status-badge nos-badge-annual">Annual</span>';
+      } else if (d.dayType === 'Sick') {
+        badge = '<span class="nos-status-badge nos-badge-sick">Sick</span>';
+      } else if (d.dayType === 'Casual') {
+        badge = '<span class="nos-status-badge nos-badge-casual">Casual</span>';
+      } else if (d.dayType === 'PH') {
+        badge = '<span class="nos-status-badge nos-badge-ph">Public Holiday</span>';
+      } else if (d.dayType === 'Task') {
+        badge = '<span class="nos-status-badge nos-badge-task">Task</span>';
+      }
+
+      html += `<div class="nos-day-card${todayClass}" style="animation-delay:${i*40}ms">
+        <div class="nos-date-block">
+          <div class="nos-day-name">${d.dayName}</div>
+          <div class="nos-day-num">${d.dayNum}</div>
+        </div>
+        <div class="nos-shift-block">
+          ${displayShift ? `<div class="nos-shift-time${shiftClass}">${displayShift}</div>` : ''}
+          ${badge}
+          ${d.isToday ? '<span class="nos-today-badge">TODAY</span>' : ''}
+        </div>
+      </div>`;
+    });
+    html += '</div></div>';
+    return html;
+  }
+
+  const thisWeekDays = buildDays(thisWeekStart, new Date(thisWeekStart.getTime() + 6*24*60*60*1000));
+  const nextWeekDays = buildDays(nextWeekStart, nextWeekEnd);
+
+  container.innerHTML = `<div class="sched-container">
+    ${buildWeekHtml(thisWeekDays, '📅 THIS WEEK')}
+    ${buildWeekHtml(nextWeekDays, '📆 NEXT WEEK')}
+  </div>`;
+}
 
 function renderAgentWeek() {
   const weekId = document.getElementById('agent-sched-week').value;
   const week   = (window._agentSchedWeeks||[]).find(w => w.id === weekId);
   if (!week) return;
+
   const dates  = getSchWeekDates(week.week_start, week.week_end);
   const today  = `${new Date().getFullYear()}-${String(new Date().getMonth()+1).padStart(2,'0')}-${String(new Date().getDate()).padStart(2,'0')}`;
   const daysEl = document.getElementById('agent-sched-days');
+
   let html = '<div class="nos-days-list">';
   dates.forEach((d, i) => {
     const entry   = (window._agentSchedMap||{})[d.iso];
@@ -699,6 +679,7 @@ function renderAgentWeek() {
     const stId    = entry ? entry.shift_type_id : null;
     const st      = schShiftTypes.find(s => s.id === stId);
     const isToday = d.iso === today;
+
     let shift = 'Day Off', badge = '', shiftClass = ' nos-off';
     if (dayType === 'Work' && st) {
       shift = st.start_time.substring(0,5) + ' - ' + st.end_time.substring(0,5);
@@ -717,7 +698,6 @@ function renderAgentWeek() {
     } else {
       badge = '<span class="nos-status-badge nos-badge-off">OFF</span>';
     }
-
 
     html += `<div class="nos-day-card${isToday?' nos-today':''}" style="animation-delay:${i*40}ms">
       <div class="nos-date-block">
@@ -1194,6 +1174,7 @@ async function sendExcuse() {
   btn.disabled = true; msg.innerText = '';
 
   try {
+    // 1. تحقق من الرصيد
     const d   = new Date(rawDate);
     const my  = d.toLocaleString('en-US', { month: 'long' }) + ' ' + d.getFullYear();
     const balRes  = await fetch(
@@ -1208,6 +1189,7 @@ async function sendExcuse() {
       return;
     }
 
+    // 2. تحقق من الجدول
     const schedRes  = await fetch(
       `${SB_URL_SCH}/rest/v1/schedule?agent_id=eq.${schMyAgentId}&shift_date=eq.${rawDate}&select=day_type`,
       { headers: { 'apikey': SB_KEY_SCH, 'Authorization': `Bearer ${SB_KEY_SCH}` } }
@@ -1220,6 +1202,7 @@ async function sendExcuse() {
       return;
     }
 
+    // 3. حفظ بـ Approved مباشرة
     const res = await fetch(`${SB_URL_SCH}/rest/v1/excuses`, {
       method:  'POST',
       headers: {
@@ -1285,6 +1268,7 @@ function selectTimeOffType(type) {
   const msgEl = document.getElementById('time-off-msg');
   if (msgEl) msgEl.innerText = '';
 
+  /* هايلايت الزرار المختار */
   document.querySelectorAll('.action-row .action-btn').forEach(b => {
     b.style.opacity     = '0.5';
     b.style.borderWidth = '1px';
@@ -1426,6 +1410,8 @@ function submitCallLogForm() {
 
   const gasAction = (_activeChannel === 'whatsapp') ? 'submitWhatsAppLog' : 'submitCallLog';
 
+
+// حفظ في Supabase دايماً — سواء مكالمة عادية أو Wrong Number أو Call Dropped
   fetch(`${SB_URL_SCH}/rest/v1/call_logs`, {
     method: 'POST',
     headers: {
@@ -1450,8 +1436,11 @@ function submitCallLogForm() {
     })
   }).catch(e => console.warn('SB call log failed:', e));
 
-  gasRun(gasAction, data).then(res => {
-    clearTimeout(slowTimer);
+   
+gasRun(gasAction, data).then(res => {
+   
+   
+   clearTimeout(slowTimer);
     /* FIX-5 */ setButtonLoading(btn, false, '📤 Submit to Database');
     if (res.status === 'success') {
       const bar = document.getElementById('call-summary-bar');
@@ -1462,7 +1451,7 @@ function submitCallLogForm() {
       setTimeout(() => bar.style.display = 'none', 30000);
       resetCallForm();
       showToast('✅', 'Call Logged!', cname ? cname + ' — ' + mobile : reason, 'success', 5000);
-      loadLastTwoCalls(data.agent);
+      loadLastTwoCalls(data.agent); 
     } else {
       showFormErr(res.msg || 'Something went wrong.');
     }
@@ -2057,15 +2046,15 @@ function gasRun(action, ...args) {
 function setButtonLoading(btn, isLoading, label) {
   if (!btn) return;
   if (isLoading) {
-    btn._origHTML     = btn.innerHTML;
+    btn._origHTML    = btn.innerHTML;
     btn._origDisabled = btn.disabled;
-    btn.disabled      = true;
+    btn.disabled    = true;
     btn.style.opacity = '0.8';
-    btn.innerHTML     = `<i class="fas fa-spinner fa-spin" style="margin-right:6px;"></i>${label || 'Loading...'}`;
+    btn.innerHTML   = `<i class="fas fa-spinner fa-spin" style="margin-right:6px;"></i>${label || 'Loading...'}`;
   } else {
-    btn.disabled      = btn._origDisabled || false;
+    btn.disabled    = btn._origDisabled || false;
     btn.style.opacity = '1';
-    btn.innerHTML     = btn._origHTML || label || 'Submit';
+    btn.innerHTML   = btn._origHTML || label || 'Submit';
   }
 }
 
@@ -2327,7 +2316,7 @@ function getSchWeekDates(start, end) {
   const [ey,em,ed] = end.split('-').map(Number);
   let cur = new Date(sy, sm-1, sd, 12, 0, 0);
   const endDate = new Date(ey, em-1, ed, 12, 0, 0);
-  while (cur <= endDate) {
+   while (cur <= endDate) {
     const iso = `${cur.getFullYear()}-${String(cur.getMonth()+1).padStart(2,'0')}-${String(cur.getDate()).padStart(2,'0')}`;
     dates.push({ iso, dayName: days[cur.getDay()], display: `${String(cur.getDate()).padStart(2,'0')}/${String(cur.getMonth()+1).padStart(2,'0')}` });
     cur.setDate(cur.getDate() + 1);
@@ -2391,20 +2380,19 @@ function buildSchGrid(agents, dates, schedMap, today) {
       const st = schShiftTypes.find(s => s.id === (e ? e.shift_type_id : null));
       const isTd = d.iso === today;
       let cell='— Off —', color='var(--muted)', bg='transparent', border='transparent';
-      if (dt==='Work'&&st) {
-        cell = st.start_time.substring(0,5)+' - '+st.end_time.substring(0,5);
-        const hr = parseInt(st.start_time.substring(0,2));
-        if (hr < 12)      { color='#059669'; bg='rgba(16,185,129,0.18)';  border='rgba(16,185,129,0.6)'; }
-        else if (hr < 14) { color='#1d4ed8'; bg='rgba(59,130,246,0.18)';  border='rgba(59,130,246,0.6)'; }
-        else              { color='#92400e'; bg='rgba(251,191,36,0.25)';   border='rgba(251,191,36,0.7)'; }
-      }
-      else if (dt==='Annual') { cell='Annual'; color='#8b5cf6'; bg='rgba(139,92,246,0.05)'; border='rgba(139,92,246,0.3)'; }
-      else if (dt==='Sick')   { cell='Sick';   color='#ef4444'; bg='rgba(239,68,68,0.05)';  border='rgba(239,68,68,0.3)'; }
-      else if (dt==='Casual') { cell='Casual'; color='#f59e0b'; bg='rgba(245,158,11,0.05)'; border='rgba(245,158,11,0.3)'; }
-      else if (dt==='PH')     { cell='PH';     color='#3b82f6'; bg='rgba(59,130,246,0.05)'; border='rgba(59,130,246,0.3)'; }
-      else if (dt==='Task')   { cell='Task';   color='#06b6d4'; bg='rgba(6,182,212,0.05)';  border='rgba(6,182,212,0.3)'; }
-      const isYellow = dt==='Work' && st && parseInt(st.start_time.substring(0,2)) >= 14;
-      html += `<td style="padding:5px;border-bottom:1px solid var(--border);text-align:center;${isTd?'background:rgba(212,175,55,0.04);':''}"><div style="background:${bg};border:1.5px solid ${border};border-radius:8px;padding:5px 4px;font-size:${isYellow?'13px':'12px'};font-weight:800;color:${color};white-space:nowrap;">${cell}</div></td>`;
+       if (dt==='Work'&&st) {
+  cell = st.start_time.substring(0,5)+' - '+st.end_time.substring(0,5);
+  const hr = parseInt(st.start_time.substring(0,2));
+       if (hr < 12)      { color='#059669'; bg='rgba(16,185,129,0.18)';  border='rgba(16,185,129,0.6)'; }
+       else if (hr < 14) { color='#1d4ed8'; bg='rgba(59,130,246,0.18)';  border='rgba(59,130,246,0.6)'; }
+       else             { color='#92400e'; bg='rgba(251,191,36,0.25)';   border='rgba(251,191,36,0.7)'; }
+       }
+      else if (dt==='Annual')   { cell='Annual'; color='#8b5cf6'; bg='rgba(139,92,246,0.05)'; border='rgba(139,92,246,0.3)'; }
+      else if (dt==='Sick')     { cell='Sick';   color='#ef4444'; bg='rgba(239,68,68,0.05)';  border='rgba(239,68,68,0.3)'; }
+      else if (dt==='Casual')   { cell='Casual'; color='#f59e0b'; bg='rgba(245,158,11,0.05)'; border='rgba(245,158,11,0.3)'; }
+      else if (dt==='PH')       { cell='PH';     color='#3b82f6'; bg='rgba(59,130,246,0.05)'; border='rgba(59,130,246,0.3)'; }
+      else if (dt==='Task')     { cell='Task';   color='#06b6d4'; bg='rgba(6,182,212,0.05)';  border='rgba(6,182,212,0.3)'; }
+      const isYellow = dt==='Work' && st && parseInt(st.start_time.substring(0,2)) >= 14; html += `<td style="padding:5px;border-bottom:1px solid var(--border);text-align:center;${isTd?'background:rgba(212,175,55,0.04);':''}"><div style="background:${bg};border:1.5px solid ${border};border-radius:8px;padding:5px 4px;font-size:${isYellow?'13px':'12px'};font-weight:800;color:${color};white-space:nowrap;">${cell}</div></td>`;
     });
     html += `</tr>`;
   });
@@ -2532,6 +2520,7 @@ function schRequestClosedMsg() {
   return `🔒 Requests are closed now.\nOpens every Sunday — next opening: ${String(next.getDate()).padStart(2,'0')}/${String(next.getMonth()+1).padStart(2,'0')}`;
 }
 
+
 async function submitSchRequest() {
   if (!isSchRequestOpen()) { customAlert('Closed', schRequestClosedMsg()); return; }
   if (!schCurrentWeek)     { customAlert('Error', 'No draft week available!'); return; }
@@ -2560,42 +2549,43 @@ async function submitSchRequest() {
   );
 
   try {
-    const res = await fetch(`${SB_URL_SCH}/rest/v1/requests${existingId ? '?id=eq.'+existingId : ''}`, {
-      method:  existingId ? 'PATCH' : 'POST',
-      headers: {
-        'apikey':        SB_KEY_SCH,
-        'Authorization': `Bearer ${SB_KEY_SCH}`,
-        'Content-Type':  'application/json',
-        'Prefer':        'return=minimal'
-      },
-      body
-    });
+const res = await fetch(`${SB_URL_SCH}/rest/v1/requests${existingId ? '?id=eq.'+existingId : ''}`, {
+  method:  existingId ? 'PATCH' : 'POST',
+  headers: {
+    'apikey':        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh6eGRhdXB3d3dkY3dmbnF3ZXViIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUzMTM5NTAsImV4cCI6MjA5MDg4OTk1MH0.KjNZpFvLxh8XfDDoWdpVsIQZAh1PjzGXOrfDmApZ4K8',
+    'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh6eGRhdXB3d3dkY3dmbnF3ZXViIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUzMTM5NTAsImV4cCI6MjA5MDg4OTk1MH0.KjNZpFvLxh8XfDDoWdpVsIQZAh1PjzGXOrfDmApZ4K8',
+    'Content-Type':  'application/json',
+    'Prefer':        'return=minimal'
+  },
+  body
+});
     const resText = await res.text();
     console.log('Submit result:', res.status, resText);
 
     if (submitBtn) setButtonLoading(submitBtn, false, '📤 Submit Schedule Request');
 
-    if (Object.keys(schMyDraft).length) {
-      const upserts = Object.entries(schMyDraft).map(([date, entry]) => ({
-        agent_id:      schMyAgentId,
-        week_id:       schCurrentWeek.id,
-        shift_date:    date,
-        day_type:      entry.day_type,
-        shift_type_id: entry.shift_type_id || null,
-        status:        'Pending'
-      }));
-      await fetch(`${SB_URL_SCH}/rest/v1/schedule`, {
-        method:  'POST',
-        headers: {
-          'apikey':        SB_KEY_SCH,
-          'Authorization': `Bearer ${SB_KEY_SCH}`,
-          'Content-Type':  'application/json',
-          'Prefer':        'resolution=merge-duplicates,return=minimal'
-        },
-        body: JSON.stringify(upserts)
-      });
-    }
-
+// تطبيق الشيفتات مباشرة في schedule table
+if (Object.keys(schMyDraft).length) {
+  const upserts = Object.entries(schMyDraft).map(([date, entry]) => ({
+    agent_id:      schMyAgentId,
+    week_id:       schCurrentWeek.id,
+    shift_date:    date,
+    day_type:      entry.day_type,
+    shift_type_id: entry.shift_type_id || null,
+    status:        'Pending'
+  }));
+  await fetch(`${SB_URL_SCH}/rest/v1/schedule`, {
+    method:  'POST',
+    headers: {
+      'apikey':        SB_KEY_SCH,
+      'Authorization': `Bearer ${SB_KEY_SCH}`,
+      'Content-Type':  'application/json',
+      'Prefer':        'resolution=merge-duplicates,return=minimal'
+    },
+    body: JSON.stringify(upserts)
+  });
+}
+     
     if (res.ok) {
       msg.style.color = '#10b981'; msg.innerText = '✅ Request submitted!';
       showToast('✅', 'Schedule Request Submitted!', 'Pending admin review.', 'success', 5000);
@@ -2612,6 +2602,7 @@ async function submitSchRequest() {
     msg.innerText   = '❌ Connection error!';
   }
 }
+
 
 function resetSchDraft() {
   schMyDraft = {};
@@ -2703,7 +2694,10 @@ function copySummary() {
   });
 }
 
-/* ── FIX-3: Search button inline في Step 1 ── */
+/* ── FIX-3: Search button inline في Step 1 ──
+   ملاحظة: الزرار ده محتاج يتضاف في الـ HTML بتاع step-1
+   بس هنا بنعمل inject له تلقائياً لو مش موجود
+*/
 document.addEventListener('DOMContentLoaded', () => {
   /* FIX-3: أضف زرار البحث في step-1 لو مش موجود */
   const step1 = document.getElementById('step-1');
@@ -2753,11 +2747,13 @@ async function step1SearchCustomer() {
       ).then(r => r.json())
     ]);
 
+// GAS results
     const gasResults = (gasRes.status === 'fulfilled' && gasRes.value?.status === 'success')
       ? gasRes.value.results || [] : [];
+    // Supabase results
     const sbResults = (sbRes.status === 'fulfilled' && Array.isArray(sbRes.value))
       ? sbRes.value : [];
-
+    // Deduplicate بالموبايل والاسم
     const normalize  = m => (m || '').replace(/\s/g, '').replace(/^0/, '');
     const gasNames   = new Set(gasResults.map(r => (r.name || '').toLowerCase().trim()));
     const gasMobiles = new Set(gasResults.map(r => normalize(r.mobile)));
@@ -2765,10 +2761,10 @@ async function step1SearchCustomer() {
       !gasMobiles.has(normalize(c.customer_mobile)) &&
       !gasNames.has((c.customer_name || '').toLowerCase().trim())
     );
-
     let html = '';
     const total = gasResults.length + uniqueSB.length;
-
+     
+    // GAS results
     if (gasResults.length) {
       html += `<div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">📋 GAS — ${gasResults.length} result(s)</div>`;
       html += gasResults.slice(0, 3).map(r => `
@@ -2780,6 +2776,7 @@ async function step1SearchCustomer() {
         </div>`).join('');
     }
 
+    // Supabase results
     if (uniqueSB.length) {
       html += `<div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin:10px 0 6px;">🗄️ Database — ${uniqueSB.length} result(s)</div>`;
       html += uniqueSB.map(c => `
@@ -2842,7 +2839,6 @@ async function loadLastTwoCalls(agentName) {
     `).join('');
   } catch(e) { console.warn('loadLastTwoCalls error:', e); }
 }
-
 function clearStep1Search() {
   const input = document.getElementById('step1-search-input');
   const results = document.getElementById('step1-search-results');
