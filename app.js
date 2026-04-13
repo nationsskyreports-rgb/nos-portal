@@ -731,7 +731,6 @@ async function loadAgentSchedule() {
     ${buildWeekHtml(thisWeekDays, '📅 THIS WEEK')}
     ${buildWeekHtml(nextWeekDays, '📆 NEXT WEEK')}
   </div>`;
-}
 
 function renderAgentWeek() {
   const weekId = document.getElementById('agent-sched-week').value;
