@@ -420,7 +420,6 @@ function showDashboard(res) {
         }
 
         subscribeTodayBreaks(agentId);
-         loadAgentSchedule();
       });
 
   } else {
@@ -456,7 +455,6 @@ function showDashboard(res) {
   /* ── FIX-4: التايم اوف مفتوح علطول ── */
 const tof = document.getElementById('time-off-form');
   if (tof) tof.style.display = 'block';
-  setTimeout(() => loadAgentSchedule(), 1500);
   document.getElementById('app-preloader').classList.add('hidden');
 }
 
