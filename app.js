@@ -420,6 +420,7 @@ function showDashboard(res) {
         }
 
         subscribeTodayBreaks(agentId);
+         loadAgentSchedule();
       });
 
   } else {
@@ -443,10 +444,10 @@ function showDashboard(res) {
     if (breakCheckTimer) clearInterval(breakCheckTimer);
     if (swapPollTimer)   clearInterval(swapPollTimer);
     knownSwapStatuses = {};
+     loadAgentSchedule();
   }
 
   schShiftTypes = [];
-  loadAgentSchedule();
   loadMyRequests();
   globalScheduleData = res.schedule      || [];
   globalTeamData     = res.allStaffBreaks || [];
