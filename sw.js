@@ -1,4 +1,4 @@
-const CACHE_NAME = 'ns-portal-v5';
+const CACHE_NAME = 'ns-portal-v6';
 const STATIC_ASSETS = [
   '/',
   '/index.html',
