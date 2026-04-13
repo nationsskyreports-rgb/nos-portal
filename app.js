@@ -456,7 +456,7 @@ function showDashboard(res) {
   /* ── FIX-4: التايم اوف مفتوح علطول ── */
   const tof = document.getElementById('time-off-form');
   if (tof) tof.style.display = 'block';
-
+loadAgentSchedule();
   document.getElementById('app-preloader').classList.add('hidden');
 }
 
