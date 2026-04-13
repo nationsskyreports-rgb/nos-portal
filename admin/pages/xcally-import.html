@@ -288,7 +288,7 @@
                     <th>Agent</th>
                     <th>Days Active</th>
                     <th>Avg Conformance</th>
-                    <th>Avg Missing</th>
+                    <th>Net Missing</th>
                     <th>Total Calls</th>
                     <th>Avg AHT</th>
                     <th>Below 98%</th>
@@ -378,7 +378,7 @@ function getTargetForDate(date) {
     const hours = parseFloat(row.querySelector('.range-hours').value)||8;
     if (from && to && date >= from && date <= to) return hours * 3600;
   }
-  return 8 * 3600; // default
+  return 8 * 3600;
 }
 
 function switchView(view) {
@@ -715,6 +715,7 @@ function setHistoryTab(mode, btn) {
   if (mode==='summary') renderSummaryTable(currentHistoryData);
 }
 
+// ── SUMMARY TABLE — Net Missing (Total Missing - Total Extra) ──
 function renderSummaryTable(data) {
   const tbody = document.getElementById('summary-tbody');
   if (!data.length) {
@@ -726,15 +727,18 @@ function renderSummaryTable(data) {
   data.forEach(r => {
     const name = r.agent_name;
     if (!agentMap[name]) agentMap[name] = {
-      name, days:0, totalActive:0, totalMissing:0,
+      name, days:0, totalMissing:0, totalExtra:0,
       totalCalls:0, totalTalk:0, confSum:0, below98:0
     };
     const a = agentMap[name];
     a.days++;
-    a.totalActive  += r.active_sec  || 0;
+    // الـ missing الفعلي بعد الـ excuse
     a.totalMissing += r.missing_sec || 0;
-    a.totalCalls   += r.calls       || 0;
-    a.totalTalk    += r.talk_sec    || 0;
+    // الـ extra = لو اشتغل أكتر من الـ target
+    const extra = Math.max(0, (r.active_sec || 0) - (r.target_sec || 0));
+    a.totalExtra   += extra;
+    a.totalCalls   += r.calls    || 0;
+    a.totalTalk    += r.talk_sec || 0;
     a.confSum      += parseFloat(r.conformance||0);
     if (parseFloat(r.conformance||0) < 98) a.below98++;
   });
@@ -742,16 +746,17 @@ function renderSummaryTable(data) {
   const rows = Object.values(agentMap).sort((a,b) => b.confSum/b.days - a.confSum/a.days);
 
   tbody.innerHTML = rows.map(a => {
-    const avgConf    = a.days > 0 ? a.confSum/a.days : 0;
-    const avgAHT     = a.totalCalls > 0 ? Math.round(a.totalTalk/a.totalCalls) : 0;
-    const avgMissing = a.days > 0 ? Math.round(a.totalMissing / a.days) : 0;
-    const missingDisplay = avgMissing <= 300 ? 'Full Time' : secToTime(avgMissing) + ' avg';
-    const confCls    = avgConf>=98?'conf-high':avgConf>=90?'conf-mid':'conf-low';
+    const avgConf  = a.days > 0 ? a.confSum/a.days : 0;
+    const avgAHT   = a.totalCalls > 0 ? Math.round(a.totalTalk/a.totalCalls) : 0;
+    // Net Missing = Total Missing - Total Extra
+    const netMissing = Math.max(0, a.totalMissing - a.totalExtra);
+    const missingDisplay = netMissing <= 300 ? 'Full Time' : secToTime(netMissing);
+    const confCls  = avgConf>=98?'conf-high':avgConf>=90?'conf-mid':'conf-low';
     return '<tr>' +
       '<td><div style="display:flex;align-items:center;gap:8px;"><div class="agent-avatar" style="width:26px;height:26px;font-size:9px;">' + initials(a.name) + '</div><span style="font-weight:700;">' + a.name + '</span></div></td>' +
       '<td style="text-align:center;font-weight:700;">' + a.days + '</td>' +
       '<td class="' + confCls + '">' + avgConf.toFixed(0) + '%</td>' +
-      '<td style="color:' + (avgMissing>300?'#EF4444':'#10B981') + ';font-size:12px;">' + missingDisplay + '</td>' +
+      '<td style="color:' + (netMissing>300?'#EF4444':'#10B981') + ';font-size:12px;font-weight:700;">' + missingDisplay + '</td>' +
       '<td style="font-weight:700;">' + a.totalCalls + '</td>' +
       '<td style="font-family:monospace;font-size:12px;">' + (avgAHT?secToTime(avgAHT):'—') + '</td>' +
       '<td><span class="badge ' + (a.below98>0?'badge-danger':'badge-success') + '">' + a.below98 + ' day(s)</span></td>' +
@@ -910,15 +915,15 @@ async function reapplyExcuses() {
       const rawMissing = Math.max(0, TARGET_SEC - perf.active_sec);
       let netMissing, conf;
 
-     if (rawMissing <= EXC_SEC) {
-     netMissing = 0;
-     conf = 100;
-     } else {
-     netMissing = rawMissing - EXC_SEC;
-  // ✅ الـ conformance بيتحسب بعد خصم الـ excuse من الـ missing
-  const effectiveActive = perf.active_sec + EXC_SEC;
-  conf = Math.min(100, (effectiveActive / TARGET_SEC) * 100);
-}
+      if (rawMissing <= EXC_SEC) {
+        netMissing = 0;
+        conf = 100;
+      } else {
+        netMissing = rawMissing - EXC_SEC;
+        const effectiveActive = perf.active_sec + EXC_SEC;
+        conf = Math.min(100, (effectiveActive / TARGET_SEC) * 100);
+      }
+
       await db.from('daily_performance').update({
         conformance: parseFloat(conf.toFixed(2)),
         missing_sec: netMissing,
