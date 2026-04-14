@@ -29,13 +29,13 @@ self.addEventListener('fetch', e => {
   if (e.request.url.includes('supabase.co')) return;
 
   // app.js و offline-calllog.js — دايماً من السيرفر مش من الـ cache
-  if (e.request.url.includes('app.js') || e.request.url.includes('offline-calllog.js')) {
+if (e.request.url.includes('app.js') || e.request.url.includes('offline-calllog.js') || e.request.url.includes('.js')) {
     e.respondWith(
       fetch(e.request).catch(() => caches.match(e.request))
     );
     return;
   }
-
+  
   if (e.request.destination === 'script' ||
       e.request.destination === 'style'  ||
       e.request.destination === 'document') {
