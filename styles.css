@@ -260,6 +260,7 @@ select.form-input option { background: var(--surface); color: var(--text); }
 .team-card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 16px; display: flex; flex-direction: column; gap: 10px; transition: all 0.3s; height: 100%; }
 .team-card:hover { transform: translateY(-3px); box-shadow: 0 8px 24px rgba(212,175,55,0.1); border-color: rgba(212,175,55,0.2); }
 .team-card-header { display: flex; align-items: center; gap: 10px; padding-bottom: 10px; border-bottom: 1px solid var(--border); }
+.team-card-header { display: flex; align-items: center; gap: 10px; padding-bottom: 10px; border-bottom: 1px solid var(--border); flex-wrap: wrap; }
 .team-avatar { width: 36px; height: 36px; background: var(--primary-gradient); border-radius: 10px; color: white; font-weight: 800; font-size: 12px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
 .team-name  { flex: 1; font-weight: 700; font-size: 13px; color: var(--text); }
 .team-shift { background: rgba(212,175,55,0.08); color: var(--primary); padding: 3px 10px; border-radius: 20px; font-size: 10px; font-weight: 700; border: 1px solid rgba(212,175,55,0.15); white-space: nowrap; max-width: none; overflow: visible; }
