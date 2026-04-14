@@ -623,7 +623,9 @@ async function saveSchedule() {
   try {
     const upserts = [];
     Object.keys(scheduleData).forEach(key => {
-      const [agentId, date] = key.split('_');
+  const lastUnderscore = key.lastIndexOf('_');
+  const agentId = key.substring(0, lastUnderscore);
+  const date = key.substring(lastUnderscore + 1);
       const entry = scheduleData[key];
       upserts.push({ agent_id: agentId, week_id: currentWeek.id, shift_date: date, day_type: entry.day_type, shift_type_id: entry.shift_type_id || null, status: 'Approved' });
     });
