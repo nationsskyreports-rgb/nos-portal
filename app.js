@@ -768,7 +768,7 @@ async function loadTeamBreaksFromSB() {
       })
       .map(b => ({
         name:   b.agents?.formal_name || 'Unknown',
-        shift:  b.shift_time ? b.shift_time.substring(0,11) : 'N/A',
+        shift:  b.shift_time ? b.shift_time.trim() : 'N/A',
         break1: b.break1 ? b.break1.substring(0,5) : '-',
         lunch:  b.lunch  ? b.lunch.substring(0,5)  : '-',
         break2: b.break2 ? b.break2.substring(0,5) : '-',
