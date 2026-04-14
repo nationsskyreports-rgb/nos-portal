@@ -308,7 +308,7 @@ select.form-input option { background: var(--surface); color: var(--text); }
 .nos-day-num { font-family: 'Inter', sans-serif; font-size: 22px; font-weight: 800; color: var(--text); line-height: 1; }
 .nos-today .nos-day-num { color: #ffffff; }
 .nos-shift-block { flex: 1; padding: 14px 16px; display: flex; align-items: center; justify-content: space-between; gap: 10px; min-width: 0; }
-.nos-shift-time { font-family: 'Inter', sans-serif; font-size: 15px; font-weight: 800; color: var(--text); white-space: nowrap; }
+.nos-shift-time { font-family: 'Inter', sans-serif; font-size: 15px; font-weight: 800; color: var(--text); white-space: nowrap; flex-shrink: 0; }
 .nos-shift-time.nos-off { color: var(--muted); font-size: 13px; font-weight: 600; }
 .nos-today-badge { display: none; padding: 3px 10px; border-radius: 20px; font-size: 9px; font-weight: 800; letter-spacing: 1.5px; background: var(--primary-gradient); color: white; box-shadow: 0 3px 10px rgba(212,175,55,0.35); flex-shrink: 0; }
 .nos-today .nos-today-badge { display: inline-block; }
