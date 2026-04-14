@@ -651,9 +651,13 @@ const today = new Date(); today.setHours(0,0,0,0);
     return html;
   }
 
-  const thisWeekDays = buildDays(thisWeekStart, new Date(thisWeekStart.getTime() + 6*24*60*60*1000));
-  const nextWeekDays = buildDays(nextWeekStart, nextWeekEnd);
-
+const thisWeekEnd = new Date(thisWeekStart);
+thisWeekEnd.setDate(thisWeekStart.getDate() + 6);
+thisWeekEnd.setHours(23,59,59,999);
+const nextWeekEndFixed = new Date(nextWeekEnd);
+nextWeekEndFixed.setHours(23,59,59,999);
+const thisWeekDays = buildDays(thisWeekStart, thisWeekEnd);
+const nextWeekDays = buildDays(nextWeekStart, nextWeekEndFixed);
   container.innerHTML = `<div class="sched-container">
     ${buildWeekHtml(thisWeekDays, '📅 THIS WEEK')}
     ${buildWeekHtml(nextWeekDays, '📆 NEXT WEEK')}
