@@ -1,0 +1,845 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="NOS Portal">
+<link rel="apple-touch-icon" href="icon-apple.png">
+<link rel="icon" type="image/png" href="logo.png">
+<meta name="theme-color" content="#0f766e">
+<meta name="application-name" content="NOS Portal">
+<title>Nations of Sky — Agent Portal</title>
+<link rel="manifest" href="manifest.json">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@600;700;800&family=Syne:wght@400;600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="mobile.css">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+  <!-- Preloader -->
+  <div id="app-preloader">
+    <div class="preloader-content">
+      <div class="preloader-logo-wrap">
+        <img src="logo.png" alt="NOS Logo" class="preloader-logo">
+        <div class="preloader-spinner"></div>
+      </div>
+      <div class="preloader-text">Loading your dashboard...</div>
+    </div>
+  </div>
+
+  <!-- LOGIN SCREEN -->
+  <div id="screen-login">
+    <div class="nsd-logo-animated" id="nsdAnimatedLogo">
+      <img src="logo.png" alt="NOS Logo" style="width:100%;height:100%;object-fit:contain;filter:none;">
+    </div>
+
+    <div class="login-header">
+      <div class="login-brand-title">NATIONS OF SKY</div>
+      <div class="login-brand-sub">Agent Portal</div>
+    </div>
+
+    <form class="login-card" id="login-form-area" onsubmit="handleLoginSubmit(event);" autocomplete="on">
+
+      <div style="width:72px;height:72px;background:rgba(212,175,55,0.1);border:1.5px solid rgba(212,175,55,0.3);border-radius:18px;display:flex;align-items:center;justify-content:center;margin:0 auto 24px;">
+  <i class="fas fa-headset" style="font-size:28px;color:#D4AF37;"></i>
+</div>
+      
+      <div class="login-title">Agent Portal</div>
+      <div class="login-sub">Nations of Sky Internal System</div>
+
+      <label class="form-label">Your Name</label>
+      <input type="text" id="empList" class="form-input" placeholder="Enter your full name" autocomplete="username" name="username" required>
+
+      <label class="form-label">Password</label>
+      <div class="pw-wrap">
+        <input type="password" id="pass" class="form-input" placeholder="••••••••" autocomplete="current-password" name="password" required>
+        <button type="button" class="pw-toggle" onclick="togglePw('pass',this)"><i class="fas fa-eye"></i></button>
+      </div>
+
+      <button type="submit" class="btn-primary" id="loginBtn">
+        <i class="fas fa-sign-in-alt"></i> Sign In
+      </button>
+      <button type="button" class="btn-ghost" onclick="toggleReset(true)">Forgot Password? <b>Reset</b></button>
+      <a href="create-account.html" class="btn-create-account">
+        <i class="fas fa-user-plus"></i> Create Account
+      </a>
+      <div id="login-msg" class="login-msg"></div>
+    </form>
+
+    <div class="login-card hidden" id="reset-form">
+      <div class="login-title">Change Password</div>
+      <div class="login-sub" id="reset-agent-name"></div>
+      <label class="form-label">Old Password</label>
+      <div class="pw-wrap"><input type="password" id="old-pass" class="form-input" placeholder="Old Password"><button class="pw-toggle" onclick="togglePw('old-pass',this)"><i class="fas fa-eye"></i></button></div>
+      <label class="form-label">New Password</label>
+      <div class="pw-wrap"><input type="password" id="new-pass" class="form-input" placeholder="New Password"><button class="pw-toggle" onclick="togglePw('new-pass',this)"><i class="fas fa-eye"></i></button></div>
+      <label class="form-label">Confirm Password</label>
+      <div class="pw-wrap"><input type="password" id="confirm-pass" class="form-input" placeholder="Confirm"><button class="pw-toggle" onclick="togglePw('confirm-pass',this)"><i class="fas fa-eye"></i></button></div>
+      <button type="button" class="btn-primary" onclick="submitReset()"><i class="fas fa-key"></i> Update Password</button>
+      <button type="button" class="btn-ghost" onclick="toggleReset(false)">Cancel</button>
+    </div>
+  </div>
+
+  <!-- DASHBOARD SCREEN -->
+  <div id="screen-dashboard">
+
+    <div class="nav-bar">
+      <div class="nav-left">
+        <div class="nav-avatar" id="nav-avatar" onclick="toggleSideMenu()" title="Settings">KR</div>
+        <span class="nav-name" id="user-name">Loading...</span>
+      </div>
+      <div class="nav-right">
+        <button class="nav-btn" onclick="refreshData()" title="Refresh Data"><i class="fas fa-sync-alt"></i></button>
+        <button class="nav-btn danger" onclick="logout()" title="Logout"><i class="fas fa-sign-out-alt"></i></button>
+      </div>
+    </div>
+
+    <div class="tab-bar">
+      <button class="tab-btn active" onclick="switchTab('tab-dashboard',this,0)"><i class="fas fa-tachometer-alt"></i> Dashboard</button>
+      <button class="tab-btn" onclick="switchTab('tab-schedule',this,1)"><i class="fas fa-calendar-alt"></i> Schedule</button>
+      <button class="tab-btn" onclick="switchTab('tab-form',this,2)"><i class="fas fa-phone-alt"></i> Call Log</button>
+      <button class="tab-btn" onclick="switchTab('tab-kb',this,3)"><i class="fas fa-book-open"></i> Knowledge Base</button>
+      <button class="tab-btn" onclick="switchTab('tab-requests',this,4)"><i class="fas fa-file-alt"></i> Requests</button>
+      <button class="tab-btn" onclick="switchTab('tab-sch-table',this,5)"><i class="fas fa-table"></i> SCH Table</button>
+    </div>
+
+    <div class="notif-bar notif-break hidden" id="break-notif">
+      <div class="notif-icon"><i class="fas fa-bell"></i></div>
+      <div><div class="notif-title" id="notif-title">Break soon!</div><div class="notif-sub" id="notif-sub"></div></div>
+      <button class="notif-close" onclick="stopNotifSound();this.closest('.notif-bar').classList.add('hidden')"><i class="fas fa-times"></i></button>
+    </div>
+
+    <div class="notif-bar notif-shift hidden" id="shift-end-notif">
+      <div class="notif-icon"><i class="fas fa-door-open"></i></div>
+      <div><div class="notif-title" id="shift-notif-title">Shift Ended!</div><div class="notif-sub">Time to log off. See you tomorrow!</div></div>
+      <button class="notif-close" onclick="stopNotifSound();this.closest('.notif-bar').classList.add('hidden')"><i class="fas fa-times"></i></button>
+    </div>
+
+    <!-- TAB: DASHBOARD -->
+    <div class="tab-content active" id="tab-dashboard">
+      <div class="status-banner" id="status-banner">
+        <div class="status-icon" id="status-icon">😴</div>
+        <div class="status-label">Today's Status</div>
+        <div class="status-value" id="status-text" style="color: var(--accent);">-</div>
+        <div class="status-sub" id="status-sub-text">Loading...</div>
+      </div>
+
+      <div class="breaks-card" id="today-breaks-area" style="display:none;">
+        <div class="breaks-header">
+          <h3><i class="fas fa-clock" style="color:var(--primary)"></i> Daily Breaks</h3>
+          <div class="shift-badge" id="br-shift">SHIFT: -</div>
+        </div>
+        <div class="break-slots">
+          <div class="break-slot b1">
+            <div class="break-slot-icon">☕</div>
+            <div class="break-slot-label">Break 1</div>
+            <div class="break-slot-time" id="br-break1">-</div>
+          </div>
+          <div class="break-slot b2">
+            <div class="break-slot-icon">🍽️</div>
+            <div class="break-slot-label">Lunch</div>
+            <div class="break-slot-time" id="br-lunch">-</div>
+          </div>
+          <div class="break-slot b3">
+            <div class="break-slot-icon">🫖</div>
+            <div class="break-slot-label">Break 2</div>
+            <div class="break-slot-time" id="br-break2">-</div>
+          </div>
+        </div>
+        <div class="swap-card">
+          <h4><i class="fas fa-exchange-alt"></i> Request Break Change</h4>
+          <div class="break-type-grid">
+            <button class="break-type-btn" onclick="selectBreakType('Break 1',this)"><i class="fas fa-coffee"></i>Break 1</button>
+            <button class="break-type-btn" onclick="selectBreakType('Lunch',this)"><i class="fas fa-utensils"></i>Lunch</button>
+            <button class="break-type-btn" onclick="selectBreakType('Break 2',this)"><i class="fas fa-mug-hot"></i>Break 2</button>
+          </div>
+          <button class="action-btn c-accent" id="swapBtn" onclick="sendBreakSwapRequest()">
+            <i class="fas fa-paper-plane"></i> Send Request
+          </button>
+          <div id="swap-msg" style="font-size:13px;font-weight:600;margin-top:8px;"></div>
+        </div>
+      </div>
+
+      <div class="section-label" style="margin-top:4px;"><i class="fas fa-users"></i> Team Availability</div>
+      <div class="team-grid" id="team-grid"></div>
+
+      <div class="filter-bar">
+        <i class="fas fa-filter" style="color:var(--muted)"></i>
+        <span style="font-size:13px;font-weight:600;color:var(--muted)">View:</span>
+        <select id="monthFilter" class="form-input" onchange="changeMonthData()">
+          <option value="CURRENT">Live (MTD)</option>
+          <option value="Jan">January</option><option value="Feb">February</option>
+          <option value="Mar">March</option><option value="Apr">April</option>
+          <option value="May">May</option><option value="Jun">June</option>
+          <option value="Jul">July</option><option value="Aug">August</option><option value="Sep">September</option><option value="Oct">October</option><option value="Nov">November</option><option value="Dec">December</option>
+        </select>
+        <i class="fas fa-spinner spinner hidden" id="filter-loader" style="color:var(--primary)"></i>
+      </div>
+
+      <div id="no-data-banner" style="display:none; background:rgba(245,158,11,0.08); border:1.5px solid rgba(245,158,11,0.3); border-radius:14px; padding:20px 24px; text-align:center; margin-bottom:16px;">
+        <div style="font-size:32px; margin-bottom:8px;">⏳</div>
+        <div style="font-family:'Syne',sans-serif; font-size:16px; font-weight:800; color:var(--text); margin-bottom:4px;">Data Not Yet Available</div>
+        <div style="font-size:13px; color:var(--muted);">This month's data hasn't been synced yet. Please check back later.</div>
+      </div>
+
+      <div class="kpi-grid">
+        <div class="kpi-card" style="border-top-color:var(--primary)"><div class="kpi-icon" style="color:var(--primary)">📈</div><div class="kpi-label">Conformance</div><div class="kpi-value" id="d-conformance">-</div></div>
+        <div class="kpi-card" style="border-top-color:var(--danger)"><div class="kpi-icon" style="color:var(--danger)">⏱️</div><div class="kpi-label">Missing Time</div><div class="kpi-value" id="d-missing">-</div></div>
+        <div class="kpi-card" style="border-top-color:var(--warn)"><div class="kpi-icon" style="color:var(--warn)">🎧</div><div class="kpi-label">Avg AHT</div><div class="kpi-value" id="d-aht">-</div></div>
+        <div class="kpi-card" style="border-top-color:var(--accent)"><div class="kpi-icon" style="color:var(--accent)">📞</div><div class="kpi-label">Total Calls</div><div class="kpi-value" id="d-calls">-</div></div>
+        <div class="kpi-card" style="border-top-color:#a142f4; cursor:pointer;" onclick="showAnnualDetails()"><div class="kpi-icon" style="color:#a142f4">🏖️</div><div class="kpi-label" id="annual-label">Annual Left</div><div class="kpi-value" id="d-annual">-</div></div>
+        <div id="annual-details" style="display:none; background:var(--surface); border:1px solid rgba(161,66,244,0.3); border-radius:14px; padding:16px; margin-top:-6px; grid-column: span 2;">
+          <div style="font-size:12px; font-weight:700; color:#a142f4; margin-bottom:12px;">🏖️ Annual Leave Details</div>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; font-size:13px;">
+            <div style="background:var(--surface2); padding:10px; border-radius:10px;"><div style="color:var(--muted); font-size:10px; font-weight:700; text-transform:uppercase; margin-bottom:4px;">Entitlement</div><div id="annual-entitlement" style="font-weight:800; color:var(--text); font-size:16px;">-</div></div>
+            <div style="background:var(--surface2); padding:10px; border-radius:10px;"><div style="color:var(--muted); font-size:10px; font-weight:700; text-transform:uppercase; margin-bottom:4px;">Carry Over</div><div id="annual-carry" style="font-weight:800; color:var(--text); font-size:16px;">-</div></div>
+            <div style="background:var(--surface2); padding:10px; border-radius:10px;"><div style="color:var(--muted); font-size:10px; font-weight:700; text-transform:uppercase; margin-bottom:4px;">Total</div><div id="annual-total" style="font-weight:800; color:#a142f4; font-size:16px;">-</div></div>
+            <div style="background:var(--surface2); padding:10px; border-radius:10px;"><div style="color:var(--muted); font-size:10px; font-weight:700; text-transform:uppercase; margin-bottom:4px;">Used</div><div id="annual-used" style="font-weight:800; color:var(--danger); font-size:16px;">-</div></div>
+          </div>
+          <div style="background:rgba(161,66,244,0.08); border:1px solid rgba(161,66,244,0.2); border-radius:10px; padding:10px; margin-top:8px; display:flex; justify-content:space-between; align-items:center;">
+            <span style="font-size:12px; font-weight:700; color:var(--muted);">Remaining</span>
+            <span id="annual-remaining" style="font-size:20px; font-weight:800; color:#a142f4;">-</span>
+          </div>
+          <div id="annual-months" style="margin-top:8px; font-size:12px; color:var(--muted);"></div>
+        </div>
+        <div class="kpi-card" style="border-top-color:var(--danger)"><div class="kpi-icon" style="color:var(--danger)">⚠️</div><div class="kpi-label">Exceptions</div><div class="kpi-value" id="d-exceptions">-</div></div>
+        <div class="kpi-card" style="border-top-color:var(--accent)"><div class="kpi-icon" style="color:var(--accent)">🏆</div><div class="kpi-label">Quality</div><div class="kpi-value" id="d-quality">-</div></div>
+      </div>
+    </div>
+
+    <!-- TAB: SCHEDULE -->
+<div class="tab-content" id="tab-schedule">
+      <div class="schedule-wrap">
+        <div class="section-label"><i class="fas fa-calendar-alt"></i> Work Schedule</div>
+        <div id="schedule-content"><div class="empty-state">Loading schedule...</div></div>
+
+        <div class="divider"></div>
+
+        <div class="schedule-bottom-grid">
+
+          <!-- LEFT COLUMN -->
+          <div class="schedule-left-col">
+            <div class="section-label"><i class="fas fa-paper-plane"></i> Quick Excuse Request</div>
+            <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
+              <input type="date" id="excuseDate" class="form-input" style="width:auto;flex:1;min-width:140px;">
+              <select id="excuseType" class="form-input" style="width:auto;flex:1;min-width:140px;">
+                <option value="" disabled selected>Choose Type</option>
+                <option value="Arrive Late">Arrive Late</option>
+                <option value="Leave Early">Leave Early</option>
+              </select>
+              <button class="action-btn c-accent" id="excuseBtn" onclick="sendExcuse()"><i class="fas fa-check"></i> Submit</button>
+              <button class="action-btn c-warn" id="undoBtn" onclick="undoLastExcuse()"><i class="fas fa-undo"></i> Undo</button>
+            </div>
+            <div id="excuse-msg" style="font-size:13px;font-weight:600;margin-top:8px;"></div>
+
+            <div class="divider"></div>
+
+            <div class="section-label"><i class="fas fa-calendar-check"></i> Time Off Request</div>
+            <div class="action-row">
+              <button class="action-btn" onclick="selectTimeOffType('Annual')" style="color:#a142f4;border-color:rgba(161,66,244,.3)"><i class="fas fa-umbrella-beach"></i> Annual</button>
+              <button class="action-btn c-danger" onclick="selectTimeOffType('Sick')"><i class="fas fa-heartbeat"></i> Sick</button>
+              <button class="action-btn c-warn" onclick="selectTimeOffType('Casual')"><i class="fas fa-coffee"></i> Casual</button>
+              <button class="action-btn c-accent" onclick="selectTimeOffType('PH')"><i class="fas fa-calendar-alt"></i> PH</button>
+              <button class="action-btn c-blue" onclick="selectTimeOffType('Task')"><i class="fas fa-tasks"></i> Task</button>
+            </div>
+            <div class="mini-form" id="time-off-form">
+              <div class="mini-form-grid">
+                <div><label class="form-label">From Date</label><input type="date" id="timeOffFromDate" class="form-input"></div>
+                <div><label class="form-label">To Date</label><input type="date" id="timeOffToDate" class="form-input"></div>
+              </div>
+              <label class="form-label">Notes</label>
+              <textarea id="timeOffNotes" class="form-input" style="margin-bottom:10px;" rows="2" placeholder="Optional..."></textarea>
+              <div style="display:flex;gap:10px;">
+                <button class="action-btn c-accent" style="flex:1" id="submitTimeOffBtn" onclick="submitTimeOffRequest()"><i class="fas fa-paper-plane"></i> Submit</button>
+                <button class="action-btn" style="flex:1" onclick="cancelTimeOffForm()">Cancel</button>
+              </div>
+              <div id="time-off-msg" style="font-size:13px;font-weight:600;margin-top:8px;"></div>
+            </div>
+          </div>
+
+          <!-- RIGHT COLUMN -->
+          <div class="schedule-right-col">
+            <div class="section-label"><i class="fas fa-exchange-alt"></i> Shift Swap Request</div>
+            <div class="swap-form-card">
+              <div class="swap-step">
+                <div class="swap-step-num">1</div>
+                <div class="swap-step-body">
+                  <div class="swap-step-label">Select Your Working Day</div>
+                  <select id="swap-day-select" class="form-input" onchange="onSwapDayChange()"><option value="">Choose a day...</option></select>
+                </div>
+              </div>
+              <div class="swap-compare">
+                <div class="swap-compare-box" id="swap-your-box"><div class="swap-compare-who">Your Shift</div><div class="swap-compare-value swap-empty" id="swap-your-shift">Select a day</div></div>
+                <div class="swap-compare-arrow"><i class="fas fa-exchange-alt"></i></div>
+                <div class="swap-compare-box" id="swap-colleague-box"><div class="swap-compare-who">Colleague's Shift</div><div class="swap-compare-value swap-empty" id="swap-colleague-shift">Select a colleague</div></div>
+              </div>
+              <div class="swap-step">
+                <div class="swap-step-num">2</div>
+                <div class="swap-step-body">
+                  <div class="swap-step-label">Select Colleague</div>
+                  <select id="swap-colleague-select" class="form-input" onchange="onSwapColleagueChange()"><option value="">Choose a colleague...</option></select>
+                </div>
+              </div>
+              <div id="swap-warning" class="swap-warning" style="display:none;"><i class="fas fa-exclamation-triangle"></i><span id="swap-warning-text"></span></div>
+              <div class="swap-note-row form-group">
+                <label class="form-label">Notes (Optional)</label>
+                <textarea id="swap-notes" class="form-input" rows="2" placeholder="Any additional notes..."></textarea>
+              </div>
+              <button class="action-btn c-accent" id="swap-submit-btn" onclick="submitShiftSwap()" style="width:100%;justify-content:center;padding:12px;font-size:14px;">
+                <i class="fas fa-paper-plane"></i> Submit Shift Swap Request
+              </button>
+              <div id="swap-request-msg" style="font-size:13px;font-weight:600;margin-top:8px;"></div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+    
+    <!-- TAB: CALL LOG -->
+    <div class="tab-content" id="tab-form">
+
+      <!-- Channel Selector -->
+      <div id="channel-selector" style="padding:24px 16px;">
+        <div style="font-family:'Syne',sans-serif;font-size:18px;font-weight:800;color:var(--text);margin-bottom:6px;">Log a Contact</div>
+        <div style="font-size:13px;color:var(--muted);margin-bottom:20px;">Choose the communication channel</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+
+          <div id="btn-channel-call" onclick="selectChannel('call')" style="
+            background:var(--surface);border:2px solid var(--border);border-radius:18px;
+            padding:28px 16px;text-align:center;cursor:pointer;transition:all 0.3s;
+          ">
+            <div style="font-size:36px;margin-bottom:12px;">📞</div>
+            <div style="font-family:'Syne',sans-serif;font-size:16px;font-weight:800;color:var(--text);">Call</div>
+            <div style="font-size:12px;color:var(--muted);margin-top:4px;">Phone call log</div>
+          </div>
+
+          <div id="btn-channel-whatsapp" onclick="selectChannel('whatsapp')" style="
+            background:var(--surface);border:2px solid var(--border);border-radius:18px;
+            padding:28px 16px;text-align:center;cursor:pointer;transition:all 0.3s;
+          ">
+            <i class="fab fa-whatsapp" style="font-size:40px;color:#25d366;margin-bottom:12px;display:block;"></i>
+            <div style="font-family:'Syne',sans-serif;font-size:16px;font-weight:800;color:var(--text);">WhatsApp</div>
+            <div style="font-size:12px;color:var(--muted);margin-top:4px;">WhatsApp message log</div>
+          </div>
+
+        </div>
+      </div>
+
+<div id="calllog-form-area" style="display:none;">
+  <!-- Channel Header -->
+  <div id="calllog-channel-header" style="display:flex;align-items:center;gap:14px;padding:16px 20px;margin:0 16px 16px;border-radius:16px;border:2px solid var(--border);background:var(--surface2);">
+    <div id="calllog-channel-icon" style="font-size:28px;">📞</div>
+    <div style="flex:1;">
+      <div id="calllog-channel-title" style="font-family:'Syne',sans-serif;font-size:16px;font-weight:800;color:var(--text);">Call Log</div>
+      <div style="font-size:12px;color:var(--muted);">Tap to switch channel</div>
+    </div>
+    <div style="display:flex;gap:8px;">
+      <button id="switch-call-btn" onclick="selectChannel('call')" style="padding:8px 14px;border-radius:10px;border:2px solid var(--border);background:var(--surface);color:var(--muted);font-size:12px;font-weight:700;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;transition:all 0.2s;">📞 Call</button>
+      <button id="switch-wa-btn" onclick="selectChannel('whatsapp')" style="padding:8px 14px;border-radius:10px;border:2px solid var(--border);background:var(--surface);color:var(--muted);font-size:12px;font-weight:700;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;transition:all 0.2s;"><i class="fab fa-whatsapp" style="color:#25d366;margin-right:4px;"></i> WhatsApp</button>
+    </div>
+  </div>
+
+  <div class="mobile-calllog-warning">
+    <div class="warn-icon">🖥️</div>
+    <h3>Desktop Only</h3>
+    <p>Call Log data entry requires a desktop browser for the best experience.</p>
+  </div>
+
+  <div class="form-card">
+    <!-- Step Indicator -->
+    <div class="step-indicator">
+      <div class="step-dot active" id="sdot-1">1</div>
+      <div class="step-line" id="sline-1"></div>
+      <div class="step-dot" id="sdot-2">2</div>
+      <div class="step-line" id="sline-2"></div>
+      <div class="step-dot" id="sdot-3">3</div>
+      <div class="step-line" id="sline-3"></div>
+      <div class="step-dot" id="sdot-4">4</div>
+    </div>
+
+    <!-- STEP 1: Agent + Reason -->
+    <div class="step-panel active" id="step-1">
+      <div class="step-title">🎯 Step 1 — Basic Info</div>
+      <div class="step-sub">Select agent and call reason</div>
+      <div class="form-group">
+        <label class="form-label">Agent Name <span class="req">*</span></label>
+        <select id="f-agent" class="form-input" onchange="onAgentSelect()">
+          <option value="">Select agent...</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Call Reason <span class="req">*</span></label>
+        <select id="f-reason" class="form-input" onchange="toggleFormSections()">
+          <option value="">Select reason...</option>
+          <option>Wrong Number</option><option>Call Dropped</option>
+          <option>Asking about the projects</option><option>Jirian campaign</option>
+          <option>Jirian Island campaign</option><option>Sky Ridge Elite</option>
+          <option>Sky Ridge Executives</option><option>Zomra</option>
+          <option>ISLA</option><option>Upviews</option><option>Broker</option>
+          <option>Delayed sales call</option><option>EOI Refund</option>
+          <option>Collaboration request</option><option>Non-Business General Inquiry</option>
+          <option>Business General Inquiry</option><option>Complaint</option>
+          <option>Shakira's Event</option>
+        </select>
+      </div>
+      <!-- Quick Log -->
+      <div class="section-label" style="margin-top:8px;"><i class="fas fa-bolt"></i> Quick Log</div>
+      <div class="quick-log-grid">
+        <div class="quick-log-btn" onclick="quickLogCall('Wrong Number')"><i class="fas fa-phone-slash"></i><span>Wrong Number</span></div>
+        <div class="quick-log-btn" onclick="quickLogCall('Call Dropped')"><i class="fas fa-phone-slash"></i><span>Call Dropped</span></div>
+      </div>
+<div class="step-nav">
+        <button class="step-nav-btn next" onclick="goStep(2)">Next <i class="fas fa-arrow-right"></i></button>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:12px;">
+        <input type="text" id="step1-search-input" placeholder="Name or mobile..."
+          class="form-input" style="flex:1;"
+          onkeydown="if(event.key==='Enter') step1SearchCustomer()">
+        <button id="inline-search-btn" onclick="step1SearchCustomer()"
+          style="padding:10px 16px;background:var(--primary-gradient);color:white;border:none;border-radius:11px;cursor:pointer;font-weight:700;font-family:inherit;white-space:nowrap;">
+          🔍 Search
+        </button>
+        <button onclick="clearStep1Search()"
+          style="padding:10px 16px;background:var(--surface2);border:1px solid var(--border);border-radius:11px;color:var(--muted);cursor:pointer;font-weight:700;font-family:inherit;white-space:nowrap;">
+          ✕ Clear
+        </button>
+      </div>
+      <div id="step1-search-results" style="margin-top:8px;"></div>
+      <div id="last-two-calls" style="display:flex;flex-direction:column;gap:8px;margin-top:12px;"></div>
+    </div>
+    <!-- STEP 2: Customer Info -->
+    <div class="step-panel" id="step-2">
+      <div class="step-title">👤 Step 2 — Customer Info</div>
+      <div class="step-sub">Enter customer details</div>
+      <!-- Customer Search -->
+      <div class="section-label"><i class="fas fa-search"></i> Customer Search</div>
+      <div style="display:flex;gap:10px;align-items:center;margin-bottom:16px;">
+        <input type="text" id="search-query" class="form-input" placeholder="Search by name or mobile..." style="flex:1;margin:0;">
+        <button class="action-btn c-accent" onclick="searchCustomer()"><i class="fas fa-search"></i></button>
+        <button class="action-btn" onclick="clearSearch()"><i class="fas fa-times"></i></button>
+      </div>
+      <div id="search-results" style="margin-bottom:12px;"></div>
+      <div id="mobile-section">
+        <div class="form-group">
+          <label class="form-label">Customer Name</label>
+          <input type="text" id="f-cname" class="form-input" placeholder="Enter customer name...">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Customer Mobile <span class="req">*</span></label>
+          <input type="tel" id="f-mobile" class="form-input" placeholder="01xxxxxxxxx">
+        </div>
+      </div>
+      <div class="step-nav">
+        <button class="step-nav-btn back" onclick="goStep(1)"><i class="fas fa-arrow-left"></i> Back</button>
+        <button class="step-nav-btn next" onclick="goStep(3)">Next <i class="fas fa-arrow-right"></i></button>
+      </div>
+    </div>
+
+    <!-- STEP 3: Business Details -->
+    <div class="step-panel" id="step-3">
+      <div class="step-title">💼 Step 3 — Business Details</div>
+      <div class="step-sub">Fill in business information</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+        <div class="form-group">
+          <label class="form-label">Business Relativity <span class="req">*</span></label>
+          <div class="radio-group" id="f-bizrel">
+            <label class="radio-opt" onclick="selectRadio('f-bizrel',this,'Business Related')"><input type="radio"> Business Related</label>
+            <label class="radio-opt" onclick="selectRadio('f-bizrel',this,'Non-Business Related')"><input type="radio"> Non-Business Related</label>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Sales Call Requested <span class="req">*</span></label>
+          <div class="radio-group" id="f-salescall">
+            <label class="radio-opt" onclick="selectRadio('f-salescall',this,'Yes')"><input type="radio"> Yes</label>
+            <label class="radio-opt" onclick="selectRadio('f-salescall',this,'No')"><input type="radio"> No</label>
+            <label class="radio-opt" onclick="selectRadio('f-salescall',this,'N/A')"><input type="radio"> N/A</label>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Communication Channel <span class="req">*</span></label>
+          <div class="radio-group" id="f-channel">
+            <label class="radio-opt" onclick="selectRadio('f-channel',this,'Whatsapp')"><input type="radio"><i class="fab fa-whatsapp" style="color:#25d366;margin-right:4px"></i>WhatsApp</label>
+            <label class="radio-opt" onclick="selectRadio('f-channel',this,'Mobile')"><input type="radio"><i class="fas fa-mobile-alt" style="margin-right:4px"></i>Mobile</label>
+            <label class="radio-opt" onclick="selectRadio('f-channel',this,'Email')"><input type="radio"><i class="fas fa-envelope" style="margin-right:4px"></i>Email</label>
+            <label class="radio-opt" onclick="selectRadio('f-channel',this,'Alternative Mobile')"><input type="radio">Alt. Mobile</label>
+            <label class="radio-opt" onclick="selectRadio('f-channel',this,'SMS')"><input type="radio"> SMS</label>
+            <label class="radio-opt" onclick="selectRadio('f-channel',this,'N/A')"><input type="radio"> N/A</label>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Media Source <span class="req">*</span></label>
+          <div class="radio-group" id="f-media">
+            <label class="radio-opt" onclick="selectRadio('f-media',this,'Billboards')"><input type="radio">Billboards</label>
+            <label class="radio-opt" onclick="selectRadio('f-media',this,'Saw site')"><input type="radio">Saw Site</label>
+            <label class="radio-opt" onclick="selectRadio('f-media',this,'Facebook')"><input type="radio"><i class="fab fa-facebook" style="color:#1877f2;margin-right:4px"></i>Facebook</label>
+            <label class="radio-opt" onclick="selectRadio('f-media',this,'Instagram')"><input type="radio"><i class="fab fa-instagram" style="color:#e1306c;margin-right:4px"></i>Instagram</label>
+            <label class="radio-opt" onclick="selectRadio('f-media',this,'Linkedin')"><input type="radio"><i class="fab fa-linkedin" style="color:#0077b5;margin-right:4px"></i>LinkedIn</label>
+            <label class="radio-opt" onclick="selectRadio('f-media',this,'Word of mouth')"><input type="radio">Word of Mouth</label>
+            <label class="radio-opt" onclick="selectRadio('f-media',this,'TV ad.')"><input type="radio">TV Ad.</label>
+            <label class="radio-opt" onclick="selectRadio('f-media',this,'Youtube')"><input type="radio"><i class="fab fa-youtube" style="color:#ff0000;margin-right:4px"></i>YouTube</label>
+            <label class="radio-opt" onclick="selectRadio('f-media',this,'N/A')"><input type="radio"> N/A</label>
+          </div>
+        </div>
+      </div>
+      <div class="budget-unit-grid">
+        <div class="form-group">
+          <label class="form-label">Budget (Millions) <span class="req">*</span></label>
+          <div class="radio-group" id="f-budget" style="flex-direction:column">
+            <label class="radio-opt" onclick="selectRadio('f-budget',this,'0 - 10')"><input type="radio"> 0 - 10M</label>
+            <label class="radio-opt" onclick="selectRadio('f-budget',this,'10 - 20')"><input type="radio"> 10 - 20M</label>
+            <label class="radio-opt" onclick="selectRadio('f-budget',this,'20 +')"><input type="radio"> 20M+</label>
+            <label class="radio-opt" onclick="selectRadio('f-budget',this,'N/A')"><input type="radio"> N/A</label>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Unit Type <span class="req">*</span></label>
+          <div class="radio-group" id="f-unit" style="flex-direction:column">
+            <label class="radio-opt" onclick="selectRadio('f-unit',this,'Apartment')"><input type="radio"> Apartment</label>
+            <label class="radio-opt" onclick="selectRadio('f-unit',this,'Villa')"><input type="radio"> Villa</label>
+            <label class="radio-opt" onclick="selectRadio('f-unit',this,'Commercial')"><input type="radio"> Commercial</label>
+            <label class="radio-opt" onclick="selectRadio('f-unit',this,'Admin')"><input type="radio"> Admin</label>
+            <label class="radio-opt" onclick="selectRadio('f-unit',this,'Twin House')"><input type="radio"> Twin House</label>
+            <label class="radio-opt" onclick="selectRadio('f-unit',this,'Stand Alone House')"><input type="radio"> Stand Alone</label>
+            <label class="radio-opt" onclick="selectRadio('f-unit',this,'Town House')"><input type="radio"> Town House</label>
+            <label class="radio-opt" onclick="selectRadio('f-unit',this,'N/A')"><input type="radio"> N/A</label>
+          </div>
+        </div>
+      </div>
+      <div class="step-nav">
+        <button class="step-nav-btn back" onclick="goStep(2)"><i class="fas fa-arrow-left"></i> Back</button>
+        <button class="step-nav-btn next" onclick="goStep(4)">Next <i class="fas fa-arrow-right"></i></button>
+      </div>
+    </div>
+
+    <!-- STEP 4: Notes + Submit -->
+    <div class="step-panel" id="step-4">
+      <div class="step-title">📝 Step 4 — Notes & Submit</div>
+      <div class="step-sub">Add any extra notes and submit</div>
+      <div class="form-group">
+        <label class="form-label">Extra Notes</label>
+        <textarea id="f-extra" class="form-input" placeholder="Any additional notes..." rows="4"></textarea>
+      </div>
+      <button class="submit-btn" id="formSubmitBtn" onclick="submitCallLogForm()">
+        <i class="fas fa-paper-plane"></i> Submit to Database
+      </button>
+      <div id="form-success" class="form-feedback form-success">✅ Call logged successfully!</div>
+      <div id="form-error" class="form-feedback form-error"></div>
+      <div class="step-nav" style="margin-top:12px;">
+        <button class="step-nav-btn back" onclick="goStep(3)"><i class="fas fa-arrow-left"></i> Back</button>
+      </div>
+    </div>
+
+  </div>
+</div><!-- end calllog-form-area -->
+    </div><!-- end tab-form -->
+    <!-- TAB: KNOWLEDGE BASE -->
+    <div class="tab-content" id="tab-kb">
+      <div class="kb-shell">
+        <div class="kb-sidebar" id="kb-sidebar">
+          <div class="kb-sidebar-head">
+            <div class="kb-sidebar-head-icon"><i class="fas fa-book-open"></i></div>
+            <div class="kb-sidebar-head-text">Knowledge Base</div>
+          </div>
+          <div class="kb-search-wrap" style="position:relative;">
+            <i class="fas fa-search kb-search-icon"></i>
+            <input type="text" class="kb-search-input" id="kb-sidebar-search" placeholder="Search sections..." oninput="filterKBSidebar(this.value)">
+          </div>
+          <div class="kb-sidebar-list" id="kb-sections-list">
+            <div class="kb-no-results"><i class="fas fa-spinner spinner"></i></div>
+          </div>
+        </div>
+        <div class="kb-main">
+          <div class="kb-toolbar">
+            <button class="kb-toggle-sidebar-btn" id="kb-toggle-btn" onclick="toggleKBSidebar()"><i class="fas fa-bars"></i></button>
+            <div class="kb-current-section" id="kb-current-title"></div>
+            <div class="kb-toolbar-actions">
+              <button class="kb-toolbar-btn kb-btn-cancel" id="kb-cancel-btn" onclick="cancelKBEdit()"><i class="fas fa-times"></i><span class="kb-btn-label">Cancel</span></button>
+              <button class="kb-toolbar-btn kb-btn-save" id="kb-save-btn" onclick="saveKBEdit()"><i class="fas fa-check"></i><span class="kb-btn-label">Save</span></button>
+              <button class="kb-toolbar-btn kb-btn-edit" id="kb-edit-btn" onclick="enterKBEditMode()"><i class="fas fa-pen"></i><span class="kb-btn-label">Edit</span></button>
+            </div>
+          </div>
+          <div class="kb-content-body" id="kb-content-body">
+            <div class="kb-placeholder" id="kb-placeholder">
+              <div class="kb-placeholder-icon"><i class="fas fa-book-open"></i></div>
+              <div class="kb-placeholder-title">Select a section</div>
+              <div class="kb-placeholder-sub">Choose a topic from the sidebar to start reading</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB: REQUESTS -->
+    <div class="tab-content" id="tab-requests">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:10px;">
+        <div class="section-label" style="margin:0"><i class="fas fa-file-alt"></i> My Requests</div>
+        <div style="display:flex;gap:8px;">
+          <button class="action-btn c-accent" onclick="exportRequests('excel')"><i class="fas fa-file-excel"></i> Excel</button>
+          <button class="action-btn c-warn" onclick="exportRequests('image')"><i class="fas fa-image"></i> Image</button>
+        </div>
+      </div>
+      <div id="requests-list"><div class="empty-state">No requests found.</div></div>
+    </div>
+
+<!-- TAB: SCH TABLE (UPDATED) -->
+<div class="tab-content" id="tab-sch-table">
+  <div style="padding:16px;">
+
+    <!-- Improved Filters -->
+<div class="sch-filters-wrap" style="margin-bottom:16px;">
+  <details style="width:100%;">
+    <summary style="cursor:pointer;font-size:12px;font-weight:700;color:var(--muted);padding:10px 14px;background:var(--surface2);border-radius:10px;border:1px solid var(--border);list-style:none;display:flex;align-items:center;gap:8px;">
+      <i class="fas fa-search" style="color:var(--primary);"></i> Browse Other Weeks
+    </summary>
+    <div style="padding:12px 0 0;">
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px;">
+        <select id="sch-filter-year" class="form-input" style="width:100px;font-size:13px;font-weight:600;" onchange="filterSchWeeks()">
+          <option value="">Year</option>
+          <option value="2023">2023</option>
+          <option value="2024">2024</option>
+          <option value="2025">2025</option>
+          <option value="2026">2026</option>
+        </select>
+        <select id="sch-filter-month" class="form-input" style="width:130px;font-size:13px;font-weight:600;" onchange="filterSchWeeks()">
+          <option value="">Month</option>
+          <option value="01">January</option><option value="02">February</option>
+          <option value="03">March</option><option value="04">April</option>
+          <option value="05">May</option><option value="06">June</option>
+          <option value="07">July</option><option value="08">August</option>
+          <option value="09">September</option><option value="10">October</option>
+          <option value="11">November</option><option value="12">December</option>
+        </select>
+        <div id="weeks-loader" style="display:none;color:var(--primary);font-size:14px;">
+          <i class="fas fa-circle-notch fa-spin"></i> Loading...
+        </div>
+      </div>
+    </div>
+  </details>
+</div>
+    
+<!-- ACCORDION 1: Published Schedule -->
+<div class="sch-accordion" id="acc-published">
+  <div class="sch-acc-header" onclick="toggleSchAccordion('acc-published')">
+    <div class="sch-acc-header-left">
+      <div class="sch-acc-icon"><i class="fas fa-calendar-alt"></i></div>
+      <div class="sch-acc-title">Published Schedule</div>
+    </div>
+    <i class="fas fa-chevron-down sch-acc-chevron"></i>
+  </div>
+  <div class="sch-acc-body">
+    <div style="font-size:13px; color:var(--muted); margin-bottom:12px;">
+      This is the official schedule approved by management.
+    </div>
+
+    <!-- Week Chips هنا جوا -->
+    <div id="weeks-chips-wrapper" style="display:none; margin-bottom:20px;">
+      <div style="font-size:12px; font-weight:700; color:var(--muted); margin-bottom:8px; text-transform:uppercase; letter-spacing:0.5px;">Select a Week</div>
+      <div class="weeks-chips-container" id="weeks-list"></div>
+    </div>
+
+    <!-- Schedule Grid -->
+    <div id="sch-table-grid" style="overflow-x:auto;">
+      <div class="empty-state">Please select Year, Month, and a Week to view schedule.</div>
+    </div>
+  </div>
+</div>
+
+<!-- ACCORDION 2: My Schedule Request -->
+<div class="sch-accordion" id="acc-request">
+  <div class="sch-acc-header" onclick="toggleSchAccordion('acc-request')">
+    <div class="sch-acc-header-left">
+      <div class="sch-acc-icon" style="color:var(--accent); background:rgba(20, 184, 166, 0.1);"><i class="fas fa-edit"></i></div>
+      <div class="sch-acc-title">My Schedule Request</div>
+    </div>
+    <i class="fas fa-chevron-down sch-acc-chevron"></i>
+  </div>
+  <div class="sch-acc-body">
+    <div style="font-size:13px; color:var(--muted); margin-bottom:12px;">
+      Draft your preferred shifts for the selected week and submit for approval.
+    </div>
+    
+        <!-- Draft Request Grid -->
+        <div id="sch-draft-grid" style="overflow-x:auto; margin-bottom:16px;">
+          <div class="empty-state">Select a week first to start drafting.</div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div style="display:flex;gap:10px;">
+          <button class="action-btn c-accent" style="flex:1;justify-content:center;" onclick="submitSchRequest()">
+            <i class="fas fa-paper-plane"></i> Submit Request
+          </button>
+          <button class="action-btn" onclick="resetSchDraft()">
+            <i class="fas fa-undo"></i> Reset
+          </button>
+        </div>
+        <div id="sch-request-msg" style="font-size:13px;font-weight:600;margin-top:8px;"></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+    <!-- Bottom Nav (Mobile) -->
+    <div class="bottom-nav" id="bottom-nav">
+      <button class="bottom-nav-btn active" onclick="switchTab('tab-dashboard',null,0)"><i class="fas fa-tachometer-alt"></i>Dashboard</button>
+      <button class="bottom-nav-btn" onclick="switchTab('tab-schedule',null,1)"><i class="fas fa-calendar-alt"></i>Schedule</button>
+      <button class="bottom-nav-btn" onclick="switchTab('tab-form',null,2)"><i class="fas fa-phone-alt"></i>Call Log</button>
+      <button class="bottom-nav-btn" onclick="switchTab('tab-kb',null,3)"><i class="fas fa-book-open"></i>KB</button>
+      <button class="bottom-nav-btn" onclick="switchTab('tab-requests',null,4)"><i class="fas fa-file-alt"></i>Requests</button>
+      <button class="bottom-nav-btn" onclick="switchTab('tab-sch-table',null,5)"><i class="fas fa-table"></i>SCH</button>
+    </div>
+
+  </div>
+
+  <!-- Side Menu -->
+  <div id="side-menu-overlay" onclick="closeSideMenu()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:8000;backdrop-filter:blur(4px);"></div>
+  <div id="side-menu" class="side-menu-panel">
+    <div class="side-header">
+      <div class="side-avatar" id="side-avatar"><img src="logo.png" alt="NOS Logo"></div>
+      <div class="side-name" id="side-name">Agent</div>
+      <div class="side-role">Nations of Sky</div>
+      <button class="side-close" onclick="closeSideMenu()"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="side-body">
+      <div class="side-section-title">Preferences</div>
+      <div class="side-item" onclick="toggleDark()">
+        <div class="side-item-icon" id="side-darkmode-icon">🌙</div>
+        <div class="side-item-content"><div class="side-item-title">Dark Mode</div><div class="side-item-sub" id="side-darkmode-label">Currently Dark</div></div>
+        <div class="side-toggle" id="side-darkmode-toggle"><div class="side-toggle-knob" id="side-darkmode-knob"></div></div>
+      </div>
+      <div class="side-item" onclick="refreshData();closeSideMenu();">
+        <div class="side-item-icon">🔄</div>
+        <div class="side-item-content"><div class="side-item-title">Refresh Data</div><div class="side-item-sub">Sync latest info</div></div>
+        <i class="fas fa-chevron-right side-item-arrow"></i>
+      </div>
+      <div class="side-divider"></div>
+      <div class="side-section-title">Account</div>
+      <div class="side-item" onclick="openChangePassword();closeSideMenu();">
+        <div class="side-item-icon">🔑</div>
+        <div class="side-item-content"><div class="side-item-title">Change Password</div><div class="side-item-sub">Update your login password</div></div>
+        <i class="fas fa-chevron-right side-item-arrow"></i>
+      </div>
+      <div style="padding: 10px 20px; border-bottom: 1px solid var(--border);">
+        <label class="form-label" for="missingPunchDate">Date of Missing Punch</label>
+        <input type="date" id="missingPunchDate" class="form-input" style="width: 100%;">
+      </div>
+      <div class="side-item side-item-danger" onclick="sendMissingPunch();closeSideMenu();">
+        <div class="side-item-icon">👆</div>
+        <div class="side-item-content"><div class="side-item-title">Missing Punch</div><div class="side-item-sub">Report missing punch</div></div>
+      </div>
+      <div class="side-divider"></div>
+      <div class="side-item side-item-danger" onclick="logout()">
+        <div class="side-item-icon">🚪</div>
+        <div class="side-item-content"><div class="side-item-title">Sign Out</div><div class="side-item-sub">Log out of portal</div></div>
+      </div>
+    </div>
+    <div class="side-footer">NOS Portal v2.0 · Nations of Sky</div>
+  </div>
+
+  <!-- Change Password Modal -->
+  <div id="cp-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9100;backdrop-filter:blur(4px);"></div>
+  <div id="cp-modal" style="display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:28px;min-width:280px;max-width:380px;width:90%;z-index:9101;box-shadow:0 24px 60px rgba(0,0,0,0.25);">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
+      <div style="font-family:'Syne',sans-serif;font-size:18px;font-weight:800;color:var(--text);">Change Password</div>
+      <button onclick="closeChangePassword()" style="background:none;border:none;cursor:pointer;color:var(--muted);font-size:16px;"><i class="fas fa-times"></i></button>
+    </div>
+    <label class="form-label">Old Password</label>
+    <div class="pw-wrap" style="margin-bottom:12px;"><input type="password" id="cp-old" class="form-input" placeholder="Current password"><button type="button" class="pw-toggle" onclick="togglePw('cp-old',this)"><i class="fas fa-eye"></i></button></div>
+    <label class="form-label">New Password</label>
+    <div class="pw-wrap" style="margin-bottom:12px;"><input type="password" id="cp-new" class="form-input" placeholder="New password"><button type="button" class="pw-toggle" onclick="togglePw('cp-new',this)"><i class="fas fa-eye"></i></button></div>
+    <label class="form-label">Confirm Password</label>
+    <div class="pw-wrap" style="margin-bottom:20px;"><input type="password" id="cp-confirm" class="form-input" placeholder="Confirm new password"><button type="button" class="pw-toggle" onclick="togglePw('cp-confirm',this)"><i class="fas fa-eye"></i></button></div>
+    <div id="cp-msg" style="font-size:13px;font-weight:600;margin-bottom:12px;"></div>
+    <button onclick="submitChangePassword()" class="btn-primary"><i class="fas fa-key"></i> Update Password</button>
+  </div>
+
+  <!-- Modal -->
+  <div class="modal-overlay" id="modal-overlay" onclick="closeModal(false)"></div>
+  <div class="modal-box" id="modal-box">
+    <div class="modal-title" id="modal-title"></div>
+    <div class="modal-msg" id="modal-msg"></div>
+    <div class="modal-btns">
+      <button class="modal-btn-cancel" id="modal-cancel" onclick="closeModal(false)">Cancel</button>
+      <button class="modal-btn-ok" id="modal-ok" onclick="closeModal(true)">OK</button>
+    </div>
+  </div>
+  <div id="nos-toast-container"></div>
+  <script type="module" src="firebase-kb.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="app-utils.js"></script>
+<script src="app-core.js"></script>
+<script src="app-schedule.js"></script>
+<script src="app-breaks.js"></script>
+<script src="app-requests.js"></script>
+<script src="app-calllog.js"></script>
+<script src="app-kb.js"></script>
+<script src="app-sch-table.js"></script>
+<script src="offline-calllog.js?v=2"></script>
+<script>
+  
+    function showUpdateToast() {
+      const bar = document.createElement('div');
+      bar.id = 'update-toast';
+      bar.style.cssText = `
+        position:fixed; bottom:80px; left:50%; transform:translateX(-50%);
+        z-index:99999; background:var(--surface);
+        border:1.5px solid var(--primary); border-radius:16px;
+        padding:14px 20px; box-shadow:0 8px 32px rgba(212,175,55,0.3);
+        display:flex; align-items:center; gap:14px;
+        min-width:280px; max-width:90vw;
+        backdrop-filter:blur(20px);
+        animation:toastIn 0.4s cubic-bezier(0.34,1.56,0.64,1) both;
+      `;
+      bar.innerHTML = `
+        <div style="font-size:24px;">🆕</div>
+        <div style="flex:1;">
+          <div style="font-family:'Syne',sans-serif;font-size:14px;font-weight:800;color:var(--text);">Update Available!</div>
+          <div style="font-size:12px;color:var(--muted);margin-top:2px;">Tap to get the latest version</div>
+        </div>
+        <button onclick="applyUpdate()" style="
+          padding:8px 16px; background:var(--primary-gradient);
+          border:none; border-radius:10px; color:white;
+          font-size:12px; font-weight:700; cursor:pointer;
+          font-family:'Plus Jakarta Sans',sans-serif; white-space:nowrap;
+        ">Update Now</button>
+        <button onclick="document.getElementById('update-toast').remove()" style="
+          width:28px; height:28px; background:var(--surface2);
+          border:1px solid var(--border); border-radius:8px;
+          color:var(--muted); cursor:pointer; font-size:13px;
+          display:flex; align-items:center; justify-content:center;
+        ">✕</button>
+      `;
+      document.body.appendChild(bar);
+    }
+
+    function applyUpdate() {
+      navigator.serviceWorker.getRegistration().then(reg => {
+        if (reg && reg.waiting) {
+          reg.waiting.postMessage({ type: 'SKIP_WAITING' });
+        }
+      });
+      window.location.reload();
+    }
+  </script>
+
+<div id="nos-result-popup" style="display:none"></div>
+<div id="call-summary-bar" style="display:none;position:fixed;bottom:80px;left:50%;transform:translateX(-50%);z-index:99998;background:var(--surface);border:1.5px solid var(--primary);border-radius:16px;padding:14px 18px;box-shadow:0 8px 32px rgba(212,175,55,0.25);display:none;align-items:center;gap:16px;min-width:320px;max-width:90vw;backdrop-filter:blur(20px);">
+  <div style="flex:1;">
+    <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;">Last Call Logged</div>
+    <div id="cs-name" style="font-weight:800;font-size:14px;color:var(--text);"></div>
+    <div id="cs-mobile" style="font-size:13px;color:var(--primary);font-family:monospace;font-weight:700;"></div>
+    <div id="cs-reason" style="font-size:11px;color:var(--muted);margin-top:2px;"></div>
+  </div>
+  <button onclick="copySummary()" style="padding:8px 14px;background:var(--primary-gradient);border:none;border-radius:10px;color:white;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;font-family:'Plus Jakarta Sans',sans-serif;">
+    <i class="fas fa-copy"></i> Copy
+  </button>
+  <button onclick="document.getElementById('call-summary-bar').style.display='none'" style="width:30px;height:30px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--muted);cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;">✕</button>
+</div>
+
+</body>
+</html>
