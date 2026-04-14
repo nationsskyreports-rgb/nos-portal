@@ -7,8 +7,8 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="NOS Portal">
-<link rel="apple-touch-icon" href="icon-apple.png">
-<link rel="icon" type="image/png" href="logo.png">
+<link rel="apple-touch-icon" href="assets/icon-apple.png">
+<link rel="icon" type="image/png" href="assets/logo.png">
 <meta name="theme-color" content="#0f766e">
 <meta name="application-name" content="NOS Portal">
 <title>Nations of Sky — Agent Portal</title>
@@ -16,8 +16,8 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@600;700;800&family=Syne:wght@400;600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="mobile.css">
-<link rel="stylesheet" href="styles.css">
+<link rel="stylesheet" href="css/mobile.css">
+<link rel="stylesheet" href="css/styles.css">
 </head>
 <body>
 
@@ -25,7 +25,7 @@
   <div id="app-preloader">
     <div class="preloader-content">
       <div class="preloader-logo-wrap">
-        <img src="logo.png" alt="NOS Logo" class="preloader-logo">
+        <img src="assets/logo.png" alt="NOS Logo" class="preloader-logo">
         <div class="preloader-spinner"></div>
       </div>
       <div class="preloader-text">Loading your dashboard...</div>
@@ -35,7 +35,7 @@
   <!-- LOGIN SCREEN -->
   <div id="screen-login">
     <div class="nsd-logo-animated" id="nsdAnimatedLogo">
-      <img src="logo.png" alt="NOS Logo" style="width:100%;height:100%;object-fit:contain;filter:none;">
+      <img src="assets/logo.png" alt="NOS Logo" style="width:100%;height:100%;object-fit:contain;filter:none;">
     </div>
 
     <div class="login-header">
@@ -46,9 +46,9 @@
     <form class="login-card" id="login-form-area" onsubmit="handleLoginSubmit(event);" autocomplete="on">
 
       <div style="width:72px;height:72px;background:rgba(212,175,55,0.1);border:1.5px solid rgba(212,175,55,0.3);border-radius:18px;display:flex;align-items:center;justify-content:center;margin:0 auto 24px;">
-  <i class="fas fa-headset" style="font-size:28px;color:#D4AF37;"></i>
-</div>
-      
+        <i class="fas fa-headset" style="font-size:28px;color:#D4AF37;"></i>
+      </div>
+
       <div class="login-title">Agent Portal</div>
       <div class="login-sub">Nations of Sky Internal System</div>
 
@@ -176,7 +176,9 @@
           <option value="Jan">January</option><option value="Feb">February</option>
           <option value="Mar">March</option><option value="Apr">April</option>
           <option value="May">May</option><option value="Jun">June</option>
-          <option value="Jul">July</option><option value="Aug">August</option><option value="Sep">September</option><option value="Oct">October</option><option value="Nov">November</option><option value="Dec">December</option>
+          <option value="Jul">July</option><option value="Aug">August</option>
+          <option value="Sep">September</option><option value="Oct">October</option>
+          <option value="Nov">November</option><option value="Dec">December</option>
         </select>
         <i class="fas fa-spinner spinner hidden" id="filter-loader" style="color:var(--primary)"></i>
       </div>
@@ -213,7 +215,7 @@
     </div>
 
     <!-- TAB: SCHEDULE -->
-<div class="tab-content" id="tab-schedule">
+    <div class="tab-content" id="tab-schedule">
       <div class="schedule-wrap">
         <div class="section-label"><i class="fas fa-calendar-alt"></i> Work Schedule</div>
         <div id="schedule-content"><div class="empty-state">Loading schedule...</div></div>
@@ -300,244 +302,224 @@
         </div>
       </div>
     </div>
-    
+
     <!-- TAB: CALL LOG -->
     <div class="tab-content" id="tab-form">
 
-      <!-- Channel Selector -->
       <div id="channel-selector" style="padding:24px 16px;">
         <div style="font-family:'Syne',sans-serif;font-size:18px;font-weight:800;color:var(--text);margin-bottom:6px;">Log a Contact</div>
         <div style="font-size:13px;color:var(--muted);margin-bottom:20px;">Choose the communication channel</div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
-
-          <div id="btn-channel-call" onclick="selectChannel('call')" style="
-            background:var(--surface);border:2px solid var(--border);border-radius:18px;
-            padding:28px 16px;text-align:center;cursor:pointer;transition:all 0.3s;
-          ">
+          <div id="btn-channel-call" onclick="selectChannel('call')" style="background:var(--surface);border:2px solid var(--border);border-radius:18px;padding:28px 16px;text-align:center;cursor:pointer;transition:all 0.3s;">
             <div style="font-size:36px;margin-bottom:12px;">📞</div>
             <div style="font-family:'Syne',sans-serif;font-size:16px;font-weight:800;color:var(--text);">Call</div>
             <div style="font-size:12px;color:var(--muted);margin-top:4px;">Phone call log</div>
           </div>
-
-          <div id="btn-channel-whatsapp" onclick="selectChannel('whatsapp')" style="
-            background:var(--surface);border:2px solid var(--border);border-radius:18px;
-            padding:28px 16px;text-align:center;cursor:pointer;transition:all 0.3s;
-          ">
+          <div id="btn-channel-whatsapp" onclick="selectChannel('whatsapp')" style="background:var(--surface);border:2px solid var(--border);border-radius:18px;padding:28px 16px;text-align:center;cursor:pointer;transition:all 0.3s;">
             <i class="fab fa-whatsapp" style="font-size:40px;color:#25d366;margin-bottom:12px;display:block;"></i>
             <div style="font-family:'Syne',sans-serif;font-size:16px;font-weight:800;color:var(--text);">WhatsApp</div>
             <div style="font-size:12px;color:var(--muted);margin-top:4px;">WhatsApp message log</div>
           </div>
-
         </div>
       </div>
 
-<div id="calllog-form-area" style="display:none;">
-  <!-- Channel Header -->
-  <div id="calllog-channel-header" style="display:flex;align-items:center;gap:14px;padding:16px 20px;margin:0 16px 16px;border-radius:16px;border:2px solid var(--border);background:var(--surface2);">
-    <div id="calllog-channel-icon" style="font-size:28px;">📞</div>
-    <div style="flex:1;">
-      <div id="calllog-channel-title" style="font-family:'Syne',sans-serif;font-size:16px;font-weight:800;color:var(--text);">Call Log</div>
-      <div style="font-size:12px;color:var(--muted);">Tap to switch channel</div>
-    </div>
-    <div style="display:flex;gap:8px;">
-      <button id="switch-call-btn" onclick="selectChannel('call')" style="padding:8px 14px;border-radius:10px;border:2px solid var(--border);background:var(--surface);color:var(--muted);font-size:12px;font-weight:700;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;transition:all 0.2s;">📞 Call</button>
-      <button id="switch-wa-btn" onclick="selectChannel('whatsapp')" style="padding:8px 14px;border-radius:10px;border:2px solid var(--border);background:var(--surface);color:var(--muted);font-size:12px;font-weight:700;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;transition:all 0.2s;"><i class="fab fa-whatsapp" style="color:#25d366;margin-right:4px;"></i> WhatsApp</button>
-    </div>
-  </div>
-
-  <div class="mobile-calllog-warning">
-    <div class="warn-icon">🖥️</div>
-    <h3>Desktop Only</h3>
-    <p>Call Log data entry requires a desktop browser for the best experience.</p>
-  </div>
-
-  <div class="form-card">
-    <!-- Step Indicator -->
-    <div class="step-indicator">
-      <div class="step-dot active" id="sdot-1">1</div>
-      <div class="step-line" id="sline-1"></div>
-      <div class="step-dot" id="sdot-2">2</div>
-      <div class="step-line" id="sline-2"></div>
-      <div class="step-dot" id="sdot-3">3</div>
-      <div class="step-line" id="sline-3"></div>
-      <div class="step-dot" id="sdot-4">4</div>
-    </div>
-
-    <!-- STEP 1: Agent + Reason -->
-    <div class="step-panel active" id="step-1">
-      <div class="step-title">🎯 Step 1 — Basic Info</div>
-      <div class="step-sub">Select agent and call reason</div>
-      <div class="form-group">
-        <label class="form-label">Agent Name <span class="req">*</span></label>
-        <select id="f-agent" class="form-input" onchange="onAgentSelect()">
-          <option value="">Select agent...</option>
-        </select>
-      </div>
-      <div class="form-group">
-        <label class="form-label">Call Reason <span class="req">*</span></label>
-        <select id="f-reason" class="form-input" onchange="toggleFormSections()">
-          <option value="">Select reason...</option>
-          <option>Wrong Number</option><option>Call Dropped</option>
-          <option>Asking about the projects</option><option>Jirian campaign</option>
-          <option>Jirian Island campaign</option><option>Sky Ridge Elite</option>
-          <option>Sky Ridge Executives</option><option>Zomra</option>
-          <option>ISLA</option><option>Upviews</option><option>Broker</option>
-          <option>Delayed sales call</option><option>EOI Refund</option>
-          <option>Collaboration request</option><option>Non-Business General Inquiry</option>
-          <option>Business General Inquiry</option><option>Complaint</option>
-          <option>Shakira's Event</option>
-        </select>
-      </div>
-      <!-- Quick Log -->
-      <div class="section-label" style="margin-top:8px;"><i class="fas fa-bolt"></i> Quick Log</div>
-      <div class="quick-log-grid">
-        <div class="quick-log-btn" onclick="quickLogCall('Wrong Number')"><i class="fas fa-phone-slash"></i><span>Wrong Number</span></div>
-        <div class="quick-log-btn" onclick="quickLogCall('Call Dropped')"><i class="fas fa-phone-slash"></i><span>Call Dropped</span></div>
-      </div>
-<div class="step-nav">
-        <button class="step-nav-btn next" onclick="goStep(2)">Next <i class="fas fa-arrow-right"></i></button>
-      </div>
-      <div style="display:flex;gap:8px;margin-top:12px;">
-        <input type="text" id="step1-search-input" placeholder="Name or mobile..."
-          class="form-input" style="flex:1;"
-          onkeydown="if(event.key==='Enter') step1SearchCustomer()">
-        <button id="inline-search-btn" onclick="step1SearchCustomer()"
-          style="padding:10px 16px;background:var(--primary-gradient);color:white;border:none;border-radius:11px;cursor:pointer;font-weight:700;font-family:inherit;white-space:nowrap;">
-          🔍 Search
-        </button>
-        <button onclick="clearStep1Search()"
-          style="padding:10px 16px;background:var(--surface2);border:1px solid var(--border);border-radius:11px;color:var(--muted);cursor:pointer;font-weight:700;font-family:inherit;white-space:nowrap;">
-          ✕ Clear
-        </button>
-      </div>
-      <div id="step1-search-results" style="margin-top:8px;"></div>
-      <div id="last-two-calls" style="display:flex;flex-direction:column;gap:8px;margin-top:12px;"></div>
-    </div>
-    <!-- STEP 2: Customer Info -->
-    <div class="step-panel" id="step-2">
-      <div class="step-title">👤 Step 2 — Customer Info</div>
-      <div class="step-sub">Enter customer details</div>
-      <!-- Customer Search -->
-      <div class="section-label"><i class="fas fa-search"></i> Customer Search</div>
-      <div style="display:flex;gap:10px;align-items:center;margin-bottom:16px;">
-        <input type="text" id="search-query" class="form-input" placeholder="Search by name or mobile..." style="flex:1;margin:0;">
-        <button class="action-btn c-accent" onclick="searchCustomer()"><i class="fas fa-search"></i></button>
-        <button class="action-btn" onclick="clearSearch()"><i class="fas fa-times"></i></button>
-      </div>
-      <div id="search-results" style="margin-bottom:12px;"></div>
-      <div id="mobile-section">
-        <div class="form-group">
-          <label class="form-label">Customer Name</label>
-          <input type="text" id="f-cname" class="form-input" placeholder="Enter customer name...">
-        </div>
-        <div class="form-group">
-          <label class="form-label">Customer Mobile <span class="req">*</span></label>
-          <input type="tel" id="f-mobile" class="form-input" placeholder="01xxxxxxxxx">
-        </div>
-      </div>
-      <div class="step-nav">
-        <button class="step-nav-btn back" onclick="goStep(1)"><i class="fas fa-arrow-left"></i> Back</button>
-        <button class="step-nav-btn next" onclick="goStep(3)">Next <i class="fas fa-arrow-right"></i></button>
-      </div>
-    </div>
-
-    <!-- STEP 3: Business Details -->
-    <div class="step-panel" id="step-3">
-      <div class="step-title">💼 Step 3 — Business Details</div>
-      <div class="step-sub">Fill in business information</div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
-        <div class="form-group">
-          <label class="form-label">Business Relativity <span class="req">*</span></label>
-          <div class="radio-group" id="f-bizrel">
-            <label class="radio-opt" onclick="selectRadio('f-bizrel',this,'Business Related')"><input type="radio"> Business Related</label>
-            <label class="radio-opt" onclick="selectRadio('f-bizrel',this,'Non-Business Related')"><input type="radio"> Non-Business Related</label>
+      <div id="calllog-form-area" style="display:none;">
+        <div id="calllog-channel-header" style="display:flex;align-items:center;gap:14px;padding:16px 20px;margin:0 16px 16px;border-radius:16px;border:2px solid var(--border);background:var(--surface2);">
+          <div id="calllog-channel-icon" style="font-size:28px;">📞</div>
+          <div style="flex:1;">
+            <div id="calllog-channel-title" style="font-family:'Syne',sans-serif;font-size:16px;font-weight:800;color:var(--text);">Call Log</div>
+            <div style="font-size:12px;color:var(--muted);">Tap to switch channel</div>
+          </div>
+          <div style="display:flex;gap:8px;">
+            <button id="switch-call-btn" onclick="selectChannel('call')" style="padding:8px 14px;border-radius:10px;border:2px solid var(--border);background:var(--surface);color:var(--muted);font-size:12px;font-weight:700;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;transition:all 0.2s;">📞 Call</button>
+            <button id="switch-wa-btn" onclick="selectChannel('whatsapp')" style="padding:8px 14px;border-radius:10px;border:2px solid var(--border);background:var(--surface);color:var(--muted);font-size:12px;font-weight:700;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;transition:all 0.2s;"><i class="fab fa-whatsapp" style="color:#25d366;margin-right:4px;"></i> WhatsApp</button>
           </div>
         </div>
-        <div class="form-group">
-          <label class="form-label">Sales Call Requested <span class="req">*</span></label>
-          <div class="radio-group" id="f-salescall">
-            <label class="radio-opt" onclick="selectRadio('f-salescall',this,'Yes')"><input type="radio"> Yes</label>
-            <label class="radio-opt" onclick="selectRadio('f-salescall',this,'No')"><input type="radio"> No</label>
-            <label class="radio-opt" onclick="selectRadio('f-salescall',this,'N/A')"><input type="radio"> N/A</label>
-          </div>
+
+        <div class="mobile-calllog-warning">
+          <div class="warn-icon">🖥️</div>
+          <h3>Desktop Only</h3>
+          <p>Call Log data entry requires a desktop browser for the best experience.</p>
         </div>
-        <div class="form-group">
-          <label class="form-label">Communication Channel <span class="req">*</span></label>
-          <div class="radio-group" id="f-channel">
-            <label class="radio-opt" onclick="selectRadio('f-channel',this,'Whatsapp')"><input type="radio"><i class="fab fa-whatsapp" style="color:#25d366;margin-right:4px"></i>WhatsApp</label>
-            <label class="radio-opt" onclick="selectRadio('f-channel',this,'Mobile')"><input type="radio"><i class="fas fa-mobile-alt" style="margin-right:4px"></i>Mobile</label>
-            <label class="radio-opt" onclick="selectRadio('f-channel',this,'Email')"><input type="radio"><i class="fas fa-envelope" style="margin-right:4px"></i>Email</label>
-            <label class="radio-opt" onclick="selectRadio('f-channel',this,'Alternative Mobile')"><input type="radio">Alt. Mobile</label>
-            <label class="radio-opt" onclick="selectRadio('f-channel',this,'SMS')"><input type="radio"> SMS</label>
-            <label class="radio-opt" onclick="selectRadio('f-channel',this,'N/A')"><input type="radio"> N/A</label>
+
+        <div class="form-card">
+          <div class="step-indicator">
+            <div class="step-dot active" id="sdot-1">1</div>
+            <div class="step-line" id="sline-1"></div>
+            <div class="step-dot" id="sdot-2">2</div>
+            <div class="step-line" id="sline-2"></div>
+            <div class="step-dot" id="sdot-3">3</div>
+            <div class="step-line" id="sline-3"></div>
+            <div class="step-dot" id="sdot-4">4</div>
           </div>
-        </div>
-        <div class="form-group">
-          <label class="form-label">Media Source <span class="req">*</span></label>
-          <div class="radio-group" id="f-media">
-            <label class="radio-opt" onclick="selectRadio('f-media',this,'Billboards')"><input type="radio">Billboards</label>
-            <label class="radio-opt" onclick="selectRadio('f-media',this,'Saw site')"><input type="radio">Saw Site</label>
-            <label class="radio-opt" onclick="selectRadio('f-media',this,'Facebook')"><input type="radio"><i class="fab fa-facebook" style="color:#1877f2;margin-right:4px"></i>Facebook</label>
-            <label class="radio-opt" onclick="selectRadio('f-media',this,'Instagram')"><input type="radio"><i class="fab fa-instagram" style="color:#e1306c;margin-right:4px"></i>Instagram</label>
-            <label class="radio-opt" onclick="selectRadio('f-media',this,'Linkedin')"><input type="radio"><i class="fab fa-linkedin" style="color:#0077b5;margin-right:4px"></i>LinkedIn</label>
-            <label class="radio-opt" onclick="selectRadio('f-media',this,'Word of mouth')"><input type="radio">Word of Mouth</label>
-            <label class="radio-opt" onclick="selectRadio('f-media',this,'TV ad.')"><input type="radio">TV Ad.</label>
-            <label class="radio-opt" onclick="selectRadio('f-media',this,'Youtube')"><input type="radio"><i class="fab fa-youtube" style="color:#ff0000;margin-right:4px"></i>YouTube</label>
-            <label class="radio-opt" onclick="selectRadio('f-media',this,'N/A')"><input type="radio"> N/A</label>
+
+          <!-- STEP 1 -->
+          <div class="step-panel active" id="step-1">
+            <div class="step-title">🎯 Step 1 — Basic Info</div>
+            <div class="step-sub">Select agent and call reason</div>
+            <div class="form-group">
+              <label class="form-label">Agent Name <span class="req">*</span></label>
+              <select id="f-agent" class="form-input" onchange="onAgentSelect()">
+                <option value="">Select agent...</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Call Reason <span class="req">*</span></label>
+              <select id="f-reason" class="form-input" onchange="toggleFormSections()">
+                <option value="">Select reason...</option>
+                <option>Wrong Number</option><option>Call Dropped</option>
+                <option>Asking about the projects</option><option>Jirian campaign</option>
+                <option>Jirian Island campaign</option><option>Sky Ridge Elite</option>
+                <option>Sky Ridge Executives</option><option>Zomra</option>
+                <option>ISLA</option><option>Upviews</option><option>Broker</option>
+                <option>Delayed sales call</option><option>EOI Refund</option>
+                <option>Collaboration request</option><option>Non-Business General Inquiry</option>
+                <option>Business General Inquiry</option><option>Complaint</option>
+                <option>Shakira's Event</option>
+              </select>
+            </div>
+            <div class="section-label" style="margin-top:8px;"><i class="fas fa-bolt"></i> Quick Log</div>
+            <div class="quick-log-grid">
+              <div class="quick-log-btn" onclick="quickLogCall('Wrong Number')"><i class="fas fa-phone-slash"></i><span>Wrong Number</span></div>
+              <div class="quick-log-btn" onclick="quickLogCall('Call Dropped')"><i class="fas fa-phone-slash"></i><span>Call Dropped</span></div>
+            </div>
+            <div class="step-nav">
+              <button class="step-nav-btn next" onclick="goStep(2)">Next <i class="fas fa-arrow-right"></i></button>
+            </div>
+            <div style="display:flex;gap:8px;margin-top:12px;">
+              <input type="text" id="step1-search-input" placeholder="Name or mobile..." class="form-input" style="flex:1;" onkeydown="if(event.key==='Enter') step1SearchCustomer()">
+              <button id="inline-search-btn" onclick="step1SearchCustomer()" style="padding:10px 16px;background:var(--primary-gradient);color:white;border:none;border-radius:11px;cursor:pointer;font-weight:700;font-family:inherit;white-space:nowrap;">🔍 Search</button>
+              <button onclick="clearStep1Search()" style="padding:10px 16px;background:var(--surface2);border:1px solid var(--border);border-radius:11px;color:var(--muted);cursor:pointer;font-weight:700;font-family:inherit;white-space:nowrap;">✕ Clear</button>
+            </div>
+            <div id="step1-search-results" style="margin-top:8px;"></div>
+            <div id="last-two-calls" style="display:flex;flex-direction:column;gap:8px;margin-top:12px;"></div>
           </div>
-        </div>
-      </div>
-      <div class="budget-unit-grid">
-        <div class="form-group">
-          <label class="form-label">Budget (Millions) <span class="req">*</span></label>
-          <div class="radio-group" id="f-budget" style="flex-direction:column">
-            <label class="radio-opt" onclick="selectRadio('f-budget',this,'0 - 10')"><input type="radio"> 0 - 10M</label>
-            <label class="radio-opt" onclick="selectRadio('f-budget',this,'10 - 20')"><input type="radio"> 10 - 20M</label>
-            <label class="radio-opt" onclick="selectRadio('f-budget',this,'20 +')"><input type="radio"> 20M+</label>
-            <label class="radio-opt" onclick="selectRadio('f-budget',this,'N/A')"><input type="radio"> N/A</label>
+
+          <!-- STEP 2 -->
+          <div class="step-panel" id="step-2">
+            <div class="step-title">👤 Step 2 — Customer Info</div>
+            <div class="step-sub">Enter customer details</div>
+            <div class="section-label"><i class="fas fa-search"></i> Customer Search</div>
+            <div style="display:flex;gap:10px;align-items:center;margin-bottom:16px;">
+              <input type="text" id="search-query" class="form-input" placeholder="Search by name or mobile..." style="flex:1;margin:0;">
+              <button class="action-btn c-accent" onclick="searchCustomer()"><i class="fas fa-search"></i></button>
+              <button class="action-btn" onclick="clearSearch()"><i class="fas fa-times"></i></button>
+            </div>
+            <div id="search-results" style="margin-bottom:12px;"></div>
+            <div id="mobile-section">
+              <div class="form-group">
+                <label class="form-label">Customer Name</label>
+                <input type="text" id="f-cname" class="form-input" placeholder="Enter customer name...">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Customer Mobile <span class="req">*</span></label>
+                <input type="tel" id="f-mobile" class="form-input" placeholder="01xxxxxxxxx">
+              </div>
+            </div>
+            <div class="step-nav">
+              <button class="step-nav-btn back" onclick="goStep(1)"><i class="fas fa-arrow-left"></i> Back</button>
+              <button class="step-nav-btn next" onclick="goStep(3)">Next <i class="fas fa-arrow-right"></i></button>
+            </div>
           </div>
-        </div>
-        <div class="form-group">
-          <label class="form-label">Unit Type <span class="req">*</span></label>
-          <div class="radio-group" id="f-unit" style="flex-direction:column">
-            <label class="radio-opt" onclick="selectRadio('f-unit',this,'Apartment')"><input type="radio"> Apartment</label>
-            <label class="radio-opt" onclick="selectRadio('f-unit',this,'Villa')"><input type="radio"> Villa</label>
-            <label class="radio-opt" onclick="selectRadio('f-unit',this,'Commercial')"><input type="radio"> Commercial</label>
-            <label class="radio-opt" onclick="selectRadio('f-unit',this,'Admin')"><input type="radio"> Admin</label>
-            <label class="radio-opt" onclick="selectRadio('f-unit',this,'Twin House')"><input type="radio"> Twin House</label>
-            <label class="radio-opt" onclick="selectRadio('f-unit',this,'Stand Alone House')"><input type="radio"> Stand Alone</label>
-            <label class="radio-opt" onclick="selectRadio('f-unit',this,'Town House')"><input type="radio"> Town House</label>
-            <label class="radio-opt" onclick="selectRadio('f-unit',this,'N/A')"><input type="radio"> N/A</label>
+
+          <!-- STEP 3 -->
+          <div class="step-panel" id="step-3">
+            <div class="step-title">💼 Step 3 — Business Details</div>
+            <div class="step-sub">Fill in business information</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+              <div class="form-group">
+                <label class="form-label">Business Relativity <span class="req">*</span></label>
+                <div class="radio-group" id="f-bizrel">
+                  <label class="radio-opt" onclick="selectRadio('f-bizrel',this,'Business Related')"><input type="radio"> Business Related</label>
+                  <label class="radio-opt" onclick="selectRadio('f-bizrel',this,'Non-Business Related')"><input type="radio"> Non-Business Related</label>
+                </div>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Sales Call Requested <span class="req">*</span></label>
+                <div class="radio-group" id="f-salescall">
+                  <label class="radio-opt" onclick="selectRadio('f-salescall',this,'Yes')"><input type="radio"> Yes</label>
+                  <label class="radio-opt" onclick="selectRadio('f-salescall',this,'No')"><input type="radio"> No</label>
+                  <label class="radio-opt" onclick="selectRadio('f-salescall',this,'N/A')"><input type="radio"> N/A</label>
+                </div>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Communication Channel <span class="req">*</span></label>
+                <div class="radio-group" id="f-channel">
+                  <label class="radio-opt" onclick="selectRadio('f-channel',this,'Whatsapp')"><input type="radio"><i class="fab fa-whatsapp" style="color:#25d366;margin-right:4px"></i>WhatsApp</label>
+                  <label class="radio-opt" onclick="selectRadio('f-channel',this,'Mobile')"><input type="radio"><i class="fas fa-mobile-alt" style="margin-right:4px"></i>Mobile</label>
+                  <label class="radio-opt" onclick="selectRadio('f-channel',this,'Email')"><input type="radio"><i class="fas fa-envelope" style="margin-right:4px"></i>Email</label>
+                  <label class="radio-opt" onclick="selectRadio('f-channel',this,'Alternative Mobile')"><input type="radio">Alt. Mobile</label>
+                  <label class="radio-opt" onclick="selectRadio('f-channel',this,'SMS')"><input type="radio"> SMS</label>
+                  <label class="radio-opt" onclick="selectRadio('f-channel',this,'N/A')"><input type="radio"> N/A</label>
+                </div>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Media Source <span class="req">*</span></label>
+                <div class="radio-group" id="f-media">
+                  <label class="radio-opt" onclick="selectRadio('f-media',this,'Billboards')"><input type="radio">Billboards</label>
+                  <label class="radio-opt" onclick="selectRadio('f-media',this,'Saw site')"><input type="radio">Saw Site</label>
+                  <label class="radio-opt" onclick="selectRadio('f-media',this,'Facebook')"><input type="radio"><i class="fab fa-facebook" style="color:#1877f2;margin-right:4px"></i>Facebook</label>
+                  <label class="radio-opt" onclick="selectRadio('f-media',this,'Instagram')"><input type="radio"><i class="fab fa-instagram" style="color:#e1306c;margin-right:4px"></i>Instagram</label>
+                  <label class="radio-opt" onclick="selectRadio('f-media',this,'Linkedin')"><input type="radio"><i class="fab fa-linkedin" style="color:#0077b5;margin-right:4px"></i>LinkedIn</label>
+                  <label class="radio-opt" onclick="selectRadio('f-media',this,'Word of mouth')"><input type="radio">Word of Mouth</label>
+                  <label class="radio-opt" onclick="selectRadio('f-media',this,'TV ad.')"><input type="radio">TV Ad.</label>
+                  <label class="radio-opt" onclick="selectRadio('f-media',this,'Youtube')"><input type="radio"><i class="fab fa-youtube" style="color:#ff0000;margin-right:4px"></i>YouTube</label>
+                  <label class="radio-opt" onclick="selectRadio('f-media',this,'N/A')"><input type="radio"> N/A</label>
+                </div>
+              </div>
+            </div>
+            <div class="budget-unit-grid">
+              <div class="form-group">
+                <label class="form-label">Budget (Millions) <span class="req">*</span></label>
+                <div class="radio-group" id="f-budget" style="flex-direction:column">
+                  <label class="radio-opt" onclick="selectRadio('f-budget',this,'0 - 10')"><input type="radio"> 0 - 10M</label>
+                  <label class="radio-opt" onclick="selectRadio('f-budget',this,'10 - 20')"><input type="radio"> 10 - 20M</label>
+                  <label class="radio-opt" onclick="selectRadio('f-budget',this,'20 +')"><input type="radio"> 20M+</label>
+                  <label class="radio-opt" onclick="selectRadio('f-budget',this,'N/A')"><input type="radio"> N/A</label>
+                </div>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Unit Type <span class="req">*</span></label>
+                <div class="radio-group" id="f-unit" style="flex-direction:column">
+                  <label class="radio-opt" onclick="selectRadio('f-unit',this,'Apartment')"><input type="radio"> Apartment</label>
+                  <label class="radio-opt" onclick="selectRadio('f-unit',this,'Villa')"><input type="radio"> Villa</label>
+                  <label class="radio-opt" onclick="selectRadio('f-unit',this,'Commercial')"><input type="radio"> Commercial</label>
+                  <label class="radio-opt" onclick="selectRadio('f-unit',this,'Admin')"><input type="radio"> Admin</label>
+                  <label class="radio-opt" onclick="selectRadio('f-unit',this,'Twin House')"><input type="radio"> Twin House</label>
+                  <label class="radio-opt" onclick="selectRadio('f-unit',this,'Stand Alone House')"><input type="radio"> Stand Alone</label>
+                  <label class="radio-opt" onclick="selectRadio('f-unit',this,'Town House')"><input type="radio"> Town House</label>
+                  <label class="radio-opt" onclick="selectRadio('f-unit',this,'N/A')"><input type="radio"> N/A</label>
+                </div>
+              </div>
+            </div>
+            <div class="step-nav">
+              <button class="step-nav-btn back" onclick="goStep(2)"><i class="fas fa-arrow-left"></i> Back</button>
+              <button class="step-nav-btn next" onclick="goStep(4)">Next <i class="fas fa-arrow-right"></i></button>
+            </div>
           </div>
+
+          <!-- STEP 4 -->
+          <div class="step-panel" id="step-4">
+            <div class="step-title">📝 Step 4 — Notes & Submit</div>
+            <div class="step-sub">Add any extra notes and submit</div>
+            <div class="form-group">
+              <label class="form-label">Extra Notes</label>
+              <textarea id="f-extra" class="form-input" placeholder="Any additional notes..." rows="4"></textarea>
+            </div>
+            <button class="submit-btn" id="formSubmitBtn" onclick="submitCallLogForm()">
+              <i class="fas fa-paper-plane"></i> Submit to Database
+            </button>
+            <div id="form-success" class="form-feedback form-success">✅ Call logged successfully!</div>
+            <div id="form-error" class="form-feedback form-error"></div>
+            <div class="step-nav" style="margin-top:12px;">
+              <button class="step-nav-btn back" onclick="goStep(3)"><i class="fas fa-arrow-left"></i> Back</button>
+            </div>
+          </div>
+
         </div>
-      </div>
-      <div class="step-nav">
-        <button class="step-nav-btn back" onclick="goStep(2)"><i class="fas fa-arrow-left"></i> Back</button>
-        <button class="step-nav-btn next" onclick="goStep(4)">Next <i class="fas fa-arrow-right"></i></button>
       </div>
     </div>
 
-    <!-- STEP 4: Notes + Submit -->
-    <div class="step-panel" id="step-4">
-      <div class="step-title">📝 Step 4 — Notes & Submit</div>
-      <div class="step-sub">Add any extra notes and submit</div>
-      <div class="form-group">
-        <label class="form-label">Extra Notes</label>
-        <textarea id="f-extra" class="form-input" placeholder="Any additional notes..." rows="4"></textarea>
-      </div>
-      <button class="submit-btn" id="formSubmitBtn" onclick="submitCallLogForm()">
-        <i class="fas fa-paper-plane"></i> Submit to Database
-      </button>
-      <div id="form-success" class="form-feedback form-success">✅ Call logged successfully!</div>
-      <div id="form-error" class="form-feedback form-error"></div>
-      <div class="step-nav" style="margin-top:12px;">
-        <button class="step-nav-btn back" onclick="goStep(3)"><i class="fas fa-arrow-left"></i> Back</button>
-      </div>
-    </div>
-
-  </div>
-</div><!-- end calllog-form-area -->
-    </div><!-- end tab-form -->
     <!-- TAB: KNOWLEDGE BASE -->
     <div class="tab-content" id="tab-kb">
       <div class="kb-shell">
@@ -587,103 +569,86 @@
       <div id="requests-list"><div class="empty-state">No requests found.</div></div>
     </div>
 
-<!-- TAB: SCH TABLE (UPDATED) -->
-<div class="tab-content" id="tab-sch-table">
-  <div style="padding:16px;">
-
-    <!-- Improved Filters -->
-<div class="sch-filters-wrap" style="margin-bottom:16px;">
-  <details style="width:100%;">
-    <summary style="cursor:pointer;font-size:12px;font-weight:700;color:var(--muted);padding:10px 14px;background:var(--surface2);border-radius:10px;border:1px solid var(--border);list-style:none;display:flex;align-items:center;gap:8px;">
-      <i class="fas fa-search" style="color:var(--primary);"></i> Browse Other Weeks
-    </summary>
-    <div style="padding:12px 0 0;">
-      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px;">
-        <select id="sch-filter-year" class="form-input" style="width:100px;font-size:13px;font-weight:600;" onchange="filterSchWeeks()">
-          <option value="">Year</option>
-          <option value="2023">2023</option>
-          <option value="2024">2024</option>
-          <option value="2025">2025</option>
-          <option value="2026">2026</option>
-        </select>
-        <select id="sch-filter-month" class="form-input" style="width:130px;font-size:13px;font-weight:600;" onchange="filterSchWeeks()">
-          <option value="">Month</option>
-          <option value="01">January</option><option value="02">February</option>
-          <option value="03">March</option><option value="04">April</option>
-          <option value="05">May</option><option value="06">June</option>
-          <option value="07">July</option><option value="08">August</option>
-          <option value="09">September</option><option value="10">October</option>
-          <option value="11">November</option><option value="12">December</option>
-        </select>
-        <div id="weeks-loader" style="display:none;color:var(--primary);font-size:14px;">
-          <i class="fas fa-circle-notch fa-spin"></i> Loading...
-        </div>
-      </div>
-    </div>
-  </details>
-</div>
-    
-<!-- ACCORDION 1: Published Schedule -->
-<div class="sch-accordion" id="acc-published">
-  <div class="sch-acc-header" onclick="toggleSchAccordion('acc-published')">
-    <div class="sch-acc-header-left">
-      <div class="sch-acc-icon"><i class="fas fa-calendar-alt"></i></div>
-      <div class="sch-acc-title">Published Schedule</div>
-    </div>
-    <i class="fas fa-chevron-down sch-acc-chevron"></i>
-  </div>
-  <div class="sch-acc-body">
-    <div style="font-size:13px; color:var(--muted); margin-bottom:12px;">
-      This is the official schedule approved by management.
-    </div>
-
-    <!-- Week Chips هنا جوا -->
-    <div id="weeks-chips-wrapper" style="display:none; margin-bottom:20px;">
-      <div style="font-size:12px; font-weight:700; color:var(--muted); margin-bottom:8px; text-transform:uppercase; letter-spacing:0.5px;">Select a Week</div>
-      <div class="weeks-chips-container" id="weeks-list"></div>
-    </div>
-
-    <!-- Schedule Grid -->
-    <div id="sch-table-grid" style="overflow-x:auto;">
-      <div class="empty-state">Please select Year, Month, and a Week to view schedule.</div>
-    </div>
-  </div>
-</div>
-
-<!-- ACCORDION 2: My Schedule Request -->
-<div class="sch-accordion" id="acc-request">
-  <div class="sch-acc-header" onclick="toggleSchAccordion('acc-request')">
-    <div class="sch-acc-header-left">
-      <div class="sch-acc-icon" style="color:var(--accent); background:rgba(20, 184, 166, 0.1);"><i class="fas fa-edit"></i></div>
-      <div class="sch-acc-title">My Schedule Request</div>
-    </div>
-    <i class="fas fa-chevron-down sch-acc-chevron"></i>
-  </div>
-  <div class="sch-acc-body">
-    <div style="font-size:13px; color:var(--muted); margin-bottom:12px;">
-      Draft your preferred shifts for the selected week and submit for approval.
-    </div>
-    
-        <!-- Draft Request Grid -->
-        <div id="sch-draft-grid" style="overflow-x:auto; margin-bottom:16px;">
-          <div class="empty-state">Select a week first to start drafting.</div>
+    <!-- TAB: SCH TABLE -->
+    <div class="tab-content" id="tab-sch-table">
+      <div style="padding:16px;">
+        <div class="sch-filters-wrap" style="margin-bottom:16px;">
+          <details style="width:100%;">
+            <summary style="cursor:pointer;font-size:12px;font-weight:700;color:var(--muted);padding:10px 14px;background:var(--surface2);border-radius:10px;border:1px solid var(--border);list-style:none;display:flex;align-items:center;gap:8px;">
+              <i class="fas fa-search" style="color:var(--primary);"></i> Browse Other Weeks
+            </summary>
+            <div style="padding:12px 0 0;">
+              <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px;">
+                <select id="sch-filter-year" class="form-input" style="width:100px;font-size:13px;font-weight:600;" onchange="filterSchWeeks()">
+                  <option value="">Year</option>
+                  <option value="2023">2023</option><option value="2024">2024</option>
+                  <option value="2025">2025</option><option value="2026">2026</option>
+                </select>
+                <select id="sch-filter-month" class="form-input" style="width:130px;font-size:13px;font-weight:600;" onchange="filterSchWeeks()">
+                  <option value="">Month</option>
+                  <option value="01">January</option><option value="02">February</option>
+                  <option value="03">March</option><option value="04">April</option>
+                  <option value="05">May</option><option value="06">June</option>
+                  <option value="07">July</option><option value="08">August</option>
+                  <option value="09">September</option><option value="10">October</option>
+                  <option value="11">November</option><option value="12">December</option>
+                </select>
+                <div id="weeks-loader" style="display:none;color:var(--primary);font-size:14px;">
+                  <i class="fas fa-circle-notch fa-spin"></i> Loading...
+                </div>
+              </div>
+            </div>
+          </details>
         </div>
 
-        <!-- Action Buttons -->
-        <div style="display:flex;gap:10px;">
-          <button class="action-btn c-accent" style="flex:1;justify-content:center;" onclick="submitSchRequest()">
-            <i class="fas fa-paper-plane"></i> Submit Request
-          </button>
-          <button class="action-btn" onclick="resetSchDraft()">
-            <i class="fas fa-undo"></i> Reset
-          </button>
+        <div class="sch-accordion" id="acc-published">
+          <div class="sch-acc-header" onclick="toggleSchAccordion('acc-published')">
+            <div class="sch-acc-header-left">
+              <div class="sch-acc-icon"><i class="fas fa-calendar-alt"></i></div>
+              <div class="sch-acc-title">Published Schedule</div>
+            </div>
+            <i class="fas fa-chevron-down sch-acc-chevron"></i>
+          </div>
+          <div class="sch-acc-body">
+            <div style="font-size:13px; color:var(--muted); margin-bottom:12px;">This is the official schedule approved by management.</div>
+            <div id="weeks-chips-wrapper" style="display:none; margin-bottom:20px;">
+              <div style="font-size:12px; font-weight:700; color:var(--muted); margin-bottom:8px; text-transform:uppercase; letter-spacing:0.5px;">Select a Week</div>
+              <div class="weeks-chips-container" id="weeks-list"></div>
+            </div>
+            <div id="sch-table-grid" style="overflow-x:auto;">
+              <div class="empty-state">Please select Year, Month, and a Week to view schedule.</div>
+            </div>
+          </div>
         </div>
-        <div id="sch-request-msg" style="font-size:13px;font-weight:600;margin-top:8px;"></div>
+
+        <div class="sch-accordion" id="acc-request">
+          <div class="sch-acc-header" onclick="toggleSchAccordion('acc-request')">
+            <div class="sch-acc-header-left">
+              <div class="sch-acc-icon" style="color:var(--accent); background:rgba(20, 184, 166, 0.1);"><i class="fas fa-edit"></i></div>
+              <div class="sch-acc-title">My Schedule Request</div>
+            </div>
+            <i class="fas fa-chevron-down sch-acc-chevron"></i>
+          </div>
+          <div class="sch-acc-body">
+            <div style="font-size:13px; color:var(--muted); margin-bottom:12px;">Draft your preferred shifts for the selected week and submit for approval.</div>
+            <div id="sch-draft-grid" style="overflow-x:auto; margin-bottom:16px;">
+              <div class="empty-state">Select a week first to start drafting.</div>
+            </div>
+            <div style="display:flex;gap:10px;">
+              <button class="action-btn c-accent" style="flex:1;justify-content:center;" onclick="submitSchRequest()">
+                <i class="fas fa-paper-plane"></i> Submit Request
+              </button>
+              <button class="action-btn" onclick="resetSchDraft()">
+                <i class="fas fa-undo"></i> Reset
+              </button>
+            </div>
+            <div id="sch-request-msg" style="font-size:13px;font-weight:600;margin-top:8px;"></div>
+          </div>
+        </div>
+
       </div>
     </div>
 
-  </div>
-</div>
     <!-- Bottom Nav (Mobile) -->
     <div class="bottom-nav" id="bottom-nav">
       <button class="bottom-nav-btn active" onclick="switchTab('tab-dashboard',null,0)"><i class="fas fa-tachometer-alt"></i>Dashboard</button>
@@ -700,7 +665,7 @@
   <div id="side-menu-overlay" onclick="closeSideMenu()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:8000;backdrop-filter:blur(4px);"></div>
   <div id="side-menu" class="side-menu-panel">
     <div class="side-header">
-      <div class="side-avatar" id="side-avatar"><img src="logo.png" alt="NOS Logo"></div>
+      <div class="side-avatar" id="side-avatar"><img src="assets/logo.png" alt="NOS Logo"></div>
       <div class="side-name" id="side-name">Agent</div>
       <div class="side-role">Nations of Sky</div>
       <button class="side-close" onclick="closeSideMenu()"><i class="fas fa-times"></i></button>
@@ -768,20 +733,37 @@
       <button class="modal-btn-ok" id="modal-ok" onclick="closeModal(true)">OK</button>
     </div>
   </div>
+
   <div id="nos-toast-container"></div>
-  <script type="module" src="firebase-kb.js"></script>
+  <div id="nos-result-popup" style="display:none"></div>
+
+  <div id="call-summary-bar" style="display:none;position:fixed;bottom:80px;left:50%;transform:translateX(-50%);z-index:99998;background:var(--surface);border:1.5px solid var(--primary);border-radius:16px;padding:14px 18px;box-shadow:0 8px 32px rgba(212,175,55,0.25);align-items:center;gap:16px;min-width:320px;max-width:90vw;backdrop-filter:blur(20px);">
+    <div style="flex:1;">
+      <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;">Last Call Logged</div>
+      <div id="cs-name" style="font-weight:800;font-size:14px;color:var(--text);"></div>
+      <div id="cs-mobile" style="font-size:13px;color:var(--primary);font-family:monospace;font-weight:700;"></div>
+      <div id="cs-reason" style="font-size:11px;color:var(--muted);margin-top:2px;"></div>
+    </div>
+    <button onclick="copySummary()" style="padding:8px 14px;background:var(--primary-gradient);border:none;border-radius:10px;color:white;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;font-family:'Plus Jakarta Sans',sans-serif;">
+      <i class="fas fa-copy"></i> Copy
+    </button>
+    <button onclick="document.getElementById('call-summary-bar').style.display='none'" style="width:30px;height:30px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--muted);cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;">✕</button>
+  </div>
+
+  <!-- Scripts — ترتيب التحميل مهم -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="app-utils.js"></script>
-<script src="app-core.js"></script>
-<script src="app-schedule.js"></script>
-<script src="app-breaks.js"></script>
-<script src="app-requests.js"></script>
-<script src="app-calllog.js"></script>
-<script src="app-kb.js"></script>
-<script src="app-sch-table.js"></script>
-<script src="offline-calllog.js?v=2"></script>
-<script>
-  
+  <script type="module" src="js/firebase-kb.js"></script>
+  <script src="js/app-utils.js"></script>
+  <script src="js/app-core.js"></script>
+  <script src="js/app-schedule.js"></script>
+  <script src="js/app-breaks.js"></script>
+  <script src="js/app-requests.js"></script>
+  <script src="js/app-calllog.js"></script>
+  <script src="js/app-kb.js"></script>
+  <script src="js/app-sch-table.js"></script>
+  <script src="js/offline-calllog.js"></script>
+
+  <script>
     function showUpdateToast() {
       const bar = document.createElement('div');
       bar.id = 'update-toast';
@@ -801,45 +783,23 @@
           <div style="font-family:'Syne',sans-serif;font-size:14px;font-weight:800;color:var(--text);">Update Available!</div>
           <div style="font-size:12px;color:var(--muted);margin-top:2px;">Tap to get the latest version</div>
         </div>
-        <button onclick="applyUpdate()" style="
-          padding:8px 16px; background:var(--primary-gradient);
-          border:none; border-radius:10px; color:white;
-          font-size:12px; font-weight:700; cursor:pointer;
-          font-family:'Plus Jakarta Sans',sans-serif; white-space:nowrap;
-        ">Update Now</button>
-        <button onclick="document.getElementById('update-toast').remove()" style="
-          width:28px; height:28px; background:var(--surface2);
-          border:1px solid var(--border); border-radius:8px;
-          color:var(--muted); cursor:pointer; font-size:13px;
-          display:flex; align-items:center; justify-content:center;
-        ">✕</button>
+        <button onclick="applyUpdate()" style="padding:8px 16px;background:var(--primary-gradient);border:none;border-radius:10px;color:white;font-size:12px;font-weight:700;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;white-space:nowrap;">Update Now</button>
+        <button onclick="document.getElementById('update-toast').remove()" style="width:28px;height:28px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--muted);cursor:pointer;font-size:13px;display:flex;align-items:center;justify-content:center;">✕</button>
       `;
       document.body.appendChild(bar);
     }
 
     function applyUpdate() {
       navigator.serviceWorker.getRegistration().then(reg => {
-        if (reg && reg.waiting) {
-          reg.waiting.postMessage({ type: 'SKIP_WAITING' });
-        }
+        if (reg && reg.waiting) reg.waiting.postMessage({ type: 'SKIP_WAITING' });
       });
       window.location.reload();
     }
-  </script>
 
-<div id="nos-result-popup" style="display:none"></div>
-<div id="call-summary-bar" style="display:none;position:fixed;bottom:80px;left:50%;transform:translateX(-50%);z-index:99998;background:var(--surface);border:1.5px solid var(--primary);border-radius:16px;padding:14px 18px;box-shadow:0 8px 32px rgba(212,175,55,0.25);display:none;align-items:center;gap:16px;min-width:320px;max-width:90vw;backdrop-filter:blur(20px);">
-  <div style="flex:1;">
-    <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;">Last Call Logged</div>
-    <div id="cs-name" style="font-weight:800;font-size:14px;color:var(--text);"></div>
-    <div id="cs-mobile" style="font-size:13px;color:var(--primary);font-family:monospace;font-weight:700;"></div>
-    <div id="cs-reason" style="font-size:11px;color:var(--muted);margin-top:2px;"></div>
-  </div>
-  <button onclick="copySummary()" style="padding:8px 14px;background:var(--primary-gradient);border:none;border-radius:10px;color:white;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;font-family:'Plus Jakarta Sans',sans-serif;">
-    <i class="fas fa-copy"></i> Copy
-  </button>
-  <button onclick="document.getElementById('call-summary-bar').style.display='none'" style="width:30px;height:30px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--muted);cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;">✕</button>
-</div>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('sw.js');
+    }
+  </script>
 
 </body>
 </html>
