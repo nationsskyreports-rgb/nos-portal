@@ -736,6 +736,7 @@ function renderSummaryTable(data) {
     a.totalMissing += r.missing_sec || 0;
     // الـ extra = لو اشتغل أكتر من الـ target
     const extra = Math.max(0, (r.active_sec || 0) - (r.target_sec || 0));
+    a.totalExtra   += extra;
     a.totalCalls   += r.calls    || 0;
     a.totalTalk    += r.talk_sec || 0;
     a.confSum      += parseFloat(r.conformance||0);
