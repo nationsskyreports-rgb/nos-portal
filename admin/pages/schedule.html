@@ -59,19 +59,6 @@
 .count-badge { display:inline-flex; align-items:center; justify-content:center; min-width:20px; height:20px; padding:0 6px; border-radius:10px; font-size:10px; font-weight:700; background:rgba(212,175,55,0.1); color:var(--gold); }
 .day-count-item { font-size:9px; font-weight:700; padding:2px 6px; border-radius:6px; }
 
-/* ── Closed Week Banner ── */
-.closed-banner {
-  background: rgba(239,68,68,0.06);
-  border: 1px solid rgba(239,68,68,0.2);
-  border-radius: 12px;
-  padding: 12px 16px;
-  margin-bottom: 14px;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  flex-wrap: wrap;
-}
-
 /* ── Draft Requests Banner ── */
 .requests-banner {
   background: rgba(212,175,55,0.04);
@@ -160,22 +147,7 @@
             </button>
             <button class="btn btn-ghost btn-sm" onclick="saveSchedule()" id="save-btn"><i class="fas fa-save"></i> Save</button>
             <button class="btn btn-success btn-sm" onclick="publishWeek()" id="publish-btn"><i class="fas fa-globe"></i> Publish</button>
-            <button class="btn btn-sm" onclick="closeWeek()" id="close-btn"
-              style="background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.2);color:#EF4444;">
-              <i class="fas fa-lock"></i> Close
-            </button>
             <button class="btn btn-danger btn-sm" onclick="deleteWeek()" id="delete-btn"><i class="fas fa-trash"></i> Delete</button>
-          </div>
-        </div>
-
-        <!-- Closed Week Banner -->
-        <div id="closed-banner" style="display:none; padding:12px 16px; border-bottom:1px solid var(--border);">
-          <div class="closed-banner">
-            <i class="fas fa-lock" style="color:#EF4444;font-size:16px;flex-shrink:0;"></i>
-            <span style="font-size:13px;font-weight:700;color:var(--text);">This week is Closed — editing is locked.</span>
-            <button class="btn btn-ghost btn-sm" onclick="reopenWeek()" style="margin-right:auto;">
-              <i class="fas fa-lock-open"></i> Reopen for Editing
-            </button>
           </div>
         </div>
 
@@ -255,7 +227,6 @@ let draftRequests = {};
 
 const TODAY = new Date().toISOString().split('T')[0];
 
-// ── Emoji Palette ──
 const MORNING_EMOJI = '🟢';
 const SHIFT_PALETTE = ['🔵','🟠','🟣','🔴','🟡','🩵','🟤','⚫'];
 const shiftEmojiMap = {};
@@ -318,7 +289,7 @@ function filterWeekTabs() {
     </option>`).join('');
   const container = document.getElementById('weeks-tabs');
   if (!filtered.length) { container.innerHTML = `<div style="color:var(--muted);font-size:13px;padding:8px;">No weeks found.</div>`; return; }
-  const statusColor = { Draft:'badge-muted', Open:'badge-warning', Published:'badge-success', Closed:'badge-danger' };
+  const statusColor = { Draft:'badge-muted', Open:'badge-warning', Published:'badge-success' };
   container.innerHTML = filtered.map(w => `
     <div class="week-tab ${currentWeek?.id === w.id ? 'active' : ''}" onclick="selectWeek('${w.id}')">
       <i class="fas fa-calendar-week" style="font-size:12px;"></i>
@@ -340,68 +311,12 @@ async function selectWeek(weekId) {
   await loadScheduleGrid();
 }
 
-// ── CLOSE WEEK ──
-async function closeWeek() {
-  if (!currentWeek) return;
-  if (currentWeek.status === 'Closed') { showToast('Week is already closed', 'info'); return; }
-  openModal(
-    'Close Week',
-    `Close week "${formatDateShort(currentWeek.week_start)} → ${formatDateShort(currentWeek.week_end)}"?\n\nThe week will be locked — editing will require reopening it.`,
-    async () => {
-      try {
-        await db.from('schedule_weeks').update({ status: 'Closed' }).eq('id', currentWeek.id);
-        currentWeek.status = 'Closed';
-        showToast('Week closed and locked!', 'success');
-        await loadWeeks();
-        updateWeekUI();
-      } catch(e) { showToast('Failed: ' + e.message, 'error'); }
-    }
-  );
-}
-
-// ── REOPEN WEEK ──
-async function reopenWeek() {
-  if (!currentWeek) return;
-  openModal(
-    'Reopen Week',
-    `Reopen "${formatDateShort(currentWeek.week_start)} → ${formatDateShort(currentWeek.week_end)}" for editing?\n\nStatus will be changed back to Published.`,
-    async () => {
-      try {
-        await db.from('schedule_weeks').update({ status: 'Published' }).eq('id', currentWeek.id);
-        currentWeek.status = 'Published';
-        showToast('Week reopened for editing!', 'success');
-        await loadWeeks();
-        updateWeekUI();
-      } catch(e) { showToast('Failed: ' + e.message, 'error'); }
-    }
-  );
-}
-
-// ── UPDATE UI BASED ON WEEK STATUS ──
 function updateWeekUI() {
-  const isClosed = currentWeek?.status === 'Closed';
-  const statusColor = { Draft:'badge-muted', Open:'badge-warning', Published:'badge-success', Closed:'badge-danger' };
-
+  const statusColor = { Draft:'badge-muted', Open:'badge-warning', Published:'badge-success' };
   document.getElementById('sched-status-badge').innerHTML =
     `<span class="badge ${statusColor[currentWeek.status]||'badge-muted'}">${currentWeek.status}</span>`;
-
-  // Show/hide closed banner
-  document.getElementById('closed-banner').style.display = isClosed ? 'block' : 'none';
-
-  // Disable/enable editing controls
-  document.getElementById('save-btn').disabled    = isClosed;
-  document.getElementById('publish-btn').disabled = isClosed;
-  document.getElementById('close-btn').style.display = isClosed ? 'none' : 'flex';
-
-  // Disable all selects if closed
-  document.querySelectorAll('.shift-select').forEach(sel => {
-    sel.disabled = isClosed;
-    sel.style.opacity = isClosed ? '0.6' : '1';
-    sel.style.cursor  = isClosed ? 'not-allowed' : 'pointer';
-  });
 }
 
-// ── Load Draft Requests ──
 async function loadDraftRequests() {
   draftRequests = {};
   if (!currentWeek) return;
@@ -460,7 +375,6 @@ function applyAgentRequest(agentId, draft, agentName) {
   }
 }
 
-// ── Load Schedule Grid ──
 async function loadScheduleGrid() {
   if (!currentWeek) return;
   Object.keys(shiftEmojiMap).forEach(k => delete shiftEmojiMap[k]);
@@ -489,7 +403,6 @@ async function loadScheduleGrid() {
   allShiftTypes.forEach(st => getShiftEmoji(st.start_time));
 
   const dates = getWeekDates(currentWeek.week_start, currentWeek.week_end);
-  const isClosed = currentWeek.status === 'Closed';
 
   let html = `<table class="sched-table"><thead><tr><th class="agent-col">Agent</th>`;
   dates.forEach(d => {
@@ -515,9 +428,7 @@ async function loadScheduleGrid() {
 
       html += `<td style="position:relative;">
         ${hasReq ? `<div style="position:absolute;top:2px;right:2px;width:7px;height:7px;background:#10B981;border-radius:50%;z-index:1;" title="Request: ${reqLabel}"></div>` : ''}
-        <select class="shift-select ${cls}" data-agent="${agent.id}" data-date="${d.iso}"
-          onchange="onShiftChange(this)"
-          ${isClosed ? 'disabled style="opacity:0.6;cursor:not-allowed;"' : ''}>
+        <select class="shift-select ${cls}" data-agent="${agent.id}" data-date="${d.iso}" onchange="onShiftChange(this)">
           ${buildShiftOptions(entry.day_type, entry.shift_type_id)}
         </select>
         ${hasReq ? `<div style="font-size:9px;color:#10B981;font-weight:700;margin-top:2px;text-align:center;">← ${reqLabel}</div>` : ''}
@@ -539,31 +450,19 @@ async function loadScheduleGrid() {
   await loadDraftRequests();
 }
 
-// ── EXPORT SCHEDULE AS PNG ──
 async function exportScheduleAsPNG() {
   if (!currentWeek) { showToast('Select a week first', 'error'); return; }
-
   const btn = document.getElementById('copy-btn');
   btn.disabled = true;
   btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Exporting...';
-
   try {
     const gridEl = document.getElementById('schedule-grid');
-
-    const canvas = await html2canvas(gridEl, {
-      backgroundColor: '#111111',
-      scale: 2,
-      useCORS: true,
-      logging: false,
-    });
-
+    const canvas = await html2canvas(gridEl, { backgroundColor: '#111111', scale: 2, useCORS: true, logging: false });
     const link = document.createElement('a');
     link.download = `Schedule_${currentWeek.week_start}_${currentWeek.week_end}.png`;
     link.href = canvas.toDataURL('image/png');
     link.click();
-
     showToast('Schedule saved as image!', 'success');
-
   } catch(e) {
     showToast('Failed: ' + e.message, 'error');
   } finally {
@@ -572,7 +471,6 @@ async function exportScheduleAsPNG() {
   }
 }
 
-// ── Build Shift Options ──
 function buildShiftOptions(dayType, shiftTypeId) {
   let opts = `<option value="Off" ${dayType==='Off'?'selected':''}>— Off —</option>`;
   allShiftTypes.forEach(st => {
@@ -590,20 +488,17 @@ function getSelectClass(dayType, shiftTypeId) {
   if (dayType === 'Casual') return 'is-casual';
   if (dayType === 'PH')     return 'is-ph';
   if (dayType !== 'Work')   return 'is-off';
-
   if (!shiftTypeId) return 'is-work';
   const st = allShiftTypes.find(s => s.id === shiftTypeId);
   if (!st) return 'is-work';
-
   const hour = parseInt(st.start_time.substring(0,2));
-  if (hour < 12) return 'is-work';           // Morning  → green
-  if (hour < 14) return 'is-shift-afternoon'; // 12-14   → blue
-  if (hour < 17) return 'is-shift-evening';   // 14-17   → yellow
-  return 'is-shift-night';                    // 17+     → orange
+  if (hour < 12) return 'is-work';
+  if (hour < 14) return 'is-shift-afternoon';
+  if (hour < 17) return 'is-shift-evening';
+  return 'is-shift-night';
 }
 
 function onShiftChange(sel) {
-  if (currentWeek?.status === 'Closed') return;
   const agentId = sel.dataset.agent;
   const date    = sel.dataset.date;
   const val     = sel.value;
@@ -617,15 +512,14 @@ function onShiftChange(sel) {
 }
 
 async function saveSchedule() {
-  if (currentWeek?.status === 'Closed') { showToast('Week is closed — reopen it first', 'error'); return; }
   const btn = document.getElementById('save-btn');
   btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
   try {
     const upserts = [];
     Object.keys(scheduleData).forEach(key => {
-  const lastUnderscore = key.lastIndexOf('_');
-  const agentId = key.substring(0, lastUnderscore);
-  const date = key.substring(lastUnderscore + 1);
+      const lastUnderscore = key.lastIndexOf('_');
+      const agentId = key.substring(0, lastUnderscore);
+      const date = key.substring(lastUnderscore + 1);
       const entry = scheduleData[key];
       upserts.push({ agent_id: agentId, week_id: currentWeek.id, shift_date: date, day_type: entry.day_type, shift_type_id: entry.shift_type_id || null, status: 'Approved' });
     });
@@ -641,8 +535,7 @@ async function saveSchedule() {
 }
 
 async function publishWeek() {
-  if (currentWeek?.status === 'Closed') { showToast('Week is closed — reopen it first', 'error'); return; }
-  const unpublished = allWeeks.filter(w => w.id !== currentWeek.id && w.status !== 'Published' && w.status !== 'Closed' && new Date(w.week_start) < new Date(currentWeek.week_start));
+  const unpublished = allWeeks.filter(w => w.id !== currentWeek.id && w.status !== 'Published' && new Date(w.week_start) < new Date(currentWeek.week_start));
   const warningMsg = unpublished.length > 0
     ? `⚠️ Warning: ${unpublished.length} older week(s) are not published yet.\n\nPublishing will make this schedule visible to all agents and auto-generate breaks. Continue?`
     : 'Publishing will make this schedule visible to all agents and auto-generate breaks. Continue?';
@@ -960,7 +853,6 @@ function exportToExcel() {
 
 function openTemplatePanel() {
   if (!currentWeek) { showToast('Select a week first', 'error'); return; }
-  if (currentWeek.status === 'Closed') { showToast('Week is closed — reopen it first', 'error'); return; }
   const dates = getWeekDates(currentWeek.week_start, currentWeek.week_end);
   document.getElementById('panel-title').innerText = 'Apply Shift Template';
   document.getElementById('panel-body').innerHTML = `
