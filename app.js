@@ -620,9 +620,11 @@ const today = new Date(); today.setHours(0,0,0,0);
       if (!d.dayType || d.dayType === 'Off') {
         badge = '<span class="nos-status-badge nos-badge-off">OFF</span>';
         displayShift = 'Day Off'; shiftClass = ' nos-off';
-      } else if (d.dayType === 'Work' && d.st) {
-        displayShift = d.st.start_time.substring(0,5) + ' - ' + d.st.end_time.substring(0,5);
-        badge = '<span class="nos-status-badge nos-badge-work">Working</span>';
+
+      } else if (d.dayType === 'Work') {
+  displayShift = d.st ? d.st.start_time.substring(0,5) + ' - ' + d.st.end_time.substring(0,5) : 'Working';
+  badge = '<span class="nos-status-badge nos-badge-work">Working</span>';
+}
       } else if (d.dayType === 'Annual') {
         badge = '<span class="nos-status-badge nos-badge-annual">Annual</span>';
       } else if (d.dayType === 'Sick') {
