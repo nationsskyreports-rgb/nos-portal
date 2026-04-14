@@ -565,6 +565,7 @@ function renderSchedule(scheduleData) {
   container.innerHTML = `<div class="sched-container">${buildWeekHtml(thisWeek,'📅 THIS WEEK')}${buildWeekHtml(nextWeek,'📆 NEXT WEEK')}</div>`;
 }
 
+
 async function loadAgentSchedule() {
   const agentName = document.getElementById('user-name').innerText.trim();
   const [agents, shifts] = await Promise.all([
@@ -606,6 +607,7 @@ const today = new Date(); today.setHours(0,0,0,0);
     }
     return result;
   }
+
 
   function buildWeekHtml(days, label) {
     if (!days.length) return '';
