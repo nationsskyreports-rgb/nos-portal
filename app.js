@@ -573,9 +573,10 @@ async function loadAgentSchedule() {
     sbFetchSch('shift_types?select=id,name,start_time,end_time&is_active=eq.true')
   ]);
   schShiftTypes = shifts || [];
-  const me = (agents||[]).find(a => a.formal_name.toLowerCase() === agentName.toLowerCase());
-  if (me) schMyAgentId = me.id;
-
+const me = (agents||[]).find(a => a.formal_name.trim().toLowerCase() === agentName.trim().toLowerCase());
+if (me) schMyAgentId = me.id;
+console.log('agentName:', agentName, '| me:', me, '| schMyAgentId:', schMyAgentId);
+   
   const container = document.getElementById('schedule-content');
   if (!schMyAgentId) { container.innerHTML = '<div class="empty-state">Schedule not found.</div>'; return; }
 
