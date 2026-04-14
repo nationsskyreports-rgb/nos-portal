@@ -735,6 +735,7 @@ function renderSummaryTable(data) {
     // الـ missing الفعلي بعد الـ excuse
     a.totalMissing += r.missing_sec || 0;
     // الـ extra = لو اشتغل أكتر من الـ target
+    const extra = Math.max(0, (r.active_sec || 0) - (r.target_sec || 0));
     a.totalCalls   += r.calls    || 0;
     a.totalTalk    += r.talk_sec || 0;
     a.confSum      += parseFloat(r.conformance||0);
@@ -747,7 +748,7 @@ function renderSummaryTable(data) {
     const avgConf  = a.days > 0 ? a.confSum/a.days : 0;
     const avgAHT   = a.totalCalls > 0 ? Math.round(a.totalTalk/a.totalCalls) : 0;
     // Net Missing = Total Missing - Total Extra
-    const netMissing = a.totalMissing;
+    const netMissing = Math.max(0, a.totalMissing - a.totalExtra);
     const missingDisplay = netMissing <= 300 ? 'Full Time' : secToTime(netMissing);
     const confCls  = avgConf>=98?'conf-high':avgConf>=90?'conf-mid':'conf-low';
     return '<tr>' +
