@@ -93,7 +93,7 @@
 
   /* ✅ FIX: Schedule Layout for Mobile */
   .schedule-wrap { padding: 12px; border-radius: 14px; overflow: visible; }
-  .sched-container { display: flex !important; flex-direction: column !important; gap: 15px !important; }
+  .sched-container { display: flex !important; flex-direction: row !important; gap: 15px !important; }
   .week-section { width: 100%; display: block !important; }
   .nos-week-label { font-size: 10px; margin: 15px 0 10px; font-weight: 800; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; }
   .nos-days-list { display: flex !important; flex-direction: column !important; gap: 8px !important; width: 100% !important; }
