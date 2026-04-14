@@ -621,22 +621,20 @@ const today = new Date(); today.setHours(0,0,0,0);
         badge = '<span class="nos-status-badge nos-badge-off">OFF</span>';
         displayShift = 'Day Off'; shiftClass = ' nos-off';
 
-      } else if (d.dayType === 'Work') {
+} else if (d.dayType === 'Work') {
   displayShift = d.st ? d.st.start_time.substring(0,5) + ' - ' + d.st.end_time.substring(0,5) : 'Working';
   badge = '<span class="nos-status-badge nos-badge-work">Working</span>';
+} else if (d.dayType === 'Annual') {
+  badge = '<span class="nos-status-badge nos-badge-annual">Annual</span>';
+} else if (d.dayType === 'Sick') {
+  badge = '<span class="nos-status-badge nos-badge-sick">Sick</span>';
+} else if (d.dayType === 'Casual') {
+  badge = '<span class="nos-status-badge nos-badge-casual">Casual</span>';
+} else if (d.dayType === 'PH') {
+  badge = '<span class="nos-status-badge nos-badge-ph">Public Holiday</span>';
+} else if (d.dayType === 'Task') {
+  badge = '<span class="nos-status-badge nos-badge-task">Task</span>';
 }
-      } else if (d.dayType === 'Annual') {
-        badge = '<span class="nos-status-badge nos-badge-annual">Annual</span>';
-      } else if (d.dayType === 'Sick') {
-        badge = '<span class="nos-status-badge nos-badge-sick">Sick</span>';
-      } else if (d.dayType === 'Casual') {
-        badge = '<span class="nos-status-badge nos-badge-casual">Casual</span>';
-      } else if (d.dayType === 'PH') {
-        badge = '<span class="nos-status-badge nos-badge-ph">Public Holiday</span>';
-      } else if (d.dayType === 'Task') {
-        badge = '<span class="nos-status-badge nos-badge-task">Task</span>';
-      }
-
       html += `<div class="nos-day-card${todayClass}" style="animation-delay:${i*40}ms">
         <div class="nos-date-block">
           <div class="nos-day-name">${d.dayName}</div>
