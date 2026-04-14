@@ -565,31 +565,38 @@ function renderSchedule(scheduleData) {
   container.innerHTML = `<div class="sched-container">${buildWeekHtml(thisWeek,'📅 THIS WEEK')}${buildWeekHtml(nextWeek,'📆 NEXT WEEK')}</div>`;
 }
 
-
 async function loadAgentSchedule() {
+  schMyAgentId = null;
+  schShiftTypes = [];
   const agentName = document.getElementById('user-name').innerText.trim();
+
+  const container = document.getElementById('schedule-content');
+  container.innerHTML = '<div class="empty-state"><i class="fas fa-spinner spinner"></i> Loading...</div>';
+
   const [agents, shifts] = await Promise.all([
     sbFetchSch('agents?select=id,formal_name&status=eq.Active'),
     sbFetchSch('shift_types?select=id,name,start_time,end_time&is_active=eq.true')
   ]);
   schShiftTypes = shifts || [];
-const me = (agents||[]).find(a => a.formal_name.trim().toLowerCase() === agentName.trim().toLowerCase());
-if (me) schMyAgentId = me.id;
-console.log('agentName:', agentName, '| me:', me, '| schMyAgentId:', schMyAgentId);
-   
-  const container = document.getElementById('schedule-content');
+
+  const me = (agents||[]).find(a => a.formal_name.trim().toLowerCase() === agentName.trim().toLowerCase());
+  if (me) schMyAgentId = me.id;
+
   if (!schMyAgentId) { container.innerHTML = '<div class="empty-state">Schedule not found.</div>'; return; }
 
-const today = new Date(); today.setHours(0,0,0,0);
+  const today = new Date(); today.setHours(0,0,0,0);
   const todayIso = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
   const curDay = today.getDay();
   const thisWeekStart = new Date(today); thisWeekStart.setDate(today.getDate() - curDay);
   const nextWeekStart = new Date(thisWeekStart); nextWeekStart.setDate(thisWeekStart.getDate() + 7);
   const nextWeekEnd   = new Date(nextWeekStart); nextWeekEnd.setDate(nextWeekStart.getDate() + 6);
+  nextWeekEnd.setHours(23,59,59,999);
+
   const thisWeekStartIso = `${thisWeekStart.getFullYear()}-${String(thisWeekStart.getMonth()+1).padStart(2,'0')}-${String(thisWeekStart.getDate()).padStart(2,'0')}`;
   const nextWeekEndIso   = `${nextWeekEnd.getFullYear()}-${String(nextWeekEnd.getMonth()+1).padStart(2,'0')}-${String(nextWeekEnd.getDate()).padStart(2,'0')}`;
+
   const records = await sbFetchSch(`schedule?select=*&agent_id=eq.${schMyAgentId}&shift_date=gte.${thisWeekStartIso}&shift_date=lte.${nextWeekEndIso}`);
-   
+
   const schedMap = {};
   (records||[]).forEach(s => { schedMap[s.shift_date] = s; });
 
@@ -608,7 +615,6 @@ const today = new Date(); today.setHours(0,0,0,0);
     }
     return result;
   }
-
 
   function buildWeekHtml(days, label) {
     if (!days.length) return '';
