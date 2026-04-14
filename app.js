@@ -2001,6 +2001,7 @@ function switchTab(id, btn, idx) {
   document.querySelectorAll('.bottom-nav-btn').forEach(b => b.classList.remove('active'));
   document.getElementById(id).classList.add('active');
   if (id === 'tab-kb') loadKBSections();
+  if (id === 'tab-schedule') loadAgentSchedule(); 
   if (btn) btn.classList.add('active');
   const bnBtns = document.querySelectorAll('.bottom-nav-btn');
   if (bnBtns[idx]) bnBtns[idx].classList.add('active');
