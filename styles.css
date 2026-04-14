@@ -257,8 +257,7 @@ select.form-input option { background: var(--surface); color: var(--text); }
 /* ─── 09. TEAM GRID ─── */
 .section-label { font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.7px; color: var(--primary); display: flex; align-items: center; gap: 8px; margin-bottom: 12px; padding: 0 2px; }
 .team-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; margin-bottom: 16px; }
-.team-card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 16px; display: flex; flex-direction: column; gap: 10px; transition: all 0.3s; height: 100%; }
-.team-card:hover { transform: translateY(-3px); box-shadow: 0 8px 24px rgba(212,175,55,0.1); border-color: rgba(212,175,55,0.2); }
+.team-card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 16px; display: flex; flex-direction: column; gap: 10px; transition: all 0.3s; height: 100%; overflow: visible; }.team-card:hover { transform: translateY(-3px); box-shadow: 0 8px 24px rgba(212,175,55,0.1); border-color: rgba(212,175,55,0.2); }
 .team-card-header { display: flex; align-items: center; gap: 10px; padding-bottom: 10px; border-bottom: 1px solid var(--border); }
 .team-card-header { display: flex; align-items: center; gap: 10px; padding-bottom: 10px; border-bottom: 1px solid var(--border); flex-wrap: wrap; }
 .team-avatar { width: 36px; height: 36px; background: var(--primary-gradient); border-radius: 10px; color: white; font-weight: 800; font-size: 12px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
