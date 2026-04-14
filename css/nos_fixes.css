@@ -1,0 +1,353 @@
+/* ═══════════════════════════════════════════════════════════
+   NOS PORTAL — FIXES PATCH v1.0
+   1. Bigger Preloader
+   2. Schedule stacked layout (this week / next week vertical)
+   3. Shift Swap fixed layout
+   4. SCH Table dark mode fixed
+   ═══════════════════════════════════════════════════════════ */
+
+/* ─── 1. PRELOADER — BIGGER ─────────────────────────────── */
+#app-preloader {
+  position: fixed; inset: 0; z-index: 99999;
+  background: radial-gradient(ellipse at 50% 40%, #0d1a2e 0%, #000000 100%);
+  display: flex; align-items: center; justify-content: center;
+  transition: opacity 0.6s ease, visibility 0.6s ease;
+}
+#app-preloader.hidden { opacity: 0; visibility: hidden; pointer-events: none; }
+
+.preloader-content {
+  text-align: center;
+  display: flex; flex-direction: column;
+  align-items: center; gap: 36px;
+}
+
+.preloader-logo-wrap {
+  position: relative;
+  width: 180px; height: 180px;
+  display: flex; align-items: center; justify-content: center;
+}
+
+.preloader-logo {
+  width: 90px; height: 90px;
+  object-fit: contain;
+  position: relative; z-index: 2;
+  animation: pulseLogo 2s ease-in-out infinite;
+  filter: drop-shadow(0 0 32px rgba(212,175,55,0.65));
+}
+
+.preloader-spinner {
+  position: absolute; inset: 0;
+  border: 3px solid transparent;
+  border-top-color: var(--primary);
+  border-right-color: rgba(212,175,55,0.25);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+.preloader-spinner::after {
+  content: '';
+  position: absolute; inset: 14px;
+  border: 2.5px solid transparent;
+  border-bottom-color: rgba(212,175,55,0.5);
+  border-radius: 50%;
+  animation: spin 2s linear infinite reverse;
+}
+
+.preloader-text {
+  color: var(--primary);
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 13px; font-weight: 700;
+  letter-spacing: 5px; text-transform: uppercase;
+  animation: pulseLogo 1.8s ease-in-out infinite;
+}
+
+
+
+/* ─── 3. SHIFT SWAP — FIXED LAYOUT ───────────────────────── */
+
+/* Step number labels */
+.swap-step {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  margin-bottom: 16px;
+}
+
+.swap-step-num {
+  width: 28px; height: 28px;
+  background: var(--primary-gradient);
+  color: white; font-size: 13px; font-weight: 800;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0; margin-top: 2px;
+  box-shadow: 0 4px 12px rgba(212,175,55,0.35);
+}
+
+.swap-step-body {
+  flex: 1; min-width: 0;
+}
+
+.swap-step-label {
+  font-size: 10px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 1px;
+  color: var(--muted); margin-bottom: 8px;
+}
+
+/* Compare boxes */
+.swap-compare {
+  display: flex; align-items: center; justify-content: center;
+  gap: 14px; margin: 20px 0;
+  padding: 18px; background: var(--surface2);
+  border: 1px solid var(--border); border-radius: 14px;
+}
+
+.swap-compare-box {
+  flex: 1; text-align: center; padding: 12px;
+  border-radius: 10px; background: var(--surface);
+  border: 1.5px solid var(--border);
+  transition: all 0.3s;
+}
+
+.swap-compare-box.swap-active {
+  background: rgba(212,175,55,0.06);
+  border-color: rgba(212,175,55,0.3);
+  box-shadow: 0 4px 14px rgba(212,175,55,0.1);
+}
+
+.swap-compare-who {
+  font-size: 9px; font-weight: 800;
+  text-transform: uppercase; letter-spacing: 1.5px;
+  color: var(--muted); margin-bottom: 8px;
+}
+
+.swap-compare-value {
+  font-size: 15px; font-weight: 800;
+  color: var(--text); font-family: 'Inter', sans-serif;
+  line-height: 1.3;
+}
+
+.swap-compare-value.swap-empty {
+  color: var(--muted); font-size: 12px; font-weight: 500;
+}
+
+.swap-compare-arrow {
+  width: 40px; height: 40px;
+  background: var(--primary-gradient); border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  color: white; font-size: 16px; flex-shrink: 0;
+  box-shadow: 0 4px 14px rgba(212,175,55,0.35);
+}
+
+/* Date inputs — make them look decent */
+input[type="date"].form-input {
+  color-scheme: dark;
+  appearance: auto;
+  -webkit-appearance: auto;
+  cursor: pointer;
+}
+
+html.light input[type="date"].form-input {
+  color-scheme: light;
+}
+
+/* Excuse request row */
+.excuse-row {
+  display: flex; gap: 10px; flex-wrap: wrap; align-items: center;
+  margin-bottom: 8px;
+}
+
+.excuse-row .form-input {
+  flex: 1; min-width: 130px; width: auto;
+}
+
+/* Swap form card */
+.swap-form-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 18px; padding: 22px;
+}
+
+/* Submit button */
+.swap-submit-btn {
+  display: flex; align-items: center; justify-content: center;
+  gap: 8px; width: 100%; padding: 14px;
+  background: linear-gradient(135deg, #059669, #34d399);
+  color: white; border: none; border-radius: 13px;
+  font-size: 14px; font-weight: 700;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  cursor: pointer; margin-top: 8px;
+  box-shadow: 0 6px 20px rgba(5,150,105,0.35);
+  transition: all 0.3s;
+}
+.swap-submit-btn:hover { transform: translateY(-2px); box-shadow: 0 12px 28px rgba(5,150,105,0.45); }
+
+
+/* ─── 4. SCH TABLE — DARK MODE FIX ───────────────────────── */
+
+/* The overall schedule table wrapper */
+#sch-table-grid,
+#sch-draft-grid {
+  overflow-x: auto;
+  border-radius: 14px;
+}
+
+/* Table itself */
+.sch-grid-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 13px;
+  min-width: 700px;
+}
+
+/* Header row */
+.sch-grid-table thead th {
+  background: rgba(212,175,55,0.08) !important;
+  color: var(--primary) !important;
+  font-size: 11px; font-weight: 800;
+  text-transform: uppercase; letter-spacing: 1px;
+  padding: 12px 10px; text-align: center;
+  border-bottom: 2px solid rgba(212,175,55,0.2);
+  white-space: nowrap;
+}
+
+html.light .sch-grid-table thead th {
+  background: rgba(212,175,55,0.06) !important;
+  border-bottom-color: rgba(212,175,55,0.15);
+}
+
+/* Name column */
+.sch-grid-table tbody td:first-child {
+  font-weight: 700; font-size: 12px;
+  color: var(--text) !important;
+  padding: 10px 14px; white-space: nowrap;
+  background: var(--surface2) !important;
+  border-right: 1px solid var(--border);
+  position: sticky; left: 0; z-index: 2;
+}
+
+/* All cells */
+.sch-grid-table tbody td {
+  padding: 7px 6px; text-align: center;
+  border-bottom: 1px solid var(--border);
+  vertical-align: middle;
+}
+
+/* Row stripes */
+.sch-grid-table tbody tr:nth-child(even) td:first-child {
+  background: var(--surface) !important;
+}
+
+/* Shift pills */
+.sch-pill {
+  display: inline-block;
+  padding: 5px 10px; border-radius: 20px;
+  font-size: 12px; font-weight: 700;
+  white-space: nowrap; min-width: 80px;
+  text-align: center; letter-spacing: 0.3px;
+  border: 1.5px solid transparent;
+}
+
+/* Morning shift — teal/green */
+.sch-pill.morning {
+  background: rgba(5,150,105,0.15);
+  color: #34d399 !important;
+  border-color: rgba(5,150,105,0.25);
+}
+html.light .sch-pill.morning {
+  background: rgba(5,150,105,0.08);
+  color: #059669 !important;
+}
+
+/* Afternoon shift — gold */
+.sch-pill.afternoon {
+  background: rgba(212,175,55,0.15);
+  color: #D4AF37 !important;
+  border-color: rgba(212,175,55,0.25);
+}
+html.light .sch-pill.afternoon {
+  background: rgba(212,175,55,0.08);
+  color: #b8860b !important;
+}
+
+/* Evening / late shift — blue */
+.sch-pill.evening {
+  background: rgba(59,130,246,0.15);
+  color: #60a5fa !important;
+  border-color: rgba(59,130,246,0.25);
+}
+html.light .sch-pill.evening {
+  background: rgba(59,130,246,0.08);
+  color: #2563eb !important;
+}
+
+/* Off day */
+.sch-pill.off {
+  background: rgba(100,116,139,0.1);
+  color: var(--muted) !important;
+  border-color: rgba(100,116,139,0.15);
+  font-size: 11px;
+}
+
+/* Annual / PH / Sick */
+.sch-pill.annual {
+  background: rgba(161,66,244,0.15);
+  color: #c084fc !important;
+  border-color: rgba(161,66,244,0.25);
+}
+html.light .sch-pill.annual { background: rgba(161,66,244,0.08); color: #7c3aed !important; }
+
+.sch-pill.ph {
+  background: rgba(236,72,153,0.15);
+  color: #f472b6 !important;
+  border-color: rgba(236,72,153,0.25);
+}
+html.light .sch-pill.ph { background: rgba(236,72,153,0.08); color: #db2777 !important; }
+
+.sch-pill.sick {
+  background: rgba(239,68,68,0.15);
+  color: #f87171 !important;
+  border-color: rgba(239,68,68,0.25);
+}
+html.light .sch-pill.sick { background: rgba(239,68,68,0.08); color: #dc2626 !important; }
+
+/* Footer row */
+.sch-grid-table tfoot td {
+  font-size: 11px; font-weight: 700;
+  color: var(--primary) !important;
+  padding: 10px 6px; text-align: center;
+  border-top: 2px solid rgba(212,175,55,0.15);
+  background: rgba(212,175,55,0.04) !important;
+}
+
+/* Today column highlight */
+.sch-col-today {
+  background: rgba(212,175,55,0.04) !important;
+}
+.sch-grid-table thead th.sch-col-today {
+  background: rgba(212,175,55,0.15) !important;
+  color: var(--primary-light) !important;
+}
+
+/* Scrollbar for table */
+#sch-table-grid::-webkit-scrollbar,
+#sch-draft-grid::-webkit-scrollbar { height: 5px; }
+#sch-table-grid::-webkit-scrollbar-thumb,
+#sch-draft-grid::-webkit-scrollbar-thumb { background: rgba(212,175,55,0.3); border-radius: 10px; }
+
+/* ─── MOBILE OVERRIDES ─────────────────────────────────── */
+@media (max-width: 640px) {
+  .preloader-logo-wrap { width: 140px; height: 140px; }
+  .preloader-logo { width: 72px; height: 72px; }
+  .preloader-text { font-size: 11px; letter-spacing: 4px; }
+
+  .swap-form-card { padding: 16px; }
+  .swap-compare { gap: 8px; padding: 14px; }
+  .swap-compare-value { font-size: 13px; }
+  .swap-compare-arrow { width: 32px; height: 32px; font-size: 13px; }
+
+  .excuse-row { flex-wrap: wrap; }
+  .excuse-row .form-input { flex: 1 1 100%; min-width: 0; }
+
+  .sch-pill { font-size: 11px; padding: 4px 8px; min-width: 70px; }
+}
