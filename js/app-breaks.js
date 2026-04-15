@@ -222,11 +222,12 @@ function startBreakChecker(breaks) {
   if (breakCheckTimer) clearInterval(breakCheckTimer);
   checkBreaks();
   breakCheckTimer = setInterval(checkBreaks, 30000);
-   // Silent team refresh every 5 minutes
-if (window._teamRefreshTimer) clearInterval(window._teamRefreshTimer);
-window._teamRefreshTimer = setInterval(() => {
-  loadTeamBreaksFromSB();
-}, 5 * 60 * 1000);
+  // Silent team refresh every 5 minutes
+  if (window._teamRefreshTimer) clearInterval(window._teamRefreshTimer);
+  window._teamRefreshTimer = setInterval(() => {
+    loadTeamBreaksFromSB();
+  }, 5 * 60 * 1000);
+}
 
 function playNotifSoundTyped(type) {
   if (isMuted) return;
