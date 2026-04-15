@@ -231,6 +231,7 @@ function logout() {
   try { sessionStorage.removeItem('ns-session'); } catch(e) {}
   sessionAgent = null;
   if (breakCheckTimer) clearInterval(breakCheckTimer);
+  if (window._teamRefreshTimer) clearInterval(window._teamRefreshTimer);
   if (sbBreaksChannel) { sbClient.removeChannel(sbBreaksChannel); sbBreaksChannel = null; }
   stopNotifSound();
   currentBreaks = null; shiftEndSecs = null; shiftEndNotified = false;
@@ -494,6 +495,7 @@ function switchTab(id, btn, idx) {
   document.querySelectorAll('.bottom-nav-btn').forEach(b => b.classList.remove('active'));
   document.getElementById(id).classList.add('active');
   if (id === 'tab-kb')        loadKBSections();
+  if (id === 'tab-form') { const btn = document.getElementById('formSubmitBtn'); if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-paper-plane"></i> Submit to Database'; } }
   if (id === 'tab-schedule')  loadAgentSchedule();
   if (id === 'tab-sch-table') initSchTab();
   if (btn) btn.classList.add('active');
