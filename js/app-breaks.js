@@ -222,7 +222,11 @@ function startBreakChecker(breaks) {
   if (breakCheckTimer) clearInterval(breakCheckTimer);
   checkBreaks();
   breakCheckTimer = setInterval(checkBreaks, 30000);
-}
+   // Silent team refresh every 5 minutes
+if (window._teamRefreshTimer) clearInterval(window._teamRefreshTimer);
+window._teamRefreshTimer = setInterval(() => {
+  loadTeamBreaksFromSB();
+}, 5 * 60 * 1000);
 
 function playNotifSoundTyped(type) {
   if (isMuted) return;
@@ -396,6 +400,7 @@ async function confirmBreakTime(time) {
 
     msg.style.color = 'var(--accent)'; msg.innerText = '✅ Updated!';
     showToast('✅', selectedBreakType + ' Updated!', 'New time: ' + time, 'success', 4000);
+    loadTeamBreaksFromSB(); 
     selectedBreakType = '';
     document.querySelectorAll('.break-type-btn').forEach(b => b.classList.remove('selected'));
 
