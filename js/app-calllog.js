@@ -95,13 +95,13 @@ function submitCallLogForm() {
   if (!isQ && !radioValues['f-budget'])    { showFormErr('Select Budget!'); return; }
   if (!isQ && !radioValues['f-unit'])      { showFormErr('Select Unit Type!'); return; }
 
-  /* ─── FIX: كل submit بياخد ID فريد — ده بيمنع أي promise قديمة تأثر على الـ UI ─── */
+  /* ─── FIX: كل submit بياخد ID فريد ─── */
   const submissionId = ++_activeSubmission;
 
   const btn = document.getElementById('formSubmitBtn');
   if (btn) setButtonLoading(btn, true, 'Submitting...');
 
-  /* ─── FIX: الـ slowTimer بيتشيك على الـ submissionId عشان ميشتغلش لو في submission جديدة ─── */
+  /* ─── FIX: الـ slowTimer بيتشيك على الـ submissionId ─── */
   const slowTimer = setTimeout(() => {
     if (submissionId !== _activeSubmission) return;
     const liveBtnSlow = document.getElementById('formSubmitBtn');
@@ -145,7 +145,7 @@ function submitCallLogForm() {
   ]).then(res => {
     clearTimeout(slowTimer);
 
-    /* ─── FIX: لو في submission أحدث منها، تجاهل النتيجة دي تماماً ─── */
+    /* ─── FIX: لو في submission أحدث منها، تجاهل ─── */
     if (submissionId !== _activeSubmission) return;
 
     const liveBtn = document.getElementById('formSubmitBtn');
@@ -167,7 +167,6 @@ function submitCallLogForm() {
   }).catch(err => {
     clearTimeout(slowTimer);
 
-    /* ─── FIX: نفس الشيء في حالة الخطأ ─── */
     if (submissionId !== _activeSubmission) return;
 
     const liveBtnErr = document.getElementById('formSubmitBtn');
