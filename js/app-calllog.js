@@ -19,6 +19,7 @@ function toggleFormSections() {
 }
 
 /* ─── FIXED QUICK LOG ─── */
+/* ─── FIXED QUICK LOG (WITH SUPABASE) ─── */
 function quickLogCall(reason) {
   const agent = document.getElementById('f-agent').value;
   if (!agent) { customAlert('Error', 'Please select Agent Name first!'); return; }
@@ -32,6 +33,20 @@ function quickLogCall(reason) {
     channel: '', media: '', budget: '', unit: '', extra: ''
   };
 
+  // 1. إرسال لـ Supabase
+  fetch(`${SB_URL_SCH}/rest/v1/call_logs`, {
+    method: 'POST',
+    headers: { 'apikey': SB_KEY_SCH, 'Authorization': `Bearer ${SB_KEY_SCH}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+    body: JSON.stringify({
+      agent_name: data.agent, customer_name: '', customer_mobile: '',
+      call_reason: data.reason, communication_channel: '', media_source: '',
+      business_relativity: '', sales_call_requested: '',
+      budget: '', unit_type: '', extra_notes: '',
+      logged_at: new Date().toISOString(),
+    })
+  }).catch(e => console.warn('SB quick log failed:', e));
+
+  // 2. إرسال لـ GAS
   Promise.race([
     gasRun(gasAction, data),
     new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 15000))
