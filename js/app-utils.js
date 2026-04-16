@@ -42,6 +42,10 @@ const SB_URL_SCH = 'https://xzxdaupwwwdcwfnqweub.supabase.co';
 const SB_KEY_SCH = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh6eGRhdXB3d3dkY3dmbnF3ZXViIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUzMTM5NTAsImV4cCI6MjA5MDg4OTk1MH0.KjNZpFvLxh8XfDDoWdpVsIQZAh1PjzGXOrfDmApZ4K8';
 const sbClient = window.supabase.createClient(SB_URL_SCH, SB_KEY_SCH);
 
+/* ─── FIX: expose للـ offline-calllog.js ─── */
+window.SB_URL_SCH = SB_URL_SCH;
+window.SB_KEY_SCH = SB_KEY_SCH;
+
 async function sbFetchSch(path) {
   const res = await fetch(`${SB_URL_SCH}/rest/v1/${path}`, {
     headers: { 'apikey': SB_KEY_SCH, 'Authorization': `Bearer ${SB_KEY_SCH}`, 'Content-Type': 'application/json' }
@@ -49,16 +53,34 @@ async function sbFetchSch(path) {
   return res.json();
 }
 
-/* ─── UTILITY: gasRun ─── */
+/* ─── UTILITY: gasRun (FIXED — CORS) ─── */
 function gasRun(action, ...args) {
-  return fetch(GAS_URL, {
+  /*
+   * FIX: الـ GAS بيعمل redirect من HTTP → HTTPS
+   * وده بيكسر الـ CORS لأن الـ browser بيحذف headers عند الـ redirect.
+   * الحل: نبعت الـ action كـ query param + body معاً،
+   * ونستخدم Content-Type: text/plain عشان نتجنب الـ preflight request.
+   */
+  const url = GAS_URL + '?action=' + encodeURIComponent(action);
+
+  return fetch(url, {
     method:  'POST',
-    redirect:'follow',
-    headers: { 'Content-Type': 'text/plain' },
+    redirect: 'follow',
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
     body:    JSON.stringify({ action, args })
   })
-  .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.text(); })
-  .then(text => { try { return JSON.parse(text); } catch(e) { throw new Error('Invalid JSON response'); } });
+  .then(r => {
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    return r.text();
+  })
+  .then(text => {
+    try {
+      return JSON.parse(text);
+    } catch(e) {
+      console.error('gasRun — invalid JSON:', text.substring(0, 200));
+      throw new Error('Invalid JSON response');
+    }
+  });
 }
 
 /* ─── UTILITY: setButtonLoading ─── */
