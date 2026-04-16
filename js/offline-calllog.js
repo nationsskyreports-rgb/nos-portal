@@ -2,7 +2,7 @@
    NOS PORTAL — offline-calllog.js
    Offline support for Call Log with auto-sync
    
-   أضف في الـ HTML بعد app.js:
+   أضف في الـ HTML بعد app-utils.js و app-calllog.js:
    <script src="offline-calllog.js"></script>
    ═══════════════════════════════════════════════════ */
 
@@ -91,7 +91,7 @@ const OFFLINE_KEY = 'nos_offline_calls';
   badge.onclick = () => syncOfflineCalls();
   document.body.appendChild(badge);
 
-  /* Status bar — يظهر في تاب الـ Call Log */
+  /* Status bar */
   const bar = document.createElement('div');
   bar.id = 'offline-status-bar';
   document.body.appendChild(bar);
@@ -143,16 +143,11 @@ function setStatusBar(state, msg) {
   const bar = document.getElementById('offline-status-bar');
   if (!bar) return;
 
-  const icons = {
-    offline:  '🔴',
-    syncing:  '🔄',
-    synced:   '✅',
-  };
+  const icons = { offline: '🔴', syncing: '🔄', synced: '✅' };
 
   bar.className = state;
   bar.innerHTML = `<span>${icons[state] || 'ℹ️'}</span><span>${msg}</span>`;
 
-  /* ابعت للـ call log tab */
   const callLogTab = document.getElementById('tab-form');
   if (callLogTab && !callLogTab.querySelector('#offline-status-bar')) {
     callLogTab.insertBefore(bar, callLogTab.firstChild);
@@ -166,6 +161,7 @@ function setStatusBar(state, msg) {
 
 /* ── SUPABASE INSERT HELPER ── */
 function sbInsertCallLog(data, savedAt) {
+  /* FIX: نجيب الـ keys من window عشان app-utils.js بيعمل expose ليهم */
   const SB_URL = window.SB_URL_SCH;
   const SB_KEY = window.SB_KEY_SCH;
   if (!SB_URL || !SB_KEY) return Promise.resolve();
@@ -216,10 +212,8 @@ async function syncOfflineCalls() {
       const action = data._channel === 'whatsapp' ? 'submitWhatsAppLog' : 'submitCallLog';
       delete data._channel;
 
-      // ✅ حفظ في Supabase أولاً — مستقل عن GAS
       await sbInsertCallLog(data, _savedAt);
 
-      // ✅ ثم GAS
       const res = await gasRun(action, data);
       if (res.status === 'success') {
         removeOfflineCall(_offlineId);
@@ -289,7 +283,7 @@ async function syncOfflineCalls() {
         showResultPopup(
           'success',
           'Saved Offline 📥',
-          'No internet connection. Call saved locally and will sync automatically when you\'re back online.',
+          "No internet connection. Call saved locally and will sync automatically when you're back online.",
           'Got it!',
           () => { if (typeof window.resetCallForm === 'function') window.resetCallForm(); }
         );
@@ -315,7 +309,7 @@ window.addEventListener('online', () => {
 window.addEventListener('offline', () => {
   setStatusBar('offline', "You're offline — calls will be saved locally");
   if (window.showToast) {
-    showToast('🔴', 'You\'re Offline', 'Call logs will be saved locally and synced when connection is restored.', 'warn', 8000);
+    showToast('🔴', "You're Offline", 'Call logs will be saved locally and synced when connection is restored.', 'warn', 8000);
   }
 });
 
@@ -324,7 +318,6 @@ window.addEventListener('offline', () => {
 document.addEventListener('DOMContentLoaded', () => {
   updateBadge();
 
-  /* لو فيه pending calls ومتصل، sync فوراً */
   if (navigator.onLine && getOfflineCalls().length > 0) {
     setTimeout(syncOfflineCalls, 2000);
   }
