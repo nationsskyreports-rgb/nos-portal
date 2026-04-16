@@ -27,6 +27,9 @@ let sbBreaksChannel    = null;
 let swapPollTimer      = null;
 let knownSwapStatuses  = {};
 
+/* ─── FIX: submission tracker لمنع race conditions ─── */
+let _activeSubmission  = 0;
+
 let _notifFired = {
   break1_warn:false, break1_start:false, break1_end:false,
   lunch_warn:false,  lunch_start:false,  lunch_end:false,
@@ -184,6 +187,9 @@ function selectChannel(ch) {
 
   goStep(1);
   _currentStep = 1;
+
+  /* ─── FIX: إلغاء أي submission قديمة عند تغيير الـ channel ─── */
+  _activeSubmission++;
 
   if (_activeChannel === ch) {
     _activeChannel = null;
