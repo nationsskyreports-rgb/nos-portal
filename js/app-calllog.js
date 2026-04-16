@@ -18,11 +18,11 @@ function toggleFormSections() {
   if (mobileSection) mobileSection.style.display = q ? 'none' : 'block';
 }
 
+/* ─── FIXED QUICK LOG ─── */
 function quickLogCall(reason) {
   const agent = document.getElementById('f-agent').value;
   if (!agent) { customAlert('Error', 'Please select Agent Name first!'); return; }
 
-  // إظهار رسالة تحميل سريعة بدلاً من تعليق الـ Button
   showToast('⏳', 'Logging...', reason + ' — Please wait...', 'info', 4000);
 
   const gasAction = (_activeChannel === 'whatsapp') ? 'submitWhatsAppLog' : 'submitCallLog';
@@ -32,10 +32,9 @@ function quickLogCall(reason) {
     channel: '', media: '', budget: '', unit: '', extra: ''
   };
 
-  // إضافة Timeout لحماية الكود من التهنجة
   Promise.race([
     gasRun(gasAction, data),
-    new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 15000)) // 15 ثانية كحد أقصى
+    new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 15000))
   ]).then(res => {
     if (res.status === 'success') {
       const bar = document.getElementById('call-summary-bar');
@@ -56,6 +55,7 @@ function quickLogCall(reason) {
   });
 }
 
+/* ─── FIXED SUBMIT FORM ─── */
 function submitCallLogForm() {
   const agent  = document.getElementById('f-agent').value;
   const reason = document.getElementById('f-reason').value;
@@ -75,11 +75,11 @@ function submitCallLogForm() {
   if (!isQ && !radioValues['f-unit'])      { showFormErr('Select Unit Type!'); return; }
 
   const btn = document.getElementById('formSubmitBtn');
-  // حماية: لو الزر مش موجود (مثلاً في Quick Log) لا تعمل كراش
   if (btn) setButtonLoading(btn, true, 'Submitting...');
 
   const slowTimer = setTimeout(() => {
-    if (btn && btn.disabled) setButtonLoading(btn, true, 'Almost there...');
+    const liveBtnSlow = document.getElementById('formSubmitBtn');
+    if (liveBtnSlow && liveBtnSlow.disabled) setButtonLoading(liveBtnSlow, true, 'Almost there...');
   }, 5000);
 
   document.getElementById('form-error').style.display = 'none';
@@ -113,13 +113,15 @@ function submitCallLogForm() {
     }).catch(e => console.warn('SB call log failed:', e));
   }
 
-  // حماية الـ GAS من التهنجة باستخدام Promise.race و Timeout
   Promise.race([
     gasRun(gasAction, data),
-    new Promise((_, reject) => setTimeout(() => reject(new Error('GAS Timeout')), 20000)) // 20 ثانية
+    new Promise((_, reject) => setTimeout(() => reject(new Error('GAS Timeout')), 20000))
   ]).then(res => {
     clearTimeout(slowTimer);
-    if (btn) setButtonLoading(btn, false, '📤 Submit to Database');
+    
+    /* الحل السحري: بنبحث عن الزرار تاني عشان نتجنب مشكلة تبديل المراحل */
+    const liveBtn = document.getElementById('formSubmitBtn');
+    if (liveBtn) setButtonLoading(liveBtn, false, '📤 Submit to Database');
     
     if (res.status === 'success') {
       const bar = document.getElementById('call-summary-bar');
@@ -136,7 +138,10 @@ function submitCallLogForm() {
     }
   }).catch(err => {
     clearTimeout(slowTimer);
-    if (btn) setButtonLoading(btn, false, '📤 Submit to Database');
+    
+    /* الحل السحري: بنبحث عن الزرار تاني في حالة الخطأ كمان */
+    const liveBtnErr = document.getElementById('formSubmitBtn');
+    if (liveBtnErr) setButtonLoading(liveBtnErr, false, '📤 Submit to Database');
     
     if (err.message === 'GAS Timeout') {
       showFormErr('Server took too long to respond. The data might have been saved, please check.');
@@ -157,7 +162,6 @@ function resetCallForm() {
   document.getElementById('form-error').style.display     = 'none';
   goStep(1);
 }
-
 
 /* ─── STEP NAVIGATION ─── */
 let _currentStep = 1;
