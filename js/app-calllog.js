@@ -18,8 +18,7 @@ function toggleFormSections() {
   if (mobileSection) mobileSection.style.display = q ? 'none' : 'block';
 }
 
-/* ─── FIXED QUICK LOG ─── */
-/* ─── FIXED QUICK LOG (WITH SUPABASE) ─── */
+/* ─── QUICK LOG (WITH SUPABASE) ─── */
 function quickLogCall(reason) {
   const agent = document.getElementById('f-agent').value;
   if (!agent) { customAlert('Error', 'Please select Agent Name first!'); return; }
@@ -32,6 +31,9 @@ function quickLogCall(reason) {
     cname: '', mobile: '', bizrel: '', salescall: '',
     channel: '', media: '', budget: '', unit: '', extra: ''
   };
+
+  /* ─── FIX: Quick Log ليها submission ID خاص بيها ─── */
+  const submissionId = ++_activeSubmission;
 
   // 1. إرسال لـ Supabase
   fetch(`${SB_URL_SCH}/rest/v1/call_logs`, {
@@ -51,6 +53,9 @@ function quickLogCall(reason) {
     gasRun(gasAction, data),
     new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 15000))
   ]).then(res => {
+    /* ─── FIX: لو في submission تانية جديدة، متعملش حاجة ─── */
+    if (submissionId !== _activeSubmission) return;
+
     if (res.status === 'success') {
       const bar = document.getElementById('call-summary-bar');
       document.getElementById('cs-name').innerText   = '—';
@@ -65,12 +70,13 @@ function quickLogCall(reason) {
       showFormErr(res.msg || 'Something went wrong.');
     }
   }).catch(err => {
+    if (submissionId !== _activeSubmission) return;
     console.error('Quick Log Error:', err);
     showFormErr(err.message === 'Timeout' ? 'Request timed out. Try again.' : 'Network error.');
   });
 }
 
-/* ─── FIXED SUBMIT FORM ─── */
+/* ─── SUBMIT FORM (FIXED) ─── */
 function submitCallLogForm() {
   const agent  = document.getElementById('f-agent').value;
   const reason = document.getElementById('f-reason').value;
@@ -89,10 +95,15 @@ function submitCallLogForm() {
   if (!isQ && !radioValues['f-budget'])    { showFormErr('Select Budget!'); return; }
   if (!isQ && !radioValues['f-unit'])      { showFormErr('Select Unit Type!'); return; }
 
+  /* ─── FIX: كل submit بياخد ID فريد — ده بيمنع أي promise قديمة تأثر على الـ UI ─── */
+  const submissionId = ++_activeSubmission;
+
   const btn = document.getElementById('formSubmitBtn');
   if (btn) setButtonLoading(btn, true, 'Submitting...');
 
+  /* ─── FIX: الـ slowTimer بيتشيك على الـ submissionId عشان ميشتغلش لو في submission جديدة ─── */
   const slowTimer = setTimeout(() => {
+    if (submissionId !== _activeSubmission) return;
     const liveBtnSlow = document.getElementById('formSubmitBtn');
     if (liveBtnSlow && liveBtnSlow.disabled) setButtonLoading(liveBtnSlow, true, 'Almost there...');
   }, 5000);
@@ -133,11 +144,13 @@ function submitCallLogForm() {
     new Promise((_, reject) => setTimeout(() => reject(new Error('GAS Timeout')), 20000))
   ]).then(res => {
     clearTimeout(slowTimer);
-    
-    /* الحل السحري: بنبحث عن الزرار تاني عشان نتجنب مشكلة تبديل المراحل */
+
+    /* ─── FIX: لو في submission أحدث منها، تجاهل النتيجة دي تماماً ─── */
+    if (submissionId !== _activeSubmission) return;
+
     const liveBtn = document.getElementById('formSubmitBtn');
     if (liveBtn) setButtonLoading(liveBtn, false, '📤 Submit to Database');
-    
+
     if (res.status === 'success') {
       const bar = document.getElementById('call-summary-bar');
       document.getElementById('cs-name').innerText   = cname  || '—';
@@ -153,11 +166,13 @@ function submitCallLogForm() {
     }
   }).catch(err => {
     clearTimeout(slowTimer);
-    
-    /* الحل السحري: بنبحث عن الزرار تاني في حالة الخطأ كمان */
+
+    /* ─── FIX: نفس الشيء في حالة الخطأ ─── */
+    if (submissionId !== _activeSubmission) return;
+
     const liveBtnErr = document.getElementById('formSubmitBtn');
     if (liveBtnErr) setButtonLoading(liveBtnErr, false, '📤 Submit to Database');
-    
+
     if (err.message === 'GAS Timeout') {
       showFormErr('Server took too long to respond. The data might have been saved, please check.');
     } else {
