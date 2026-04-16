@@ -21,9 +21,39 @@ function toggleFormSections() {
 function quickLogCall(reason) {
   const agent = document.getElementById('f-agent').value;
   if (!agent) { customAlert('Error', 'Please select Agent Name first!'); return; }
-  document.getElementById('f-reason').value = reason;
-  goStep(4);
-  setTimeout(() => submitCallLogForm(), 200);
+
+  // إظهار رسالة تحميل سريعة بدلاً من تعليق الـ Button
+  showToast('⏳', 'Logging...', reason + ' — Please wait...', 'info', 4000);
+
+  const gasAction = (_activeChannel === 'whatsapp') ? 'submitWhatsAppLog' : 'submitCallLog';
+  const data = {
+    agent, reason,
+    cname: '', mobile: '', bizrel: '', salescall: '',
+    channel: '', media: '', budget: '', unit: '', extra: ''
+  };
+
+  // إضافة Timeout لحماية الكود من التهنجة
+  Promise.race([
+    gasRun(gasAction, data),
+    new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 15000)) // 15 ثانية كحد أقصى
+  ]).then(res => {
+    if (res.status === 'success') {
+      const bar = document.getElementById('call-summary-bar');
+      document.getElementById('cs-name').innerText   = '—';
+      document.getElementById('cs-mobile').innerText = '—';
+      document.getElementById('cs-reason').innerText = reason;
+      if (bar) { bar.style.display = 'flex'; setTimeout(() => bar.style.display = 'none', 30000); }
+      
+      resetCallForm();
+      showToast('✅', 'Quick Logged!', reason, 'success', 3000);
+      loadLastTwoCalls(agent);
+    } else {
+      showFormErr(res.msg || 'Something went wrong.');
+    }
+  }).catch(err => {
+    console.error('Quick Log Error:', err);
+    showFormErr(err.message === 'Timeout' ? 'Request timed out. Try again.' : 'Network error.');
+  });
 }
 
 function submitCallLogForm() {
@@ -45,10 +75,11 @@ function submitCallLogForm() {
   if (!isQ && !radioValues['f-unit'])      { showFormErr('Select Unit Type!'); return; }
 
   const btn = document.getElementById('formSubmitBtn');
-  setButtonLoading(btn, true, 'Submitting...');
+  // حماية: لو الزر مش موجود (مثلاً في Quick Log) لا تعمل كراش
+  if (btn) setButtonLoading(btn, true, 'Submitting...');
 
   const slowTimer = setTimeout(() => {
-    if (btn.disabled) setButtonLoading(btn, true, 'Almost there...');
+    if (btn && btn.disabled) setButtonLoading(btn, true, 'Almost there...');
   }, 5000);
 
   document.getElementById('form-error').style.display = 'none';
@@ -82,9 +113,14 @@ function submitCallLogForm() {
     }).catch(e => console.warn('SB call log failed:', e));
   }
 
-  gasRun(gasAction, data).then(res => {
+  // حماية الـ GAS من التهنجة باستخدام Promise.race و Timeout
+  Promise.race([
+    gasRun(gasAction, data),
+    new Promise((_, reject) => setTimeout(() => reject(new Error('GAS Timeout')), 20000)) // 20 ثانية
+  ]).then(res => {
     clearTimeout(slowTimer);
-    setButtonLoading(btn, false, '📤 Submit to Database');
+    if (btn) setButtonLoading(btn, false, '📤 Submit to Database');
+    
     if (res.status === 'success') {
       const bar = document.getElementById('call-summary-bar');
       document.getElementById('cs-name').innerText   = cname  || '—';
@@ -100,8 +136,13 @@ function submitCallLogForm() {
     }
   }).catch(err => {
     clearTimeout(slowTimer);
-    setButtonLoading(btn, false, '📤 Submit to Database');
-    showFormErr('Network error. Please try again.');
+    if (btn) setButtonLoading(btn, false, '📤 Submit to Database');
+    
+    if (err.message === 'GAS Timeout') {
+      showFormErr('Server took too long to respond. The data might have been saved, please check.');
+    } else {
+      showFormErr('Network error. Please try again.');
+    }
     console.error('gasRun error:', err);
   });
 }
