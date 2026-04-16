@@ -108,49 +108,51 @@ function submitChangePassword() {
 }
 
 
-/* ─── 05. APP INIT ─── */
+/* ─── 05. APP INIT (FIXED — parallel GAS calls) ─── */
 window.onload = function() {
   applyTheme();
   if ('Notification' in window) Notification.requestPermission();
 
-  gasRun('getAgentList').then(result => {
-    const s2 = document.getElementById('f-agent');
-    s2.innerHTML = '<option value="">Select agent...</option>';
-    if (result && result.length) {
-      result.forEach(item => {
-        agentCodeMap[item.name] = item.code;
-        s2.add(new Option(item.name, item.name));
-      });
+  /* ─── FIX: نشغل الكالين بالتوازي بدل ورا بعض ─── */
+  let savedSession = null;
+  try {
+    const saved = sessionStorage.getItem('ns-session');
+    if (saved) {
+      const sess = JSON.parse(saved);
+      if (sess && sess.name) savedSession = sess;
     }
+  } catch(e) {}
 
-    try {
-      const saved = sessionStorage.getItem('ns-session');
-      if (saved) {
-        const sess = JSON.parse(saved);
-        if (sess && sess.name) {
-          gasRun('processLogin', sess.name, 'REFRESH_MODE').then(res => {
-            if (res.status === 'success') showDashboard(res);
-            else {
-              sessionStorage.removeItem('ns-session');
-              document.getElementById('app-preloader').classList.add('hidden');
-            }
-          }).catch(() => {
-            sessionStorage.removeItem('ns-session');
-            document.getElementById('app-preloader').classList.add('hidden');
-          });
-        } else {
-          document.getElementById('app-preloader').classList.add('hidden');
-        }
+  /* بنبعت الكالين في نفس الوقت — كل واحد مستقل عن التاني */
+  const agentListCall = gasRun('getAgentList').catch(() => []);
+  const loginCall     = savedSession
+    ? gasRun('processLogin', savedSession.name, 'REFRESH_MODE').catch(() => null)
+    : Promise.resolve(null);
+
+  Promise.all([agentListCall, loginCall])
+    .then(([agentResult, loginRes]) => {
+
+      /* ─── ملي agent dropdown ─── */
+      const s2 = document.getElementById('f-agent');
+      s2.innerHTML = '<option value="">Select agent...</option>';
+      if (agentResult && agentResult.length) {
+        agentResult.forEach(item => {
+          agentCodeMap[item.name] = item.code;
+          s2.add(new Option(item.name, item.name));
+        });
+      }
+
+      /* ─── لو فيه session محفوظة ─── */
+      if (loginRes && loginRes.status === 'success') {
+        showDashboard(loginRes);
       } else {
+        if (savedSession) sessionStorage.removeItem('ns-session');
         document.getElementById('app-preloader').classList.add('hidden');
       }
-    } catch(e) {
+    })
+    .catch(() => {
       document.getElementById('app-preloader').classList.add('hidden');
-    }
-
-  }).catch(() => {
-    document.getElementById('app-preloader').classList.add('hidden');
-  });
+    });
 
   const tof = document.getElementById('time-off-form');
   if (tof) tof.style.display = 'block';
