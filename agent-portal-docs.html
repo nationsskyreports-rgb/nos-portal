@@ -1,0 +1,723 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NOS Agent Portal — توثيق تقني كامل</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
+<style>
+:root {
+  --gold:#D4AF37; --gold2:#F4D03F; --dark:#0a0e1a; --dark2:#111827;
+  --dark3:#1f2937; --border:rgba(212,175,55,0.18); --text:#e2e8f0;
+  --muted:#6b7280; --green:#10b981; --red:#ef4444; --blue:#3b82f6;
+  --purple:#8b5cf6; --orange:#f59e0b; --teal:#14b8a6; --pink:#ec4899;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+html{scroll-behavior:smooth;}
+body{font-family:'Cairo',sans-serif;background:var(--dark);color:var(--text);line-height:1.8;}
+a{color:var(--gold);text-decoration:none;}
+a:hover{color:var(--gold2);}
+code{font-family:'IBM Plex Mono',monospace;font-size:12px;background:rgba(255,255,255,0.06);padding:2px 7px;border-radius:4px;color:var(--gold2);}
+pre{font-family:'IBM Plex Mono',monospace;font-size:12px;background:#0d1117;border:1px solid var(--border);border-radius:8px;padding:16px;overflow-x:auto;line-height:1.7;color:#a5d6ff;}
+
+/* NAV */
+.topbar{position:sticky;top:0;z-index:100;background:rgba(10,14,26,0.95);backdrop-filter:blur(12px);border-bottom:1px solid var(--border);padding:12px 32px;display:flex;align-items:center;gap:16px;}
+.topbar-logo{font-size:18px;font-weight:900;color:var(--gold);}
+.topbar-sub{font-size:13px;color:var(--muted);}
+.nav-links{display:flex;gap:8px;margin-right:auto;flex-wrap:wrap;}
+.nav-links a{font-size:12px;padding:4px 12px;border-radius:20px;border:1px solid var(--border);color:var(--muted);transition:.2s;}
+.nav-links a:hover{border-color:var(--gold);color:var(--gold);}
+
+/* LAYOUT */
+.main{max-width:1100px;margin:0 auto;padding:40px 24px 80px;}
+
+/* SECTIONS */
+.section{margin-bottom:56px;}
+.section-title{font-size:22px;font-weight:900;color:var(--gold);margin-bottom:4px;display:flex;align-items:center;gap:10px;}
+.section-title::before{content:'';display:inline-block;width:4px;height:24px;background:var(--gold);border-radius:2px;}
+.section-sub{font-size:14px;color:var(--muted);margin-bottom:24px;padding-right:14px;}
+
+/* CARDS GRID */
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px;margin-bottom:16px;}
+.card{background:var(--dark2);border:1px solid var(--border);border-radius:12px;padding:20px;}
+.card-title{font-size:14px;font-weight:700;color:var(--text);margin-bottom:8px;display:flex;align-items:center;gap:8px;}
+.card-body{font-size:13px;color:var(--muted);line-height:1.8;}
+
+/* TABLE */
+.tbl{width:100%;border-collapse:collapse;font-size:13px;}
+.tbl th{background:var(--dark3);color:var(--muted);font-weight:700;padding:10px 14px;text-align:right;border-bottom:1px solid var(--border);}
+.tbl td{padding:10px 14px;border-bottom:1px solid rgba(255,255,255,0.04);vertical-align:top;}
+.tbl tr:hover td{background:rgba(255,255,255,0.02);}
+
+/* BADGES */
+.badge{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:700;padding:2px 10px;border-radius:20px;}
+.badge-read{background:rgba(59,130,246,0.15);color:#60a5fa;border:1px solid rgba(59,130,246,0.3);}
+.badge-write{background:rgba(239,68,68,0.15);color:#f87171;border:1px solid rgba(239,68,68,0.3);}
+.badge-rw{background:rgba(245,158,11,0.15);color:#fbbf24;border:1px solid rgba(245,158,11,0.3);}
+.badge-ok{background:rgba(16,185,129,0.15);color:#34d399;border:1px solid rgba(16,185,129,0.3);}
+.badge-warn{background:rgba(239,68,68,0.15);color:#f87171;border:1px solid rgba(239,68,68,0.3);}
+.badge-info{background:rgba(139,92,246,0.15);color:#a78bfa;border:1px solid rgba(139,92,246,0.3);}
+.badge-gold{background:rgba(212,175,55,0.15);color:var(--gold);border:1px solid var(--border);}
+
+/* FLOW */
+.flow{display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin:16px 0;}
+.flow-box{background:var(--dark3);border:1px solid var(--border);border-radius:8px;padding:8px 16px;font-size:13px;font-weight:700;}
+.flow-box.gold{border-color:var(--gold);color:var(--gold);}
+.flow-box.blue{border-color:var(--blue);color:#60a5fa;}
+.flow-box.green{border-color:var(--green);color:#34d399;}
+.flow-box.red{border-color:var(--red);color:#f87171;}
+.flow-arrow{color:var(--muted);font-size:18px;}
+
+/* WARNING BOX */
+.warn-box{background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.3);border-radius:10px;padding:16px 20px;font-size:13px;margin:16px 0;}
+.warn-box strong{color:#f87171;}
+.info-box{background:rgba(59,130,246,0.08);border:1px solid rgba(59,130,246,0.25);border-radius:10px;padding:16px 20px;font-size:13px;margin:16px 0;}
+.info-box strong{color:#60a5fa;}
+.ok-box{background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.25);border-radius:10px;padding:16px 20px;font-size:13px;margin:16px 0;}
+.ok-box strong{color:#34d399;}
+
+/* DIVIDER */
+hr{border:none;border-top:1px solid var(--border);margin:40px 0;}
+
+/* FILE TREE */
+.tree{font-family:'IBM Plex Mono',monospace;font-size:12px;background:#0d1117;border:1px solid var(--border);border-radius:8px;padding:20px;line-height:2;}
+.tree .dir{color:var(--gold);}
+.tree .file{color:#a5d6ff;}
+.tree .desc{color:var(--muted);font-size:11px;}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar-logo">NOS</div>
+  <div class="topbar-sub">Agent Portal — توثيق تقني كامل</div>
+  <nav class="nav-links">
+    <a href="#overview">نظرة عامة</a>
+    <a href="#files">الملفات</a>
+    <a href="#auth">Login</a>
+    <a href="#supabase">Supabase</a>
+    <a href="#tabs">التابات</a>
+    <a href="#data-flow">Data Flow</a>
+    <a href="#maintenance">الصيانة</a>
+    <a href="#issues">المشاكل</a>
+  </nav>
+</div>
+
+<div class="main">
+
+<!-- ══ OVERVIEW ══ -->
+<div class="section" id="overview">
+  <div class="section-title">نظرة عامة على المشروع</div>
+  <div class="section-sub">Agent Portal هو تطبيق ويب PWA للموظفين — بيشوفوا شيفتهم وبريكساتهم ويسجلوا مكالمات ويعملوا طلبات</div>
+
+  <div class="cards">
+    <div class="card">
+      <div class="card-title">🌐 Hosting</div>
+      <div class="card-body">
+        <b>Cloudflare Pages</b> عن طريق GitHub<br>
+        الـ repo: <code>nos-portal-main</code><br>
+        أي commit على GitHub → deploy تلقائي
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">🗄️ Database</div>
+      <div class="card-body">
+        <b>Supabase</b><br>
+        URL: <code>xzxdaupwwwdcwfnqweub.supabase.co</code><br>
+        Key type: <code>anon</code> مع Supabase Auth<br>
+        RLS: <span class="badge badge-ok">✅ مفعّل</span>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">📖 Knowledge Base</div>
+      <div class="card-body">
+        <b>Firebase Firestore</b> — منفصل عن Supabase<br>
+        الـ KB بس اللي بيشتغل على Firebase<br>
+        باقي كل حاجة على Supabase
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">📱 PWA</div>
+      <div class="card-body">
+        بيشتغل كـ installed app على الموبايل<br>
+        <code>manifest.json</code> + <code>sw.js</code><br>
+        Offline call log مدعوم
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">🔐 Authentication</div>
+      <div class="card-body">
+        <b>Supabase Auth</b> — signInWithPassword<br>
+        الـ agent بيدخل باسمه وباسورده<br>
+        Token بيتحدث في <code>window._authToken</code>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">⏰ Auto Refresh</div>
+      <div class="card-body">
+        الصفحة بتعمل reload تلقائي كل يوم الساعة <b>3 صبح</b><br>
+        عشان يجيب الـ schedule الجديد<br>
+        <code>scheduleNightlyRefresh()</code>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ FILES ══ -->
+<div class="section" id="files">
+  <div class="section-title">هيكل الملفات</div>
+  <div class="section-sub">كل ملف وإيه وظيفته بالظبط</div>
+  <div class="tree">
+<span class="dir">nos-portal-main/</span><br>
+│<br>
+├── <span class="file">index.html</span>         <span class="desc">← الملف الوحيد للـ HTML — فيه كل الـ screens</span><br>
+├── <span class="file">manifest.json</span>      <span class="desc">← إعدادات الـ PWA (اسم التطبيق، الأيقونة)</span><br>
+├── <span class="file">sw.js</span>              <span class="desc">← Service Worker للـ PWA</span><br>
+├── <span class="file">Set-password.html</span>  <span class="desc">← صفحة لتعيين باسورد جديد</span><br>
+├── <span class="file">create-account.html</span><span class="desc">← صفحة إنشاء حساب</span><br>
+│<br>
+├── <span class="dir">css/</span><br>
+│   ├── <span class="file">styles.css</span>     <span class="desc">← كل الـ styles الرئيسية (82KB)</span><br>
+│   ├── <span class="file">app-utils.css</span>  <span class="desc">← styles للـ toast, modal, popup</span><br>
+│   └── <span class="file">nos_fixes.css</span>  <span class="desc">← fixes وتعديلات إضافية</span><br>
+│<br>
+├── <span class="dir">js/</span><br>
+│   ├── <span class="file">app-utils.js</span>   <span class="desc">← Globals, Supabase config, Auth helpers, Toast, Modal</span><br>
+│   ├── <span class="file">app-core.js</span>    <span class="desc">← Login, Dashboard, KPIs, Navigation, Theme</span><br>
+│   ├── <span class="file">app-breaks.js</span>  <span class="desc">← Team breaks, Today breaks, Break notifications, Swap</span><br>
+│   ├── <span class="file">app-calllog.js</span> <span class="desc">← Call log form, Quick log, Customer search</span><br>
+│   ├── <span class="file">app-requests.js</span><span class="desc">← My requests, Excuse, Time off, Shift swap</span><br>
+│   ├── <span class="file">app-schedule.js</span><span class="desc">← Schedule render, Load agent schedule</span><br>
+│   ├── <span class="file">app-sch-table.js</span><span class="desc">← SCH Table tab, Draft requests</span><br>
+│   ├── <span class="file">app-kb.js</span>      <span class="desc">← Knowledge Base (Firebase)</span><br>
+│   ├── <span class="file">firebase-kb.js</span> <span class="desc">← Firebase Firestore connection</span><br>
+│   └── <span class="file">offline-calllog.js</span><span class="desc">← Offline call saving, Auto sync عند الاتصال</span><br>
+│<br>
+└── <span class="dir">assets/</span>            <span class="desc">← الأيقونات واللوجو</span>
+  </div>
+</div>
+
+<!-- ══ AUTH ══ -->
+<div class="section" id="auth">
+  <div class="section-title">Login & Authentication</div>
+  <div class="section-sub">إزاي الـ agent بيسجل دخول وبتتحقق هويته</div>
+
+  <div class="flow">
+    <div class="flow-box">الـ agent بيكتب اسمه وباسورده</div>
+    <div class="flow-arrow">←</div>
+    <div class="flow-box blue">جيب email من agents table</div>
+    <div class="flow-arrow">←</div>
+    <div class="flow-box gold">sbClient.auth.signInWithPassword()</div>
+    <div class="flow-arrow">←</div>
+    <div class="flow-box green">window._authToken = session.access_token</div>
+    <div class="flow-arrow">←</div>
+    <div class="flow-box green">showDashboard()</div>
+  </div>
+
+  <table class="tbl" style="margin-top:16px;">
+    <tr><th>الموقف</th><th>اللي بيحصل</th></tr>
+    <tr><td>أول تحميل — فيه session محفوظة</td><td>بيعمل <code>sbClient.auth.getSession()</code> — لو صحيحة يدخل مباشرة</td></tr>
+    <tr><td>أول تحميل — مفيش session</td><td>بيعرض شاشة Login</td></tr>
+    <tr><td>Login ناجح</td><td>بيحفظ <code>ns-session</code> في sessionStorage + <code>window._authToken</code></td></tr>
+    <tr><td>Logout</td><td>بيمسح الـ session + <code>sbClient.auth.signOut()</code> + بيوقف كل الـ timers</td></tr>
+    <tr><td>Back button</td><td>بيظهر confirm logout dialog</td></tr>
+    <tr><td>3 صبح</td><td>auto reload للصفحة</td></tr>
+  </table>
+
+  <div class="info-box" style="margin-top:16px;">
+    <strong>ملاحظة:</strong> الـ agent بيدخل باسمه (مش email). الكود بيجيب الـ email من جدول <code>agents</code> بناءً على الاسم، وبعدين بيستخدمه مع Supabase Auth.<br>
+    لو الـ agent مفيش عنده email في الجدول — بيتعمله email تلقائي: <code>firstname.lastname@nos.internal</code>
+  </div>
+
+  <div style="margin-top:16px;">
+    <b>تغيير الباسورد:</b> متاح من مكانين:
+    <ul style="margin-top:8px;padding-right:20px;font-size:13px;color:var(--muted);">
+      <li>من الـ Dashboard — أيقونة القفل في الـ side menu → <code>submitChangePassword()</code></li>
+      <li>من شاشة Login — "Forgot Password" → <code>submitReset()</code></li>
+      <li>الاتنين بيستخدموا <code>sbClient.auth.updateUser({ password })</code> + بيحدّثوا <code>password_hash</code> في agents table</li>
+    </ul>
+  </div>
+</div>
+
+<!-- ══ SUPABASE ══ -->
+<div class="section" id="supabase">
+  <div class="section-title">Supabase — الجداول والصلاحيات</div>
+  <div class="section-sub">كل جدول بيتعامل معاه الـ agent portal وإيه اللي بيعمله فيه</div>
+
+  <table class="tbl">
+    <tr>
+      <th>الجدول</th>
+      <th>الـ Agent Portal</th>
+      <th>RLS Policy</th>
+      <th>الغرض</th>
+    </tr>
+    <tr>
+      <td><code>agents</code></td>
+      <td><span class="badge badge-read">READ</span> <span class="badge badge-write">UPDATE</span></td>
+      <td>كل الـ agents مرئيين — بيعدّل بتاعه بس</td>
+      <td>بيجيب قائمة الـ agents للـ dropdowns، وبيحدّث الباسورد</td>
+    </tr>
+    <tr>
+      <td><code>schedule</code></td>
+      <td><span class="badge badge-read">READ</span></td>
+      <td>كل الـ schedule مرئي للكل</td>
+      <td>شيفت الأسبوع الحالي والجاي، TODAY'S STATUS</td>
+    </tr>
+    <tr>
+      <td><code>schedule_weeks</code></td>
+      <td><span class="badge badge-read">READ</span></td>
+      <td>Published weeks فقط</td>
+      <td>بيجيب الأسابيع المنشورة عشان يعرض الـ schedule</td>
+    </tr>
+    <tr>
+      <td><code>breaks</code></td>
+      <td><span class="badge badge-read">READ</span> <span class="badge badge-write">UPDATE</span> <span class="badge badge-write">INSERT</span></td>
+      <td>SELECT للكل — UPDATE/INSERT بتاعه بس</td>
+      <td>Team Availability، Today's breaks، تغيير status الـ break</td>
+    </tr>
+    <tr>
+      <td><code>daily_performance</code></td>
+      <td><span class="badge badge-read">READ</span></td>
+      <td>بتاعه بس</td>
+      <td>KPIs: Conformance, Missing Time, AHT</td>
+    </tr>
+    <tr>
+      <td><code>excuses</code></td>
+      <td><span class="badge badge-rw">READ/WRITE</span></td>
+      <td>بتاعه بس</td>
+      <td>يشوف excuses بتاعته، يرفع excuse جديدة، يتراجع</td>
+    </tr>
+    <tr>
+      <td><code>annual_leave</code></td>
+      <td><span class="badge badge-read">READ</span></td>
+      <td>بتاعه بس</td>
+      <td>Annual Left/Used في الـ KPI cards وتفاصيل الإجازة</td>
+    </tr>
+    <tr>
+      <td><code>quality_scores</code></td>
+      <td><span class="badge badge-read">READ</span></td>
+      <td>بتاعه بس</td>
+      <td>Quality % في الـ KPI cards</td>
+    </tr>
+    <tr>
+      <td><code>requests</code></td>
+      <td><span class="badge badge-rw">READ/WRITE</span></td>
+      <td>بتاعه بس</td>
+      <td>يشوف طلباته، يرفع طلب جديد (Time off, Missing punch, Schedule, Shift swap)</td>
+    </tr>
+    <tr>
+      <td><code>call_logs</code></td>
+      <td><span class="badge badge-rw">READ/WRITE</span></td>
+      <td>بتاعه بس</td>
+      <td>يسجل مكالمات، يشوف سجل مكالماته، البحث عن عملاء</td>
+    </tr>
+    <tr>
+      <td><code>shift_types</code></td>
+      <td><span class="badge badge-read">READ</span></td>
+      <td>public read</td>
+      <td>أوقات الشيفتات عشان يعرض الـ schedule صح</td>
+    </tr>
+    <tr>
+      <td><code>call_reasons</code></td>
+      <td><span class="badge badge-read">READ</span></td>
+      <td>public read</td>
+      <td>قائمة أسباب المكالمات في الـ call log form</td>
+    </tr>
+  </table>
+
+  <div class="ok-box" style="margin-top:16px;">
+    <strong>مهم:</strong> الـ Admin Portal بيستخدم <code>service_role</code> key — بيـ bypass الـ RLS كلها. الـ Agent Portal بيستخدم <code>anon</code> key مع Supabase Auth token — الـ RLS بتحمي كل agent يشوف بتاعه بس.
+  </div>
+</div>
+
+<!-- ══ TABS ══ -->
+<div class="section" id="tabs">
+  <div class="section-title">التابات — كل تاب بيعمل إيه</div>
+  <div class="section-sub">الـ agent portal فيه 7 تابات — كل تاب ملف JS منفصل</div>
+
+  <div class="cards">
+    <div class="card">
+      <div class="card-title">🏠 Dashboard — <code>app-core.js</code></div>
+      <div class="card-body">
+        <b>TODAY'S STATUS:</b> بيجيب الشيفت من <code>schedule</code> table<br>
+        <b>TEAM AVAILABILITY:</b> بيجيب من <code>breaks</code> table — real-time بـ Supabase Realtime<br>
+        <b>KPI Cards:</b> بيحسب من <code>daily_performance</code> + <code>excuses</code> + <code>annual_leave</code> + <code>quality_scores</code> + <code>call_logs</code><br>
+        <b>Month Filter:</b> بيغير الشهر ويعيد حساب الـ KPIs<br><br>
+        <b style="color:#f87171">⚠️ مشكلة موجودة:</b> TODAY'S STATUS لسه بتجيب بيانات أمس أحياناً — سببها الـ timezone
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">📅 Schedule — <code>app-schedule.js</code></div>
+      <div class="card-body">
+        بيعرض الـ schedule للأسبوع الحالي والجاي<br>
+        بيجيب من <code>schedule</code> + <code>schedule_weeks</code> + <code>shift_types</code><br>
+        بيعرض: الشيفت، يوم أوف، إجازة سنوية، PH، Task<br>
+        <b>Quick Excuse Request:</b> من هنا → يروح <code>excuses</code><br>
+        <b>Shift Swap Request:</b> من هنا → يروح <code>requests</code><br>
+        <b>Time Off Request:</b> من هنا → يروح <code>requests</code>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">📞 Call Log — <code>app-calllog.js</code></div>
+      <div class="card-body">
+        <b>Quick Log:</b> تسجيل سريع بدون تفاصيل → <code>call_logs</code><br>
+        <b>Full Form:</b> تسجيل كامل بخطوات (5 steps):<br>
+        &nbsp;&nbsp;1. اختار العميل / ابحث<br>
+        &nbsp;&nbsp;2. سبب المكالمة<br>
+        &nbsp;&nbsp;3. Business details<br>
+        &nbsp;&nbsp;4. Sales info<br>
+        &nbsp;&nbsp;5. Submit<br>
+        <b>Channel:</b> Call أو WhatsApp<br>
+        <b>Offline:</b> لو مفيش نت — بيحفظ محلياً ويرفع لما يرجع النت
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">📚 Knowledge Base — <code>app-kb.js</code></div>
+      <div class="card-body">
+        <b>Source:</b> Firebase Firestore — مش Supabase<br>
+        بيجيب sections وبيعرضها في sidebar<br>
+        الـ Admin يقدر يعدّل المحتوى من الـ KB<br>
+        فيه search في الـ sidebar<br>
+        <code>firebase-kb.js</code> هو اللي بيتكلم مع Firebase
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">📋 Requests — <code>app-requests.js</code></div>
+      <div class="card-body">
+        بيعرض كل طلبات الـ agent من <code>requests</code><br>
+        أنواع الطلبات:<br>
+        &nbsp;&nbsp;• <b>Time Off</b> (Annual, Sick, Casual, PH, Task)<br>
+        &nbsp;&nbsp;• <b>Missing Punch</b><br>
+        &nbsp;&nbsp;• <b>Schedule Request</b><br>
+        &nbsp;&nbsp;• <b>Shift Swap</b><br>
+        بيعرض الـ status: Pending / Approved / Rejected<br>
+        يقدر يعمل export للطلبات
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">📊 SCH Table — <code>app-sch-table.js</code></div>
+      <div class="card-body">
+        بيعرض الـ Published Schedule للفريق كله في جدول<br>
+        بيجيب من <code>schedule</code> + <code>schedule_weeks</code> + <code>agents</code><br>
+        بيعرض هذا الأسبوع والأسبوع الجاي<br>
+        <b>Draft Request:</b> الـ agent يقدر يحط طلب تعديل على شيفته → <code>requests</code> بـ type "Schedule Request"<br>
+        بيقدر يـ browse أسابيع قديمة
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">📱 My Call Log — <code>app-calllog.js</code></div>
+      <div class="card-body">
+        بيعرض سجل مكالمات الـ agent نفسه<br>
+        فلتر بالتاريخ من/إلى<br>
+        بيجيب من <code>call_logs</code> بـ <code>agent_name=eq.{name}</code><br>
+        بيعرض التفاصيل الكاملة لكل مكالمة
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ DATA FLOW ══ -->
+<div class="section" id="data-flow">
+  <div class="section-title">Data Flow — مين بيكتب ومين بيقرا</div>
+  <div class="section-sub">الـ Admin Portal هو اللي بيكتب البيانات، والـ Agent Portal بيقراها</div>
+
+  <table class="tbl">
+    <tr><th>البيانات</th><th>مين بيكتبها</th><th>مين بيقراها</th><th>الجدول</th></tr>
+    <tr>
+      <td>الـ Schedule</td>
+      <td><span class="badge badge-gold">Admin → Schedule page</span></td>
+      <td>Agent → Schedule tab, Dashboard</td>
+      <td><code>schedule</code> + <code>schedule_weeks</code></td>
+    </tr>
+    <tr>
+      <td>الـ Breaks</td>
+      <td><span class="badge badge-gold">Admin → Breaks page (auto-generate عند Publish)</span></td>
+      <td>Agent → Dashboard (Team Availability + Today's Status)</td>
+      <td><code>breaks</code></td>
+    </tr>
+    <tr>
+      <td>Performance KPIs</td>
+      <td><span class="badge badge-gold">Admin → xCally Import (من ملف CSV)</span></td>
+      <td>Agent → Dashboard (Conformance, AHT, Missing)</td>
+      <td><code>daily_performance</code></td>
+    </tr>
+    <tr>
+      <td>Quality Score</td>
+      <td><span class="badge badge-gold">Admin → Quality page</span></td>
+      <td>Agent → Dashboard (Quality card)</td>
+      <td><code>quality_scores</code></td>
+    </tr>
+    <tr>
+      <td>Annual Leave</td>
+      <td><span class="badge badge-gold">Admin → Schedule (عند Publish يحدث تلقائي)</span></td>
+      <td>Agent → Dashboard (Annual Left)</td>
+      <td><code>annual_leave</code></td>
+    </tr>
+    <tr>
+      <td>Excuses</td>
+      <td><span class="badge badge-blue">Agent يرفعها ← Admin يعتمدها</span></td>
+      <td>Agent → يشوف بتاعته — Admin → يعتمد أو يرفض</td>
+      <td><code>excuses</code></td>
+    </tr>
+    <tr>
+      <td>Requests</td>
+      <td><span class="badge badge-blue">Agent يرفعها ← Admin يعتمدها</span></td>
+      <td>Agent → يشوف بتاعته — Admin → يعتمد أو يرفض</td>
+      <td><code>requests</code></td>
+    </tr>
+    <tr>
+      <td>Call Logs</td>
+      <td><span class="badge badge-blue">Agent يسجّلها</span></td>
+      <td>Agent → My Call Log — Admin → Call Log page</td>
+      <td><code>call_logs</code></td>
+    </tr>
+    <tr>
+      <td>Knowledge Base</td>
+      <td><span class="badge badge-gold">Admin → KB page (Firebase)</span></td>
+      <td>Agent → Knowledge Base tab</td>
+      <td>Firebase Firestore</td>
+    </tr>
+  </table>
+</div>
+
+<!-- ══ BREAK SYSTEM ══ -->
+<div class="section">
+  <div class="section-title">Break System — إزاي الـ breaks بتشتغل</div>
+  <div class="section-sub">نظام البريكات هو أكتر جزء تفاعلي في الـ agent portal</div>
+
+  <div class="flow">
+    <div class="flow-box gold">Admin ينشر الـ schedule</div>
+    <div class="flow-arrow">←</div>
+    <div class="flow-box blue">Auto-generate breaks</div>
+    <div class="flow-arrow">←</div>
+    <div class="flow-box">حفظ في breaks table</div>
+    <div class="flow-arrow">←</div>
+    <div class="flow-box green">Agent Portal يقراها Real-time</div>
+  </div>
+
+  <table class="tbl" style="margin-top:16px;">
+    <tr><th>Function</th><th>بتعمل إيه</th></tr>
+    <tr><td><code>loadTeamBreaksFromSB()</code></td><td>بتجيب breaks كل الفريق النهارده وتعرضها في Team Availability</td></tr>
+    <tr><td><code>loadTodayBreaksFromSB(agentId)</code></td><td>بتجيب breaks الـ agent نفسه عشان تعرض أوقات البريك</td></tr>
+    <tr><td><code>applyBreaksToUI(breaks)</code></td><td>بتحدّث الـ UI بأوقات البريك والشيفت</td></tr>
+    <tr><td><code>subscribeTodayBreaks(agentId)</code></td><td>Supabase Realtime — لو الأدمن غيّر الـ break يتحدث تلقائي</td></tr>
+    <tr><td><code>startBreakChecker(breaks)</code></td><td>Timer بيشتغل كل دقيقة يتحقق لو حان وقت البريك</td></tr>
+    <tr><td><code>checkBreaks()</code></td><td>بترسل notification 5 دقايق قبل كل break + لما يبدأ + لما ينتهي</td></tr>
+    <tr><td><code>checkShiftEnd()</code></td><td>notification 15 دقيقة قبل نهاية الشيفت + عند النهاية + بعد 10 دقايق</td></tr>
+  </table>
+
+  <div class="info-box" style="margin-top:16px;">
+    <strong>Break Swap:</strong> الـ agent يقدر يطلب تبديل break مع زميل — بيتبعت كـ request في <code>requests</code> table بـ type "Break Swap". الكود بيعمل polling كل فترة يتحقق من الـ status.
+  </div>
+</div>
+
+<!-- ══ OFFLINE ══ -->
+<div class="section">
+  <div class="section-title">Offline Call Log — الشغل من غير نت</div>
+  <div class="section-sub"><code>offline-calllog.js</code> بيتعامل مع الحالات اللي فيها انقطاع في النت</div>
+
+  <div class="flow">
+    <div class="flow-box red">مفيش نت</div>
+    <div class="flow-arrow">←</div>
+    <div class="flow-box">حفظ المكالمة في localStorage</div>
+    <div class="flow-arrow">←</div>
+    <div class="flow-box green">عاد النت</div>
+    <div class="flow-arrow">←</div>
+    <div class="flow-box green">syncOfflineCalls() → Supabase</div>
+  </div>
+
+  <div class="warn-box" style="margin-top:16px;">
+    <strong>ملاحظة:</strong> الـ offline calls بتتحفظ في <code>localStorage</code> على جهاز الـ agent. لو مسح الـ browser cache أو غيّر جهاز — البيانات بتتمسح. الـ sync بيحصل تلقائي لما يرجع النت.
+  </div>
+</div>
+
+<!-- ══ KPI CALCULATION ══ -->
+<div class="section">
+  <div class="section-title">حساب الـ KPIs</div>
+  <div class="section-sub">إزاي بيتحسب كل رقم في الـ Dashboard</div>
+
+  <table class="tbl">
+    <tr><th>KPI</th><th>المصدر</th><th>الحساب</th></tr>
+    <tr>
+      <td><b>Conformance</b></td>
+      <td><code>daily_performance.conformance</code></td>
+      <td>متوسط كل أيام الشهر</td>
+    </tr>
+    <tr>
+      <td><b>Missing Time</b></td>
+      <td><code>daily_performance.missing_sec</code></td>
+      <td>مجموع الثوان → لو أقل من 5 دقايق = "Full Time"، غيرها HH:MM:SS</td>
+    </tr>
+    <tr>
+      <td><b>Avg AHT</b></td>
+      <td><code>daily_performance.avg_aht</code></td>
+      <td>متوسط الأيام اللي avg_aht &gt; 0 → MM:SS:00</td>
+    </tr>
+    <tr>
+      <td><b>Total Calls</b></td>
+      <td><code>call_logs</code></td>
+      <td>عدد السجلات للـ agent في الشهر</td>
+    </tr>
+    <tr>
+      <td><b>Exceptions</b></td>
+      <td><code>excuses</code> (status=Approved)</td>
+      <td>عدد الـ excuses × 2 ساعات</td>
+    </tr>
+    <tr>
+      <td><b>Annual Left</b></td>
+      <td><code>annual_leave.remaining</code></td>
+      <td>مباشر من الجدول (الأدمن بيحدّثه)</td>
+    </tr>
+    <tr>
+      <td><b>Quality</b></td>
+      <td><code>quality_scores.score</code></td>
+      <td>مباشر من الجدول للشهر المختار</td>
+    </tr>
+  </table>
+</div>
+
+<!-- ══ MAINTENANCE ══ -->
+<div class="section" id="maintenance">
+  <div class="section-title">الصيانة والتحديث</div>
+  <div class="section-sub">كل المواقف اللي ممكن تحتاج تتدخل فيها</div>
+
+  <div class="cards">
+    <div class="card">
+      <div class="card-title">➕ إضافة agent جديد</div>
+      <div class="card-body">
+        1. Admin Portal → Agents → Add<br>
+        2. حط الاسم والإيميل والباسورد<br>
+        3. الكود بيعمل <code>annual_leave</code> record تلقائي<br>
+        4. لازم تعمل Supabase Auth user يدوي أو بـ <code>migrate-once.html</code>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">🔑 Agent نسي باسورده</div>
+      <div class="card-body">
+        1. Admin Portal → Agents → Edit → غيّر الباسورد<br>
+        2. <b>أو</b> من Supabase Dashboard → Authentication → Users → Reset password<br>
+        3. قوله الباسورد الجديد
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">📊 رفع Performance Data</div>
+      <div class="card-body">
+        1. Admin Portal → xCally Import<br>
+        2. ارفع ملف CSV من xCally<br>
+        3. الكود بيـ map الأسماء ويحفظ في <code>daily_performance</code><br>
+        4. الـ KPIs في الـ agent portal بتتحدث فوراً
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">📅 نشر الـ Schedule</div>
+      <div class="card-body">
+        1. Admin Portal → Schedule → اختار الأسبوع<br>
+        2. حط الشيفتات<br>
+        3. اضغط Publish<br>
+        4. الكود تلقائياً: يجنرت الـ breaks + يحدّث annual_leave<br>
+        5. الـ agents بيشوفوا الـ schedule فوراً
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">🌐 تحديث الـ Knowledge Base</div>
+      <div class="card-body">
+        من Supabase مباشرة — مش من Firebase<br>
+        اتأكد إن الـ Firebase project شغّال<br>
+        لو Firebase مش شغّال — تاب KB مش هيشتغل
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">🔄 تحديث الكود</div>
+      <div class="card-body">
+        1. عدّل الملف محلياً<br>
+        2. ارفعه على GitHub<br>
+        3. Cloudflare Pages بيعمل deploy تلقائي خلال دقيقتين<br>
+        4. الـ agents محتاجين يعملوا hard refresh (Ctrl+Shift+R)
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ ISSUES ══ -->
+<div class="section" id="issues">
+  <div class="section-title">المشاكل الموجودة والحالة</div>
+  <div class="section-sub">كل مشكلة وحالتها الحالية</div>
+
+  <table class="tbl">
+    <tr><th>المشكلة</th><th>السبب</th><th>الحالة</th></tr>
+    <tr>
+      <td><b>TODAY'S STATUS بيجيب بيانات أمس</b></td>
+      <td>الـ <code>breaks</code> table بتجيب breaks النهارده بالـ UTC date، بس في Cairo UTC+3 فبيحصل mismatch في بعض الأوقات</td>
+      <td><span class="badge badge-warn">⚠️ قيد الحل</span> — الـ fix موجود في <code>getLocalDateStr()</code> بس لسه بيتختبر</td>
+    </tr>
+    <tr>
+      <td><b>GAS_URL موجود في الكود</b></td>
+      <td>بقايا من الكود القديم</td>
+      <td><span class="badge badge-ok">✅ تم الحل</span> — مفيش gasRun calls شغّالة</td>
+    </tr>
+    <tr>
+      <td><b>KPIs كانت بتجيب من kpis table</b></td>
+      <td>كانت <code>changeMonthData</code> بتقرا من جدول وسيط</td>
+      <td><span class="badge badge-ok">✅ تم الحل</span> — بتحسب من المصدر مباشرة</td>
+    </tr>
+    <tr>
+      <td><b>_applyGASBreaks غير موجودة</b></td>
+      <td>كانت function بتجيب البيانات من GAS وبقت undefined</td>
+      <td><span class="badge badge-ok">✅ تم الحل</span> — استُبدلت بـ Supabase query</td>
+    </tr>
+    <tr>
+      <td><b>Login كان يستخدم password_hash مباشرة</b></td>
+      <td>الباسورد كان stored plain text ومش secure</td>
+      <td><span class="badge badge-ok">✅ تم الحل</span> — Supabase Auth مع bcrypt</td>
+    </tr>
+    <tr>
+      <td><b>مفيش RLS</b></td>
+      <td>أي agent كان يقدر يقرا بيانات أي حد تاني</td>
+      <td><span class="badge badge-ok">✅ تم الحل</span> — RLS مفعّل على كل الجداول</td>
+    </tr>
+    <tr>
+      <td><b>Admin Portal بيستخدم anon key</b></td>
+      <td>نفس صلاحيات الـ agent</td>
+      <td><span class="badge badge-ok">✅ تم الحل</span> — Admin بيستخدم service_role</td>
+    </tr>
+  </table>
+
+  <div class="warn-box" style="margin-top:24px;">
+    <strong>⚠️ المشكلة الوحيدة المتبقية:</strong> TODAY'S STATUS أحياناً بيجيب شيفت أمس. ده بيحصل لأن جدول <code>breaks</code> بيـ store الـ <code>break_date</code> بـ format مختلف أو لأن الـ timezone مش متطابق بين ما بيتحفظ في الـ admin وما بيتقرا في الـ agent. الـ fix الكامل هيتأكد لما الـ agent يسجّل دخول وقت الشيفت الحقيقي.
+  </div>
+</div>
+
+<!-- ══ QUICK REF ══ -->
+<div class="section">
+  <div class="section-title">مرجع سريع — الـ Keys والـ URLs</div>
+  <pre>
+// Supabase
+URL:             https://xzxdaupwwwdcwfnqweub.supabase.co
+Anon Key:        eyJhbGci... (في app-utils.js)
+Service Role:    eyJhbGci... (في admin portal js/supabase.js فقط)
+
+// Firebase (KB فقط)
+Project:         في firebase-kb.js
+
+// Cloudflare Pages
+Agent Portal:    nos-portal-main repo
+Admin Portal:    admin-portal2-main repo
+
+// Auto refresh
+كل يوم 3 صبح — scheduleNightlyRefresh() في app-core.js
+  </pre>
+</div>
+
+<div style="text-align:center;padding:40px;color:var(--muted);font-size:13px;">
+  NOS Agent Portal — Technical Docs — April 2026
+</div>
+
+</div>
+</body>
+</html>
