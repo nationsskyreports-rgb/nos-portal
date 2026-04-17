@@ -42,14 +42,23 @@ const SB_URL_SCH = 'https://xzxdaupwwwdcwfnqweub.supabase.co';
 const SB_KEY_SCH = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh6eGRhdXB3d3dkY3dmbnF3ZXViIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUzMTM5NTAsImV4cCI6MjA5MDg4OTk1MH0.KjNZpFvLxh8XfDDoWdpVsIQZAh1PjzGXOrfDmApZ4K8';
 const sbClient = window.supabase.createClient(SB_URL_SCH, SB_KEY_SCH);
 
+/* ─── AUTH TOKEN — بيتحدّث بعد الـ login ─── */
+window._authToken = SB_KEY_SCH;
+
+function getAuthHeaders(extra) {
+  return Object.assign({
+    'apikey':        SB_KEY_SCH,
+    'Authorization': `Bearer ${window._authToken}`,
+    'Content-Type':  'application/json'
+  }, extra || {});
+}
+
 /* ─── FIX: expose للـ offline-calllog.js ─── */
 window.SB_URL_SCH = SB_URL_SCH;
 window.SB_KEY_SCH = SB_KEY_SCH;
 
 async function sbFetchSch(path) {
-  const res = await fetch(`${SB_URL_SCH}/rest/v1/${path}`, {
-    headers: { 'apikey': SB_KEY_SCH, 'Authorization': `Bearer ${SB_KEY_SCH}`, 'Content-Type': 'application/json' }
-  });
+  const res = await fetch(`${SB_URL_SCH}/rest/v1/${path}`, { headers: getAuthHeaders() });
   return res.json();
 }
 
