@@ -90,13 +90,10 @@ function submitCallLogForm() {
   if (!isQ && !radioValues['f-budget'])    { showFormErr('Select Budget!'); return; }
   if (!isQ && !radioValues['f-unit'])      { showFormErr('Select Unit Type!'); return; }
 
-  /* ─── FIX: كل submit بياخد ID فريد ─── */
   const submissionId = ++_activeSubmission;
-
   const btn = document.getElementById('formSubmitBtn');
   if (btn) setButtonLoading(btn, true, 'Submitting...');
 
-  /* ─── FIX: الـ slowTimer بيتشيك على الـ submissionId ─── */
   const slowTimer = setTimeout(() => {
     if (submissionId !== _activeSubmission) return;
     const liveBtnSlow = document.getElementById('formSubmitBtn');
@@ -112,70 +109,64 @@ function submitCallLogForm() {
     bizrel:    isQ ? '' : (radioValues['f-bizrel']    || ''),
     salescall: isQ ? '' : (radioValues['f-salescall'] || ''),
     channel:   isQ ? '' : (radioValues['f-channel']   || ''),
-    media:     isQ ? '' : (radioValues['f-media']     || ''),
-    budget:    isQ ? '' : (radioValues['f-budget']    || ''),
-    unit:      isQ ? '' : (radioValues['f-unit']      || ''),
+    media:     isQ ? '' : (radioValues['f-media']      || ''),
+    budget:    isQ ? '' : (radioValues['f-budget']     || ''),
+    unit:      isQ ? '' : (radioValues['f-unit']       || ''),
     extra: document.getElementById('f-extra').value.trim()
   };
 
-  const gasAction = (_activeChannel === 'whatsapp') ? 'submitWhatsAppLog' : 'submitCallLog';
-
-  if (!isQ) {
-    fetch(`${SB_URL_SCH}/rest/v1/call_logs`, {
-      method: 'POST',
-      headers: { 'apikey': SB_KEY_SCH, 'Authorization': `Bearer ${SB_KEY_SCH}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
-      body: JSON.stringify({
-        agent_name: data.agent, customer_name: data.cname, customer_mobile: data.mobile,
-        call_reason: data.reason, communication_channel: data.channel, media_source: data.media,
-        business_relativity: data.bizrel, sales_call_requested: data.salescall,
-        budget: data.budget, unit_type: data.unit, extra_notes: data.extra,
-        logged_at: new Date().toISOString(),
-      })
-    }).catch(e => console.warn('SB call log failed:', e));
-  }
-
-  Promise.race([
-    gasRun(gasAction, data),
-    new Promise((_, reject) => setTimeout(() => reject(new Error('GAS Timeout')), 20000))
-  ]).then(res => {
+  // Supabase
+  fetch(`${SB_URL_SCH}/rest/v1/call_logs`, {
+    method: 'POST',
+    headers: { 'apikey': SB_KEY_SCH, 'Authorization': `Bearer ${SB_KEY_SCH}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+    body: JSON.stringify({
+      agent_name:            data.agent,
+      customer_name:         data.cname,
+      customer_mobile:       data.mobile,
+      call_reason:           data.reason,
+      communication_channel: data.channel,
+      media_source:          data.media,
+      business_relativity:   data.bizrel,
+      sales_call_requested:  data.salescall,
+      budget:                data.budget,
+      unit_type:             data.unit,
+      extra_notes:           data.extra,
+      logged_at:             new Date().toISOString(),
+    })
+  })
+  .then(res => {
     clearTimeout(slowTimer);
-
-    /* ─── FIX: لو في submission أحدث منها، تجاهل ─── */
     if (submissionId !== _activeSubmission) return;
 
     const liveBtn = document.getElementById('formSubmitBtn');
     if (liveBtn) setButtonLoading(liveBtn, false, '📤 Submit to Database');
 
-    if (res.status === 'success') {
+    if (res.ok) {
       const bar = document.getElementById('call-summary-bar');
       document.getElementById('cs-name').innerText   = cname  || '—';
       document.getElementById('cs-mobile').innerText = mobile || '—';
       document.getElementById('cs-reason').innerText = reason || '—';
-      bar.style.display = 'flex';
-      setTimeout(() => bar.style.display = 'none', 30000);
+      if (bar) { bar.style.display = 'flex'; setTimeout(() => bar.style.display = 'none', 30000); }
       resetCallForm();
       showToast('✅', 'Call Logged!', cname ? cname + ' — ' + mobile : reason, 'success', 5000);
       loadLastTwoCalls(data.agent);
     } else {
-      showFormErr(res.msg || 'Something went wrong.');
+      showFormErr('Something went wrong. Please try again.');
     }
-  }).catch(err => {
+  })
+  .catch(err => {
     clearTimeout(slowTimer);
-
     if (submissionId !== _activeSubmission) return;
-
     const liveBtnErr = document.getElementById('formSubmitBtn');
     if (liveBtnErr) setButtonLoading(liveBtnErr, false, '📤 Submit to Database');
-
-    if (err.message === 'GAS Timeout') {
-      showFormErr('Server took too long to respond. The data might have been saved, please check.');
-    } else {
-      showFormErr('Network error. Please try again.');
-    }
-    console.error('gasRun error:', err);
+    showFormErr('Connection error. Please try again.');
+    console.error('submitCallLogForm error:', err);
   });
-}
 
+  // GAS — Fire and Forget
+  const gasAction = (_activeChannel === 'whatsapp') ? 'submitWhatsAppLog' : 'submitCallLog';
+  gasRun(gasAction, data).catch(e => console.warn('GAS sync failed:', e));
+}
 function resetCallForm() {
   ['f-reason','f-mobile','f-extra'].forEach(id => document.getElementById(id).value = '');
   document.getElementById('f-cname').value = '';
@@ -229,39 +220,49 @@ function searchCustomer() {
   const searchBtn = document.querySelector('[onclick="searchCustomer()"]');
   if (searchBtn) setButtonLoading(searchBtn, true, 'Searching...');
 
-  gasRun('searchCustomer', query).then(res => {
+  fetch(
+    `${SB_URL_SCH}/rest/v1/call_logs?or=(customer_name.ilike.%25${encodeURIComponent(query)}%25,customer_mobile.ilike.%25${encodeURIComponent(query)}%25)&order=logged_at.desc&limit=20`,
+    { headers: { 'apikey': SB_KEY_SCH, 'Authorization': `Bearer ${SB_KEY_SCH}` } }
+  )
+  .then(r => r.json())
+  .then(results => {
     if (searchBtn) setButtonLoading(searchBtn, false, '🔍 Search');
-    if (res.status !== 'success' || !res.results.length) {
+    if (!results || !results.length) {
       resultsDiv.innerHTML = `<div class="empty-state">No results found for "${query}"</div>`;
       return;
     }
-    let html = `<div style="font-size:13px;font-weight:700;color:var(--muted);margin-bottom:10px;">${res.count} result(s) found</div>`;
-    res.results.forEach(r => {
-      const reasonColor = (r.reason === 'Wrong Number' || r.reason === 'Call Dropped') ? 'var(--muted)' : 'var(--primary)';
-      const sourceColor = r.source === '💬 WhatsApp' ? '#25d366' : 'var(--primary)';
+    let html = `<div style="font-size:13px;font-weight:700;color:var(--muted);margin-bottom:10px;">${results.length} result(s) found</div>`;
+    results.forEach(r => {
+      const reasonColor = (r.call_reason === 'Wrong Number' || r.call_reason === 'Call Dropped') ? 'var(--muted)' : 'var(--primary)';
       html += `<div style="background:var(--surface2);border:1px solid var(--border);border-radius:14px;padding:16px;margin-bottom:10px;">
-        <div style="font-size:11px;font-weight:700;color:${sourceColor};margin-bottom:8px;">${r.source||''}</div>
+        <div style="font-size:11px;font-weight:700;color:var(--primary);margin-bottom:8px;">📞 Call</div>
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px;">
           <div style="display:flex;align-items:center;gap:10px;">
-            <div style="width:36px;height:36px;background:var(--primary-gradient);border-radius:10px;display:flex;align-items:center;justify-content:center;color:white;font-weight:800;font-size:13px;">${r.name?r.name[0].toUpperCase():'?'}</div>
-            <div><div style="font-weight:700;font-size:14px;color:var(--text);">${r.name||'N/A'}</div>
-            <div style="font-size:12px;color:var(--muted);">${r.mobile||'-'}${r.mobile2&&r.mobile2!=='-'&&r.mobile2!=='NA'?' · '+r.mobile2:''}</div></div>
+            <div style="width:36px;height:36px;background:var(--primary-gradient);border-radius:10px;display:flex;align-items:center;justify-content:center;color:white;font-weight:800;font-size:13px;">${r.customer_name?r.customer_name[0].toUpperCase():'?'}</div>
+            <div>
+              <div style="font-weight:700;font-size:14px;color:var(--text);">${r.customer_name||'N/A'}</div>
+              <div style="font-size:12px;color:var(--muted);">${r.customer_mobile||'-'}</div>
+            </div>
           </div>
-          <div style="font-size:11px;color:var(--muted);">${r.timestamp||''}</div>
+          <div style="font-size:11px;color:var(--muted);">${r.logged_at ? new Date(r.logged_at).toLocaleDateString('en-GB') : ''}</div>
         </div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:12px;">
-          <div><span style="color:var(--muted);">Reason: </span><span style="font-weight:600;color:${reasonColor};">${r.reason||'-'}</span></div>
-          <div><span style="color:var(--muted);">Agent: </span><span style="font-weight:600;color:var(--text);">${r.agent||'-'}</span></div>
-          <div><span style="color:var(--muted);">Media: </span><span style="font-weight:600;color:var(--text);">${r.media||'-'}</span></div>
-          <div><span style="color:var(--muted);">Channel: </span><span style="font-weight:600;color:var(--text);">${r.channel||'-'}</span></div>
+          <div><span style="color:var(--muted);">Reason: </span><span style="font-weight:600;color:${reasonColor};">${r.call_reason||'-'}</span></div>
+          <div><span style="color:var(--muted);">Agent: </span><span style="font-weight:600;color:var(--text);">${r.agent_name||'-'}</span></div>
+          <div><span style="color:var(--muted);">Media: </span><span style="font-weight:600;color:var(--text);">${r.media_source||'-'}</span></div>
+          <div><span style="color:var(--muted);">Channel: </span><span style="font-weight:600;color:var(--text);">${r.communication_channel||'-'}</span></div>
           <div><span style="color:var(--muted);">Budget: </span><span style="font-weight:600;color:var(--text);">${r.budget||'-'}</span></div>
-          <div><span style="color:var(--muted);">Unit: </span><span style="font-weight:600;color:var(--text);">${r.unit||'-'}</span></div>
+          <div><span style="color:var(--muted);">Unit: </span><span style="font-weight:600;color:var(--text);">${r.unit_type||'-'}</span></div>
         </div>
-        ${r.extra&&r.extra.trim()&&r.extra!=='-'?`<div style="margin-top:10px;padding:10px;background:var(--surface);border-radius:10px;border:1px solid var(--border);font-size:12px;color:var(--muted);"><i class="fas fa-sticky-note" style="margin-right:6px;color:var(--warn);"></i>${r.extra}</div>`:''}
+        ${r.extra_notes&&r.extra_notes.trim()&&r.extra_notes!=='-'?`<div style="margin-top:10px;padding:10px;background:var(--surface);border-radius:10px;border:1px solid var(--border);font-size:12px;color:var(--muted);"><i class="fas fa-sticky-note" style="margin-right:6px;color:var(--warn);"></i>${r.extra_notes}</div>`:''}
       </div>`;
     });
     resultsDiv.innerHTML = html;
-  }).catch(() => { if (searchBtn) setButtonLoading(searchBtn, false, '🔍 Search'); });
+  })
+  .catch(() => {
+    if (searchBtn) setButtonLoading(searchBtn, false, '🔍 Search');
+    resultsDiv.innerHTML = '<div class="empty-state">Connection error. Try again.</div>';
+  });
 }
 
 function clearSearch() {
@@ -316,38 +317,18 @@ async function step1SearchCustomer() {
   resultsEl.innerHTML = '<div style="font-size:12px;color:var(--muted);padding:8px 0;"><i class="fas fa-spinner fa-spin"></i> Searching...</div>';
 
   try {
-    const [gasRes, sbRes] = await Promise.allSettled([
-      gasRun('searchCustomer', query),
-      fetch(`${SB_URL_SCH}/rest/v1/call_logs?or=(customer_name.ilike.%25${encodeURIComponent(query)}%25,customer_mobile.ilike.%25${encodeURIComponent(query)}%25)&order=logged_at.desc&limit=5`,
-        { headers: { 'apikey': SB_KEY_SCH, 'Authorization': `Bearer ${SB_KEY_SCH}` } }
-      ).then(r => r.json())
-    ]);
-
-    const gasResults = (gasRes.status === 'fulfilled' && gasRes.value?.status === 'success') ? gasRes.value.results || [] : [];
-    const sbResults  = (sbRes.status  === 'fulfilled' && Array.isArray(sbRes.value))         ? sbRes.value            : [];
-
-    const normalize  = m => (m || '').replace(/\s/g, '').replace(/^0/, '');
-    const gasNames   = new Set(gasResults.map(r => (r.name || '').toLowerCase().trim()));
-    const gasMobiles = new Set(gasResults.map(r => normalize(r.mobile)));
-    const uniqueSB   = sbResults.filter(c => !gasMobiles.has(normalize(c.customer_mobile)) && !gasNames.has((c.customer_name || '').toLowerCase().trim()));
+    const res  = await fetch(
+      `${SB_URL_SCH}/rest/v1/call_logs?or=(customer_name.ilike.%25${encodeURIComponent(query)}%25,customer_mobile.ilike.%25${encodeURIComponent(query)}%25)&order=logged_at.desc&limit=5`,
+      { headers: { 'apikey': SB_KEY_SCH, 'Authorization': `Bearer ${SB_KEY_SCH}` } }
+    );
+    const data = await res.json();
 
     let html = '';
-    const total = gasResults.length + uniqueSB.length;
-
-    if (gasResults.length) {
-      html += `<div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">📋 GAS — ${gasResults.length} result(s)</div>`;
-      html += gasResults.slice(0, 3).map(r => `
-        <div style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:10px;margin-bottom:6px;font-size:12px;">
-          <div style="font-weight:700;color:var(--text);">${r.name || 'N/A'}</div>
-          <div style="color:var(--muted);font-family:monospace;">${r.mobile || '-'}</div>
-          <div style="color:var(--muted);">${r.reason || '-'} · ${r.agent || '-'}</div>
-          <div style="color:var(--muted);font-size:11px;">${r.timestamp || ''}</div>
-        </div>`).join('');
-    }
-
-    if (uniqueSB.length) {
-      html += `<div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin:10px 0 6px;">🗄️ Database — ${uniqueSB.length} result(s)</div>`;
-      html += uniqueSB.map(c => `
+    if (!data || !data.length) {
+      html = `<div style="font-size:12px;color:var(--muted);padding:4px 0;">No results for "${query}"</div>`;
+    } else {
+      html += `<div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">📋 ${data.length} result(s)</div>`;
+      html += data.map(c => `
         <div style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:10px;margin-bottom:6px;font-size:12px;">
           <div style="font-weight:700;color:var(--text);">${c.customer_name || 'N/A'}</div>
           <div style="color:var(--muted);font-family:monospace;">${c.customer_mobile || '-'}</div>
@@ -355,10 +336,7 @@ async function step1SearchCustomer() {
           <div style="color:var(--muted);font-size:11px;">${c.logged_at ? new Date(c.logged_at).toLocaleDateString('en-GB') : ''}</div>
         </div>`).join('');
     }
-
-    if (!total) html = `<div style="font-size:12px;color:var(--muted);padding:4px 0;">No results for "${query}"</div>`;
     resultsEl.innerHTML = html;
-
   } catch(e) {
     resultsEl.innerHTML = '<div style="font-size:12px;color:var(--danger);">Connection error</div>';
   } finally {
