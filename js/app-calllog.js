@@ -38,7 +38,7 @@ function quickLogCall(reason) {
   // 1. Supabase — بنستنى الرد ✅
   fetch(`${SB_URL_SCH}/rest/v1/call_logs`, {
     method: 'POST',
-    headers: { 'apikey': SB_KEY_SCH, 'Authorization': `Bearer ${SB_KEY_SCH}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+    headers: { 'apikey': SB_KEY_SCH, 'Authorization': `Bearer ${window._authToken || SB_KEY_SCH}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
     body: JSON.stringify({
       agent_name: data.agent, customer_name: '', customer_mobile: '',
       call_reason: data.reason, communication_channel: '', media_source: '',
@@ -114,7 +114,7 @@ function submitCallLogForm() {
   // Supabase
   fetch(`${SB_URL_SCH}/rest/v1/call_logs`, {
     method: 'POST',
-    headers: { 'apikey': SB_KEY_SCH, 'Authorization': `Bearer ${SB_KEY_SCH}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+    headers: { 'apikey': SB_KEY_SCH, 'Authorization': `Bearer ${window._authToken || SB_KEY_SCH}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
     body: JSON.stringify({
       agent_name:            data.agent,
       customer_name:         data.cname,
@@ -218,7 +218,7 @@ function searchCustomer() {
 
   fetch(
     `${SB_URL_SCH}/rest/v1/call_logs?or=(customer_name.ilike.%25${encodeURIComponent(query)}%25,customer_mobile.ilike.%25${encodeURIComponent(query)}%25,customer_mobile.ilike.%25${encodeURIComponent(normalizedQuery)}%25)&order=logged_at.desc&limit=20`,
-    { headers: { 'apikey': SB_KEY_SCH, 'Authorization': `Bearer ${SB_KEY_SCH}` } }
+    { headers: { 'apikey': SB_KEY_SCH, 'Authorization': `Bearer ${window._authToken || SB_KEY_SCH}` } }
   )
   .then(r => r.json())
   .then(results => {
@@ -271,7 +271,7 @@ async function loadLastTwoCalls(agentName) {
   try {
     const res  = await fetch(
       `${SB_URL_SCH}/rest/v1/call_logs?agent_name=eq.${encodeURIComponent(agentName)}&order=logged_at.desc&limit=2`,
-      { headers: { 'apikey': SB_KEY_SCH, 'Authorization': `Bearer ${SB_KEY_SCH}` } }
+      { headers: { 'apikey': SB_KEY_SCH, 'Authorization': `Bearer ${window._authToken || SB_KEY_SCH}` } }
     );
     const data = await res.json();
     const el   = document.getElementById('last-two-calls');
@@ -316,7 +316,7 @@ async function step1SearchCustomer() {
   try {
     const res  = await fetch(
       `${SB_URL_SCH}/rest/v1/call_logs?or=(customer_name.ilike.%25${encodeURIComponent(query)}%25,customer_mobile.ilike.%25${encodeURIComponent(query)}%25,customer_mobile.ilike.%25${encodeURIComponent(normalizedQuery)}%25)&order=logged_at.desc&limit=5`,
-      { headers: { 'apikey': SB_KEY_SCH, 'Authorization': `Bearer ${SB_KEY_SCH}` } }
+      { headers: { 'apikey': SB_KEY_SCH, 'Authorization': `Bearer ${window._authToken || SB_KEY_SCH}` } }
     );
     const data = await res.json();
 
@@ -388,7 +388,7 @@ async function fetchMyCallLog(agent) {
 
     const res  = await fetch(
       `${SB_URL_SCH}/rest/v1/call_logs?agent_name=eq.${encodeURIComponent(agent)}&logged_at=gte.${fromISO}&logged_at=lte.${toISO}&order=logged_at.desc`,
-      { headers: { 'apikey': SB_KEY_SCH, 'Authorization': `Bearer ${SB_KEY_SCH}` } }
+      { headers: { 'apikey': SB_KEY_SCH, 'Authorization': `Bearer ${window._authToken || SB_KEY_SCH}` } }
     );
     const data = await res.json();
 
