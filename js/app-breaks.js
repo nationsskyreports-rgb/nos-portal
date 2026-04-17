@@ -29,14 +29,14 @@ async function loadTeamBreaksFromSB() {
   try {
     const breaksRes = await fetch(
       `${SB_URL_SCH}/rest/v1/breaks?break_date=eq.${today}&select=*,agents(id,formal_name)`,
-      { headers: { 'apikey': SB_KEY_SCH, 'Authorization': `Bearer ${SB_KEY_SCH}` } }
+      { headers: { 'apikey': SB_KEY_SCH, 'Authorization': `Bearer ${window._authToken || SB_KEY_SCH}` } }
     );
     const breaksData = await breaksRes.json();
     if (!breaksData || !breaksData.length) return;
 
     const schedRes  = await fetch(
       `${SB_URL_SCH}/rest/v1/schedule?shift_date=eq.${today}&select=agent_id,day_type`,
-      { headers: { 'apikey': SB_KEY_SCH, 'Authorization': `Bearer ${SB_KEY_SCH}` } }
+      { headers: { 'apikey': SB_KEY_SCH, 'Authorization': `Bearer ${window._authToken || SB_KEY_SCH}` } }
     );
     const schedData = await schedRes.json();
     const dayTypeMap = {};
@@ -71,7 +71,7 @@ async function loadTodayBreaksFromSB(agentId) {
   try {
     const res  = await fetch(
       `${SB_URL_SCH}/rest/v1/breaks?agent_id=eq.${agentId}&break_date=eq.${today}&select=*`,
-      { headers: { 'apikey': SB_KEY_SCH, 'Authorization': `Bearer ${SB_KEY_SCH}` } }
+      { headers: { 'apikey': SB_KEY_SCH, 'Authorization': `Bearer ${window._authToken || SB_KEY_SCH}` } }
     );
     const data = await res.json();
     if (!data || !data.length) return null;
@@ -320,7 +320,7 @@ async function findAvailableBreakSlot(requestedTime, breakType, agentShiftStart,
   const durMap = { 'Break 1': 15, 'Lunch': 30, 'Break 2': 15 };
   const dur    = durMap[breakType];
 
-  const res       = await fetch(`${SB_URL_SCH}/rest/v1/breaks?break_date=eq.${today}&select=*`, { headers: { 'apikey': SB_KEY_SCH, 'Authorization': `Bearer ${SB_KEY_SCH}` } });
+  const res       = await fetch(`${SB_URL_SCH}/rest/v1/breaks?break_date=eq.${today}&select=*`, { headers: { 'apikey': SB_KEY_SCH, 'Authorization': `Bearer ${window._authToken || SB_KEY_SCH}` } });
   const allBreaks = await res.json();
 
   const shiftStart   = timeStrToMins(agentShiftStart);
@@ -389,7 +389,7 @@ async function confirmBreakTime(time) {
     msg.innerText = 'Updating...';
     const res = await fetch(`${SB_URL_SCH}/rest/v1/breaks?agent_id=eq.${schMyAgentId}&break_date=eq.${today}`, {
       method: 'PATCH',
-      headers: { 'apikey': SB_KEY_SCH, 'Authorization': `Bearer ${SB_KEY_SCH}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+      headers: { 'apikey': SB_KEY_SCH, 'Authorization': `Bearer ${window._authToken || SB_KEY_SCH}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
       body: JSON.stringify({ [col]: time + ':00', updated_at: new Date().toISOString() })
     });
     if (!res.ok) throw new Error('Update failed');
@@ -398,7 +398,7 @@ await fetch(`${SB_URL_SCH}/rest/v1/requests`, {
   method: 'POST',
   headers: {
     'apikey': SB_KEY_SCH,
-    'Authorization': `Bearer ${SB_KEY_SCH}`,
+    'Authorization': `Bearer ${window._authToken || SB_KEY_SCH}`,
     'Content-Type': 'application/json',
     'Prefer': 'return=minimal'
   },
