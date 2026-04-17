@@ -340,14 +340,22 @@ function onSwapDayChange() {
     return;
   }
 
-const selectedOpt = document.querySelector(`#swap-day-select option[value="${date}"]`);
-const shift = selectedOpt?.dataset?.shift || '';
-if (!shift) { shiftEl.innerText = 'N/A'; shiftEl.className = 'swap-compare-value swap-empty'; return; }
-shiftEl.innerText = shift; shiftEl.className = 'swap-compare-value'; boxEl.classList.add('swap-active');
-const mins = getMinutesToShift(date, shift);
-const mins = getMinutesToShift(date, day.shift);
-  if (mins < 120) {
-    const h = Math.floor(Math.abs(mins)/60), m = Math.abs(mins)%60;
+  // ✅ جيب الشيفت من الـ option مباشرة
+  const selectedOpt = document.querySelector(`#swap-day-select option[value="${date}"]`);
+  const shift = selectedOpt?.dataset?.shift || '';
+  if (!shift) {
+    shiftEl.innerText = 'N/A';
+    shiftEl.className = 'swap-compare-value swap-empty';
+    return;
+  }
+  shiftEl.innerText = shift;
+  shiftEl.className = 'swap-compare-value';
+  boxEl.classList.add('swap-active');
+
+  // ✅ warning لو الشيفت قريب
+  const swapMins = getMinutesToShift(date, shift);
+  if (swapMins < 120) {
+    const h = Math.floor(Math.abs(swapMins)/60), m = Math.abs(swapMins)%60;
     warningText.innerText   = 'Your shift starts in ' + (h>0?h+'h '+m+'m':m+'m') + '. Swap requests must be submitted at least 2 hours before.';
     warningEl.style.display = 'flex';
   }
@@ -367,12 +375,12 @@ const mins = getMinutesToShift(date, day.shift);
     (rows || []).forEach(s => {
       const name = s.agents?.formal_name || '';
       if (!name || name === currentName) return;
-      const shift = s.day_type === 'Work' && s.shift_types
+      const colleagueShift = s.day_type === 'Work' && s.shift_types
         ? s.shift_types.start_time.substring(0,5) + ' - ' + s.shift_types.end_time.substring(0,5)
         : s.day_type || 'OFF';
       const opt       = document.createElement('option');
       opt.value       = name;
-      opt.textContent = name + '  —  ' + shift;
+      opt.textContent = name + '  —  ' + colleagueShift;
       colleagueSelect.appendChild(opt);
     });
   })
