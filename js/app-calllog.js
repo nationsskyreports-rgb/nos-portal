@@ -359,37 +359,35 @@ document.addEventListener('DOMContentLoaded', () => {
   if (tof) tof.style.display = 'block';
 });
 async function loadMyCallLog() {
-  const container = document.getElementById('tab-mylog');
   const agent     = document.getElementById('user-name').innerText.trim();
+  const container = document.getElementById('tab-mylog');
+  const today     = new Date().toISOString().split('T')[0];
+
   container.innerHTML = `
     <div style="padding:16px;">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:10px;">
         <div class="section-label" style="margin:0"><i class="fas fa-phone-alt"></i> My Call Log</div>
         <div style="display:flex;gap:8px;align-items:center;">
-          <input type="date" id="mylog-from" class="form-input" style="width:140px;font-size:13px;">
-          <input type="date" id="mylog-to"   class="form-input" style="width:140px;font-size:13px;">
-          <button class="action-btn c-accent" onclick="loadMyCallLog()"><i class="fas fa-search"></i> Filter</button>
+          <input type="date" id="mylog-from" class="form-input" style="width:140px;font-size:13px;" value="${today}">
+          <input type="date" id="mylog-to"   class="form-input" style="width:140px;font-size:13px;" value="${today}">
+          <button class="action-btn c-accent" onclick="fetchMyCallLog('${agent}')"><i class="fas fa-search"></i> Filter</button>
         </div>
       </div>
       <div id="mylog-content"><div class="empty-state"><i class="fas fa-spinner spinner"></i> Loading...</div></div>
     </div>`;
 
-  // Default: اليوم
-  const today = new Date().toISOString().split('T')[0];
-  document.getElementById('mylog-from').value = today;
-  document.getElementById('mylog-to').value   = today;
-
-  await fetchMyCallLog(agent, today, today);
+  await fetchMyCallLog(agent);
 }
 
-async function fetchMyCallLog(agent, from, to) {
+async function fetchMyCallLog(agent) {
   const container = document.getElementById('mylog-content');
   if (!container) return;
   container.innerHTML = '<div class="empty-state"><i class="fas fa-spinner spinner"></i> Loading...</div>';
 
   try {
-    const fromDate = document.getElementById('mylog-from')?.value || from;
-    const toDate   = document.getElementById('mylog-to')?.value   || to;
+    const fromDate = document.getElementById('mylog-from')?.value;
+    const toDate   = document.getElementById('mylog-to')?.value;
+    if (!fromDate || !toDate) return;
 
     const fromISO = new Date(fromDate).toISOString();
     const toISO   = new Date(toDate + 'T23:59:59').toISOString();
@@ -405,13 +403,11 @@ async function fetchMyCallLog(agent, from, to) {
       return;
     }
 
-    // Summary
     const total    = data.length;
     const business = data.filter(c => c.business_relativity === 'Business Related').length;
     const sales    = data.filter(c => c.sales_call_requested === 'Yes').length;
 
     let html = `
-      <!-- Summary Cards -->
       <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px;">
         <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:14px;text-align:center;">
           <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;margin-bottom:4px;">Total Calls</div>
@@ -426,8 +422,6 @@ async function fetchMyCallLog(agent, from, to) {
           <div style="font-size:24px;font-weight:800;color:#3b82f6;">${sales}</div>
         </div>
       </div>
-
-      <!-- Calls List -->
       <div style="display:flex;flex-direction:column;gap:10px;">`;
 
     data.forEach(c => {
@@ -471,6 +465,6 @@ async function fetchMyCallLog(agent, from, to) {
 
   } catch(e) {
     container.innerHTML = '<div class="empty-state">Connection error. Try again.</div>';
-    console.error('loadMyCallLog error:', e);
+    console.error('fetchMyCallLog error:', e);
   }
 }
