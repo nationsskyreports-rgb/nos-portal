@@ -528,3 +528,18 @@ document.addEventListener('touchmove', e => {
     if (target && !dashboard.contains(target)) e.preventDefault();
   }
 }, { passive: false });
+/* ─── AUTO REFRESH AT 3AM ─── */
+function scheduleNightlyRefresh() {
+  const now     = new Date();
+  const target  = new Date();
+  target.setHours(3, 0, 0, 0);
+  if (now >= target) target.setDate(target.getDate() + 1);
+
+  const msUntil3AM = target - now;
+
+  setTimeout(() => {
+  window.location.reload(true);
+  }, msUntil3AM);
+
+  console.log(`🕒 Auto refresh scheduled in ${Math.round(msUntil3AM / 1000 / 60)} minutes`);
+}
