@@ -45,6 +45,11 @@ const sbClient = window.supabase.createClient(SB_URL_SCH, SB_KEY_SCH);
 /* ─── AUTH TOKEN — بيتحدّث بعد الـ login ─── */
 window._authToken = SB_KEY_SCH;
 
+
+/* ─── LOCAL DATE (Cairo timezone) ─── */
+function getLocalDateStr() {
+  return new Intl.DateTimeFormat('en-CA', { timeZone: 'Africa/Cairo' }).format(new Date());
+}
 function getAuthHeaders(extra) {
   return Object.assign({
     'apikey':        SB_KEY_SCH,
