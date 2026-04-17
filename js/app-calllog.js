@@ -221,8 +221,10 @@ function searchCustomer() {
   if (searchBtn) setButtonLoading(searchBtn, true, 'Searching...');
 
   fetch(
-    `${SB_URL_SCH}/rest/v1/call_logs?or=(customer_name.ilike.%25${encodeURIComponent(query)}%25,customer_mobile.ilike.%25${encodeURIComponent(query)}%25)&order=logged_at.desc&limit=20`,
-    { headers: { 'apikey': SB_KEY_SCH, 'Authorization': `Bearer ${SB_KEY_SCH}` } }
+const normalizedQuery = query.replace(/^0+/, ''); 
+const url = `${SB_URL_SCH}/rest/v1/call_logs?or=(customer_name.ilike.%25${encodeURIComponent(query)}%25,customer_mobile.ilike.%25${encodeURIComponent(query)}%25,customer_mobile.ilike.%25${encodeURIComponent(normalizedQuery)}%25)&order=logged_at.desc&limit=20`;
+     
+     { headers: { 'apikey': SB_KEY_SCH, 'Authorization': `Bearer ${SB_KEY_SCH}` } }
   )
   .then(r => r.json())
   .then(results => {
@@ -315,10 +317,11 @@ async function step1SearchCustomer() {
 
   setButtonLoading(btn, true, 'Searching...');
   resultsEl.innerHTML = '<div style="font-size:12px;color:var(--muted);padding:8px 0;"><i class="fas fa-spinner fa-spin"></i> Searching...</div>';
+  const normalizedQuery = query.replace(/^0+/, '');
 
   try {
     const res  = await fetch(
-      `${SB_URL_SCH}/rest/v1/call_logs?or=(customer_name.ilike.%25${encodeURIComponent(query)}%25,customer_mobile.ilike.%25${encodeURIComponent(query)}%25)&order=logged_at.desc&limit=5`,
+      `${SB_URL_SCH}/rest/v1/call_logs?or=(customer_name.ilike.%25${encodeURIComponent(query)}%25,customer_mobile.ilike.%25${encodeURIComponent(query)}%25,customer_mobile.ilike.%25${encodeURIComponent(normalizedQuery)}%25)&order=logged_at.desc&limit=5`,
       { headers: { 'apikey': SB_KEY_SCH, 'Authorization': `Bearer ${SB_KEY_SCH}` } }
     );
     const data = await res.json();
@@ -343,7 +346,6 @@ async function step1SearchCustomer() {
     setButtonLoading(btn, false, '🔍 Search');
   }
 }
-
 function clearStep1Search() {
   const input   = document.getElementById('step1-search-input');
   const results = document.getElementById('step1-search-results');
