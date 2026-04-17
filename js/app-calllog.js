@@ -358,3 +358,119 @@ document.addEventListener('DOMContentLoaded', () => {
   const tof = document.getElementById('time-off-form');
   if (tof) tof.style.display = 'block';
 });
+async function loadMyCallLog() {
+  const container = document.getElementById('tab-mylog');
+  const agent     = document.getElementById('user-name').innerText.trim();
+  container.innerHTML = `
+    <div style="padding:16px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:10px;">
+        <div class="section-label" style="margin:0"><i class="fas fa-phone-alt"></i> My Call Log</div>
+        <div style="display:flex;gap:8px;align-items:center;">
+          <input type="date" id="mylog-from" class="form-input" style="width:140px;font-size:13px;">
+          <input type="date" id="mylog-to"   class="form-input" style="width:140px;font-size:13px;">
+          <button class="action-btn c-accent" onclick="loadMyCallLog()"><i class="fas fa-search"></i> Filter</button>
+        </div>
+      </div>
+      <div id="mylog-content"><div class="empty-state"><i class="fas fa-spinner spinner"></i> Loading...</div></div>
+    </div>`;
+
+  // Default: اليوم
+  const today = new Date().toISOString().split('T')[0];
+  document.getElementById('mylog-from').value = today;
+  document.getElementById('mylog-to').value   = today;
+
+  await fetchMyCallLog(agent, today, today);
+}
+
+async function fetchMyCallLog(agent, from, to) {
+  const container = document.getElementById('mylog-content');
+  if (!container) return;
+  container.innerHTML = '<div class="empty-state"><i class="fas fa-spinner spinner"></i> Loading...</div>';
+
+  try {
+    const fromDate = document.getElementById('mylog-from')?.value || from;
+    const toDate   = document.getElementById('mylog-to')?.value   || to;
+
+    const fromISO = new Date(fromDate).toISOString();
+    const toISO   = new Date(toDate + 'T23:59:59').toISOString();
+
+    const res  = await fetch(
+      `${SB_URL_SCH}/rest/v1/call_logs?agent_name=eq.${encodeURIComponent(agent)}&logged_at=gte.${fromISO}&logged_at=lte.${toISO}&order=logged_at.desc`,
+      { headers: { 'apikey': SB_KEY_SCH, 'Authorization': `Bearer ${SB_KEY_SCH}` } }
+    );
+    const data = await res.json();
+
+    if (!data || !data.length) {
+      container.innerHTML = '<div class="empty-state">No calls found for this period.</div>';
+      return;
+    }
+
+    // Summary
+    const total    = data.length;
+    const business = data.filter(c => c.business_relativity === 'Business Related').length;
+    const sales    = data.filter(c => c.sales_call_requested === 'Yes').length;
+
+    let html = `
+      <!-- Summary Cards -->
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px;">
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:14px;text-align:center;">
+          <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;margin-bottom:4px;">Total Calls</div>
+          <div style="font-size:24px;font-weight:800;color:var(--primary);">${total}</div>
+        </div>
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:14px;text-align:center;">
+          <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;margin-bottom:4px;">Business</div>
+          <div style="font-size:24px;font-weight:800;color:#059669;">${business}</div>
+        </div>
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:14px;text-align:center;">
+          <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;margin-bottom:4px;">Sales Req.</div>
+          <div style="font-size:24px;font-weight:800;color:#3b82f6;">${sales}</div>
+        </div>
+      </div>
+
+      <!-- Calls List -->
+      <div style="display:flex;flex-direction:column;gap:10px;">`;
+
+    data.forEach(c => {
+      const time = c.logged_at ? new Date(c.logged_at).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'}) : '';
+      const date = c.logged_at ? new Date(c.logged_at).toLocaleDateString('en-GB') : '';
+      const isQ  = c.call_reason === 'Wrong Number' || c.call_reason === 'Call Dropped';
+      const reasonColor = isQ ? 'var(--muted)' : 'var(--primary)';
+
+      html += `
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:16px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+            <div style="display:flex;align-items:center;gap:10px;">
+              <div style="width:38px;height:38px;background:var(--primary-gradient);border-radius:10px;display:flex;align-items:center;justify-content:center;color:white;font-size:16px;">📞</div>
+              <div>
+                <div style="font-weight:800;font-size:14px;color:var(--text);">${c.customer_name || '—'}</div>
+                <div style="font-size:12px;color:var(--muted);font-family:monospace;">${c.customer_mobile || '—'}</div>
+              </div>
+            </div>
+            <div style="text-align:right;">
+              <div style="font-size:13px;font-weight:700;color:var(--primary);">${time}</div>
+              <div style="font-size:11px;color:var(--muted);">${date}</div>
+            </div>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;font-size:12px;">
+            <div><span style="color:var(--muted);">Reason: </span><span style="font-weight:700;color:${reasonColor};">${c.call_reason||'—'}</span></div>
+            <div><span style="color:var(--muted);">Channel: </span><span style="font-weight:600;color:var(--text);">${c.communication_channel||'—'}</span></div>
+            <div><span style="color:var(--muted);">Media: </span><span style="font-weight:600;color:var(--text);">${c.media_source||'—'}</span></div>
+            <div><span style="color:var(--muted);">Budget: </span><span style="font-weight:600;color:var(--text);">${c.budget||'—'}</span></div>
+            <div><span style="color:var(--muted);">Unit: </span><span style="font-weight:600;color:var(--text);">${c.unit_type||'—'}</span></div>
+            <div><span style="color:var(--muted);">Sales: </span><span style="font-weight:600;color:var(--text);">${c.sales_call_requested||'—'}</span></div>
+          </div>
+          ${c.extra_notes&&c.extra_notes.trim()&&c.extra_notes!=='-' ? `
+          <div style="margin-top:10px;padding:10px;background:var(--surface2);border-radius:10px;border:1px solid var(--border);font-size:12px;color:var(--muted);">
+            <i class="fas fa-sticky-note" style="margin-right:6px;color:var(--warn);"></i>${c.extra_notes}
+          </div>` : ''}
+        </div>`;
+    });
+
+    html += '</div>';
+    container.innerHTML = html;
+
+  } catch(e) {
+    container.innerHTML = '<div class="empty-state">Connection error. Try again.</div>';
+    console.error('loadMyCallLog error:', e);
+  }
+}
