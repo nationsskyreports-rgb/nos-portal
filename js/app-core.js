@@ -332,13 +332,22 @@ function showDashboard(res) {
   document.getElementById('f-agent').value        = res.name;
   loadLastTwoCalls(res.name);
 
-  if (checkDataAvailability(res.data)) {
-    currentAnnualData.left = res.data.annual    || 0;
-    currentAnnualData.used = res.data.totalUsed || 0;
-    ['conformance','missing','aht','calls','annual','exceptions','quality']
-      .forEach(k => document.getElementById('d-' + k).innerText = res.data[k] || '-');
-  }
+async function fetchTotalCalls(agentName) {
+  const now      = new Date();
+  const year     = now.getFullYear();
+  const month    = String(now.getMonth() + 1).padStart(2, '0');
+  const dateFrom = `${year}-${month}-01`;
+  const lastDay  = new Date(year, now.getMonth() + 1, 0).getDate();
+  const dateTo   = `${year}-${month}-${String(lastDay).padStart(2, '0')}`;
 
+  const res  = await fetch(
+    `${SB_URL_SCH}/rest/v1/call_logs?agent_name=eq.${encodeURIComponent(agentName)}&logged_at=gte.${dateFrom}&logged_at=lte.${dateTo}T23:59:59&select=id`,
+    { headers: { 'apikey': SB_KEY_SCH, 'Authorization': `Bearer ${SB_KEY_SCH}` } }
+  );
+  const data = await res.json();
+  return data ? data.length : 0;
+}
+   
   const shift     = res.todayBreaks ? res.todayBreaks.shift : 'N/A';
   const isWorking = shift && shift !== 'OFF' && shift !== 'N/A' && shift !== '-'
     && shift.trim() !== '' && !/^(annual|sick|casual|ph|task)$/i.test(shift.trim());
