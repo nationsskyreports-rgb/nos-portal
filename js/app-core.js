@@ -72,7 +72,6 @@ function closeSideMenu() {
   }, 300);
 }
 
-
 /* ─── 04. CHANGE PASSWORD ─── */
 function openChangePassword() {
   ['cp-old','cp-new','cp-confirm'].forEach(id => document.getElementById(id).value = '');
@@ -86,30 +85,50 @@ function closeChangePassword() {
   document.getElementById('cp-modal').style.display   = 'none';
 }
 
-function submitChangePassword() {
+async function submitChangePassword() {
   const name  = document.getElementById('user-name').innerText.trim();
   const oldP  = document.getElementById('cp-old').value;
   const newP  = document.getElementById('cp-new').value;
   const confP = document.getElementById('cp-confirm').value;
   const msg   = document.getElementById('cp-msg');
+
   if (!oldP || !newP || !confP) { msg.style.color = 'var(--danger)'; msg.innerText = 'Fill all fields'; return; }
   if (newP !== confP)           { msg.style.color = 'var(--danger)'; msg.innerText = "Passwords don't match!"; return; }
+
   msg.style.color = 'var(--primary)'; msg.innerText = 'Updating...';
-  gasRun('updatePassword', name, oldP, newP).then(res => {
-    if (res.status === 'success') {
+
+  try {
+    const res  = await fetch(
+      `${SB_URL_SCH}/rest/v1/agents?select=id,password_hash&formal_name=eq.${encodeURIComponent(name)}&limit=1`,
+      { headers: { 'apikey': SB_KEY_SCH, 'Authorization': `Bearer ${SB_KEY_SCH}` } }
+    );
+    const data = await res.json();
+
+    if (!data || !data.length) { msg.style.color = 'var(--danger)'; msg.innerText = 'User not found'; return; }
+
+    if (data[0].password_hash !== oldP) { msg.style.color = 'var(--danger)'; msg.innerText = 'Old password incorrect'; return; }
+    const upd = await fetch(
+      `${SB_URL_SCH}/rest/v1/agents?id=eq.${data[0].id}`,
+      {
+        method:  'PATCH',
+        headers: { 'apikey': SB_KEY_SCH, 'Authorization': `Bearer ${SB_KEY_SCH}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password_hash: newP, updated_at: new Date().toISOString() })
+      }
+    );
+
+    if (upd.ok) {
       msg.style.color = '#059669';
       msg.innerText   = 'Password updated successfully!';
       setTimeout(() => closeChangePassword(), 2000);
     } else {
-      msg.style.color = 'var(--danger)';
-      msg.innerText   = res.msg;
+      msg.style.color = 'var(--danger)'; msg.innerText = 'Update failed. Try again.';
     }
-  });
+  } catch(e) {
+    msg.style.color = 'var(--danger)'; msg.innerText = 'Connection error!';
+  }
 }
 
-
 /* ─── 05. APP INIT (FIXED — parallel GAS calls) ─── */
-
 window.onload = async function() {
   applyTheme();
   if ('Notification' in window) Notification.requestPermission();
@@ -180,9 +199,9 @@ function toggleReset(show) {
   }
 }
 
-function login() {
+async function login() {
   document.getElementById('app-preloader').classList.remove('hidden');
-  const name = document.getElementById('empList').value;
+  const name = document.getElementById('empList').value.trim();
   const pass = document.getElementById('pass').value;
   const msg  = document.getElementById('login-msg');
   const btn  = document.getElementById('loginBtn');
@@ -198,23 +217,54 @@ function login() {
   btn.disabled    = true;
   setButtonLoading(btn, true, 'Verifying...');
 
-  gasRun('processLogin', name, pass).then(res => {
+  try {
+    const res  = await fetch(
+      `${SB_URL_SCH}/rest/v1/agents?select=id,formal_name,role,password_hash,status&formal_name=eq.${encodeURIComponent(name)}&status=eq.Active&limit=1`,
+      { headers: { 'apikey': SB_KEY_SCH, 'Authorization': `Bearer ${SB_KEY_SCH}` } }
+    );
+    const data = await res.json();
+
     setButtonLoading(btn, false, 'Login');
     btn.disabled = false;
-    if (res.status === 'success') {
-      showDashboard(res);
-    } else {
+
+    if (!data || !data.length) {
       document.getElementById('app-preloader').classList.add('hidden');
       msg.style.color = 'var(--danger)';
-      msg.innerHTML   = '<i class="fas fa-times-circle"></i> ' + res.msg;
+      msg.innerHTML   = '<i class="fas fa-times-circle"></i> Account not found!';
+      return;
     }
-  }).catch(() => {
+
+    const agent = data[0];
+
+    if (agent.password_hash !== pass) {
+      document.getElementById('app-preloader').classList.add('hidden');
+      msg.style.color = 'var(--danger)';
+      msg.innerHTML   = '<i class="fas fa-times-circle"></i> Invalid Password';
+      return;
+    }
+
+    schMyAgentId = agent.id;
+    const loginRes = {
+      status:         'success',
+      name:           agent.formal_name,
+      role:           agent.role || 'Agent',
+      data:           null,
+      schedule:       [],
+      todayBreaks:    { shift: 'N/A', break1: '-', lunch: '-', break2: '-' },
+      allStaffBreaks: [],
+      userRequests:   []
+    };
+
+    showDashboard(loginRes);
+
+  } catch(e) {
     setButtonLoading(btn, false, 'Login');
     btn.disabled = false;
     document.getElementById('app-preloader').classList.add('hidden');
     msg.style.color = 'var(--danger)';
     msg.innerHTML   = '<i class="fas fa-wifi"></i> Connection error!';
-  });
+    console.error('Login error:', e);
+  }
 }
 
 function submitReset() {
