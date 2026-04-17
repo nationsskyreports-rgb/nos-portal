@@ -432,7 +432,7 @@ async function loadKPIData(agentName) {
     const monthStr = String(month + 1).padStart(2, '0');
     const dateFrom = `${year}-${monthStr}-01`;
     const lastDay  = new Date(year, month + 1, 0).getDate();
-    const dateTo   = `${year}-${monthStr}-${String(lastDay).padStart(2, '0')}T23:59:59`;
+    const dateTo   = `${year}-${monthStr}-${String(lastDay).padStart(2, '0')}`;
 
     const MONTH_NAMES_SHORT = ['jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec'];
     const MONTH_NAMES_FULL  = ['January','February','March','April','May','June','July','August','September','October','November','December'];
@@ -447,47 +447,83 @@ async function loadKPIData(agentName) {
     );
     const agentData = await agentRes.json();
     const agentId   = agentData?.[0]?.id;
+    if (!agentId) { checkDataAvailability(null); return; }
 
     // كل الـ requests بالتوازي
-    const [kpiRes, callsRes, annRes, qualRes] = await Promise.all([
-      fetch(`${SB_URL_SCH}/rest/v1/kpis?agent_name=eq.${encodeURIComponent(agentName)}&month=eq.${monthFull}&year=eq.${year}&limit=1`, { headers }),
-      fetch(`${SB_URL_SCH}/rest/v1/call_logs?agent_name=eq.${encodeURIComponent(agentName)}&logged_at=gte.${dateFrom}&logged_at=lte.${dateTo}&select=id`, { headers }),
+    const [perfRes, excusesRes, annRes, qualRes, callsRes] = await Promise.all([
+      fetch(`${SB_URL_SCH}/rest/v1/daily_performance?agent_id=eq.${agentId}&perf_date=gte.${dateFrom}&perf_date=lte.${dateTo}&select=conformance,missing_sec,avg_aht,calls`, { headers }),
+      fetch(`${SB_URL_SCH}/rest/v1/excuses?agent_id=eq.${agentId}&status=eq.Approved&excuse_date=gte.${dateFrom}&excuse_date=lte.${dateTo}&select=id`, { headers }),
       fetch(`${SB_URL_SCH}/rest/v1/annual_leave?agent_id=eq.${agentId}&year=eq.${year}&limit=1`, { headers }),
-      fetch(`${SB_URL_SCH}/rest/v1/quality_scores?agent_id=eq.${agentId}&month=eq.${monthFull}&year=eq.${year}&limit=1`, { headers }),
+      fetch(`${SB_URL_SCH}/rest/v1/quality_scores?agent_id=eq.${agentId}&month=eq.${monthFull}&year=eq.${year}&limit=1&select=score`, { headers }),
+      fetch(`${SB_URL_SCH}/rest/v1/call_logs?agent_name=eq.${encodeURIComponent(agentName)}&logged_at=gte.${dateFrom}&logged_at=lte.${dateTo}T23:59:59&select=id`, { headers }),
     ]);
 
-    const [kpiData, callsData, annData, qualData] = await Promise.all([
-      kpiRes.json(), callsRes.json(), annRes.json(), qualRes.json()
+    const [perfData, excusesData, annData, qualData, callsData] = await Promise.all([
+      perfRes.json(), excusesRes.json(), annRes.json(), qualRes.json(), callsRes.json()
     ]);
 
-    const kpi        = kpiData?.[0]  || null;
-    const ann        = annData?.[0]  || null;
+    // ── حساب الـ KPIs ──
+    const perf = perfData || [];
+
+    // Conformance
+    const conformance = perf.length
+      ? (perf.reduce((s, p) => s + parseFloat(p.conformance || 0), 0) / perf.length).toFixed(1) + '%'
+      : '-';
+
+    // Missing Time
+    const totalMissingSec = perf.reduce((s, p) => s + (p.missing_sec || 0), 0);
+    const missingTime = perf.length
+      ? (totalMissingSec <= 300 ? 'Full Time'
+        : String(Math.floor(totalMissingSec / 3600)).padStart(2, '0') + ':' +
+          String(Math.floor((totalMissingSec % 3600) / 60)).padStart(2, '0') + ':' +
+          String(totalMissingSec % 60).padStart(2, '0'))
+      : '-';
+
+    // AHT
+    const ahtArr = perf.filter(p => p.avg_aht > 0);
+    const avgAHT = ahtArr.length
+      ? (() => {
+          const sec = Math.round(ahtArr.reduce((s, p) => s + p.avg_aht, 0) / ahtArr.length);
+          return String(Math.floor(sec / 60)).padStart(2, '0') + ':' +
+                 String(sec % 60).padStart(2, '0') + ':00';
+        })()
+      : '-';
+
+    // Calls
     const totalCalls = callsData ? callsData.length : 0;
-    const quality    = qualData?.[0]?.score || '-';
-    const annLeft    = ann ? ann.remaining : '-';
-    const annUsed    = ann ? (ann[monthKey] || 0) : 0;
 
-   const hasData = kpi || totalCalls > 0 || ann || qualData?.[0];
-   if (typeof checkDataAvailability === 'function') {
-   checkDataAvailability(hasData ? {} : null);
-  }
-    document.getElementById('d-conformance').innerText = kpi?.conformance  || '-';
-    document.getElementById('d-missing').innerText     = kpi?.missing_time || '-';
-    document.getElementById('d-aht').innerText         = kpi?.avg_aht      || '-';
+    // Exceptions
+    const excHours   = (excusesData || []).length * 2;
+    const exceptions = excHours > 0 ? excHours + ' Hours' : 'None';
+
+    // Annual
+    const ann     = annData?.[0] || null;
+    const annLeft = ann ? ann.remaining : '-';
+    const annUsed = ann ? (ann[monthKey] || 0) : 0;
+
+    // Quality
+    const quality = qualData?.[0]?.score || '-';
+
+    // ── حط الأرقام في الـ cards ──
+    const hasData = perf.length > 0 || totalCalls > 0 || ann || qualData?.[0];
+    if (typeof checkDataAvailability === 'function') checkDataAvailability(hasData ? {} : null);
+
+    document.getElementById('d-conformance').innerText = conformance;
+    document.getElementById('d-missing').innerText     = missingTime;
+    document.getElementById('d-aht').innerText         = avgAHT;
     document.getElementById('d-calls').innerText       = totalCalls || '-';
     document.getElementById('d-annual').innerText      = annLeft;
-    document.getElementById('d-exceptions').innerText  = kpi?.exceptions   || '-';
+    document.getElementById('d-exceptions').innerText  = exceptions;
     document.getElementById('d-quality').innerText     = quality;
 
     currentAnnualData.left = annLeft || 0;
     currentAnnualData.used = annUsed || 0;
 
-} catch(e) {
+  } catch(e) {
     console.error('KPI fetch error:', e);
     if (typeof checkDataAvailability === 'function') checkDataAvailability(null);
   }
 }
-
 
 /* ─── 12. KPI FILTER ─── */
 async function changeMonthData() {
@@ -495,67 +531,110 @@ async function changeMonthData() {
   const agentName     = document.getElementById('user-name').innerText.trim();
   const loader        = document.getElementById('filter-loader');
   loader.classList.remove('hidden');
-  document.getElementById('annual-label').innerText = selectedMonth === 'CURRENT' ? 'Annual Left' : 'Annual Used';
+  document.getElementById('annual-label').innerText =
+    selectedMonth === 'CURRENT' ? 'Annual Left' : 'Annual Used';
 
   try {
-    const now   = new Date();
-    const year  = now.getFullYear();
-    const MONTH_NAMES_FULL  = ['January','February','March','April','May','June','July','August','September','October','November','December'];
-    const MONTH_NAMES_SHORT = ['jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec'];
+    const now  = new Date();
+    const year = now.getFullYear();
 
-    let monthFull, monthStr, monthIdx;
-    if (selectedMonth === 'CURRENT') {
-      monthIdx  = now.getMonth();
-      monthFull = MONTH_NAMES_FULL[monthIdx];
-      monthStr  = String(monthIdx + 1).padStart(2, '0');
-    } else {
-      const MONTHS_SHORT_MAP = {'Jan':0,'Feb':1,'Mar':2,'Apr':3,'May':4,'Jun':5,'Jul':6,'Aug':7,'Sep':8,'Oct':9,'Nov':10,'Dec':11};
-      monthIdx  = MONTHS_SHORT_MAP[selectedMonth] ?? now.getMonth();
-      monthFull = MONTH_NAMES_FULL[monthIdx];
-      monthStr  = String(monthIdx + 1).padStart(2, '0');
-    }
-    const dateFrom = `${year}-${monthStr}-01`;
-    const lastDay  = new Date(year, monthIdx + 1, 0).getDate();
-    const dateTo   = `${year}-${monthStr}-${String(lastDay).padStart(2, '0')}T23:59:59`;
-    const monthKey = 'used_' + MONTH_NAMES_SHORT[monthIdx];
-    const headers  = { 'apikey': SB_KEY_SCH, 'Authorization': `Bearer ${SB_KEY_SCH}` };
+    const MONTH_NAMES_FULL  = ['January','February','March','April','May','June',
+                               'July','August','September','October','November','December'];
+    const MONTH_NAMES_SHORT = ['jan','feb','mar','apr','may','jun',
+                               'jul','aug','sep','oct','nov','dec'];
+    const MONTHS_SHORT_MAP  = {
+      'Jan':0,'Feb':1,'Mar':2,'Apr':3,'May':4,'Jun':5,
+      'Jul':6,'Aug':7,'Sep':8,'Oct':9,'Nov':10,'Dec':11
+    };
 
+    const monthIdx  = selectedMonth === 'CURRENT'
+      ? now.getMonth()
+      : (MONTHS_SHORT_MAP[selectedMonth] ?? now.getMonth());
+
+    const monthFull = MONTH_NAMES_FULL[monthIdx];
+    const monthStr  = String(monthIdx + 1).padStart(2, '0');
+    const monthKey  = 'used_' + MONTH_NAMES_SHORT[monthIdx];
+    const dateFrom  = `${year}-${monthStr}-01`;
+    const lastDay   = new Date(year, monthIdx + 1, 0).getDate();
+    const dateTo    = `${year}-${monthStr}-${String(lastDay).padStart(2, '0')}`;
+
+    const headers = { 'apikey': SB_KEY_SCH, 'Authorization': `Bearer ${SB_KEY_SCH}` };
+
+    // جيب agent_id
     const agentRes  = await fetch(
       `${SB_URL_SCH}/rest/v1/agents?select=id&formal_name=eq.${encodeURIComponent(agentName)}&limit=1`,
       { headers }
     );
     const agentData = await agentRes.json();
     const agentId   = agentData?.[0]?.id;
+    if (!agentId) { loader.classList.add('hidden'); checkDataAvailability(null); return; }
 
-    const [kpiRes, callsRes, annRes, qualRes] = await Promise.all([
-      fetch(`${SB_URL_SCH}/rest/v1/kpis?agent_name=eq.${encodeURIComponent(agentName)}&month=eq.${monthFull}&year=eq.${year}&limit=1`, { headers }),
-      fetch(`${SB_URL_SCH}/rest/v1/call_logs?agent_name=eq.${encodeURIComponent(agentName)}&logged_at=gte.${dateFrom}&logged_at=lte.${dateTo}&select=id`, { headers }),
+    // كل الـ requests بالتوازي — نفس منطق loadKPIData
+    const [perfRes, excusesRes, annRes, qualRes, callsRes] = await Promise.all([
+      fetch(`${SB_URL_SCH}/rest/v1/daily_performance?agent_id=eq.${agentId}&perf_date=gte.${dateFrom}&perf_date=lte.${dateTo}&select=conformance,missing_sec,avg_aht,calls`, { headers }),
+      fetch(`${SB_URL_SCH}/rest/v1/excuses?agent_id=eq.${agentId}&status=eq.Approved&excuse_date=gte.${dateFrom}&excuse_date=lte.${dateTo}&select=id`, { headers }),
       fetch(`${SB_URL_SCH}/rest/v1/annual_leave?agent_id=eq.${agentId}&year=eq.${year}&limit=1`, { headers }),
-      fetch(`${SB_URL_SCH}/rest/v1/quality_scores?agent_id=eq.${agentId}&month=eq.${monthFull}&year=eq.${year}&limit=1`, { headers }),
+      fetch(`${SB_URL_SCH}/rest/v1/quality_scores?agent_id=eq.${agentId}&month=eq.${monthFull}&year=eq.${year}&limit=1&select=score`, { headers }),
+      fetch(`${SB_URL_SCH}/rest/v1/call_logs?agent_name=eq.${encodeURIComponent(agentName)}&logged_at=gte.${dateFrom}&logged_at=lte.${dateTo}T23:59:59&select=id`, { headers }),
     ]);
 
-    const [kpiData, callsData, annData, qualData] = await Promise.all([
-      kpiRes.json(), callsRes.json(), annRes.json(), qualRes.json()
+    const [perfData, excusesData, annData, qualData, callsData] = await Promise.all([
+      perfRes.json(), excusesRes.json(), annRes.json(), qualRes.json(), callsRes.json()
     ]);
 
     loader.classList.add('hidden');
 
-    const kpi        = kpiData?.[0]  || null;
-    const ann        = annData?.[0]  || null;
-    const totalCalls = callsData ? callsData.length : 0;
-    const quality    = qualData?.[0]?.score || '-';
-    const annLeft    = ann ? ann.remaining : '-';
-    const annUsed    = ann ? (ann[monthKey] || 0) : 0;
+    const perf = perfData || [];
 
-    const hasData = kpi || totalCalls > 0 || ann || qualData?.[0];
+    // ── Conformance ──
+    const conformance = perf.length
+      ? (perf.reduce((s, p) => s + parseFloat(p.conformance || 0), 0) / perf.length).toFixed(1) + '%'
+      : '-';
+
+    // ── Missing Time ──
+    const totalMissingSec = perf.reduce((s, p) => s + (p.missing_sec || 0), 0);
+    const missingTime = perf.length
+      ? (totalMissingSec <= 300 ? 'Full Time'
+        : String(Math.floor(totalMissingSec / 3600)).padStart(2, '0') + ':' +
+          String(Math.floor((totalMissingSec % 3600) / 60)).padStart(2, '0') + ':' +
+          String(totalMissingSec % 60).padStart(2, '0'))
+      : '-';
+
+    // ── AHT ──
+    const ahtArr = perf.filter(p => p.avg_aht > 0);
+    const avgAHT = ahtArr.length
+      ? (() => {
+          const sec = Math.round(ahtArr.reduce((s, p) => s + p.avg_aht, 0) / ahtArr.length);
+          return String(Math.floor(sec / 60)).padStart(2, '0') + ':' +
+                 String(sec % 60).padStart(2, '0') + ':00';
+        })()
+      : '-';
+
+    // ── Calls ──
+    const totalCalls = callsData ? callsData.length : 0;
+
+    // ── Exceptions ──
+    const excHours   = (excusesData || []).length * 2;
+    const exceptions = excHours > 0 ? excHours + ' Hours' : 'None';
+
+    // ── Annual ──
+    const ann    = annData?.[0] || null;
+    const annLeft = ann ? ann.remaining      : '-';
+    const annUsed = ann ? (ann[monthKey] || 0) : 0;
+
+    // ── Quality ──
+    const quality = qualData?.[0]?.score || '-';
+
+    // ── Update UI ──
+    const hasData = perf.length > 0 || totalCalls > 0 || ann || qualData?.[0];
     checkDataAvailability(hasData ? {} : null);
 
-    document.getElementById('d-conformance').innerText = kpi?.conformance  || '-';
-    document.getElementById('d-missing').innerText     = kpi?.missing_time || '-';
-    document.getElementById('d-aht').innerText         = kpi?.avg_aht      || '-';
+    document.getElementById('d-conformance').innerText = conformance;
+    document.getElementById('d-missing').innerText     = missingTime;
+    document.getElementById('d-aht').innerText         = avgAHT;
     document.getElementById('d-calls').innerText       = totalCalls || '-';
     document.getElementById('d-annual').innerText      = selectedMonth === 'CURRENT' ? annLeft : annUsed;
-    document.getElementById('d-exceptions').innerText  = kpi?.exceptions   || '-';
+    document.getElementById('d-exceptions').innerText  = exceptions;
     document.getElementById('d-quality').innerText     = quality;
 
     currentAnnualData.left = annLeft || 0;
@@ -565,9 +644,7 @@ async function changeMonthData() {
     loader.classList.add('hidden');
     console.error('KPI filter error:', e);
   }
-}
-
-     
+}     
 
 /* ─── 21. ANNUAL LEAVE ─── */
 function showAnnualDetails() {
