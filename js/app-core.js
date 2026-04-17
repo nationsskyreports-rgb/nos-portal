@@ -332,22 +332,6 @@ function showDashboard(res) {
   document.getElementById('f-agent').value        = res.name;
   loadLastTwoCalls(res.name);
 
-async function fetchTotalCalls(agentName) {
-  const now      = new Date();
-  const year     = now.getFullYear();
-  const month    = String(now.getMonth() + 1).padStart(2, '0');
-  const dateFrom = `${year}-${month}-01`;
-  const lastDay  = new Date(year, now.getMonth() + 1, 0).getDate();
-  const dateTo   = `${year}-${month}-${String(lastDay).padStart(2, '0')}`;
-
-  const res  = await fetch(
-    `${SB_URL_SCH}/rest/v1/call_logs?agent_name=eq.${encodeURIComponent(agentName)}&logged_at=gte.${dateFrom}&logged_at=lte.${dateTo}T23:59:59&select=id`,
-    { headers: { 'apikey': SB_KEY_SCH, 'Authorization': `Bearer ${SB_KEY_SCH}` } }
-  );
-  const data = await res.json();
-  return data ? data.length : 0;
-}
-   
   const shift     = res.todayBreaks ? res.todayBreaks.shift : 'N/A';
   const isWorking = shift && shift !== 'OFF' && shift !== 'N/A' && shift !== '-'
     && shift.trim() !== '' && !/^(annual|sick|casual|ph|task)$/i.test(shift.trim());
@@ -421,11 +405,11 @@ async function fetchTotalCalls(agentName) {
     knownSwapStatuses = {};
   }
 
-schShiftTypes = [];
-loadAgentSchedule().then(() => {
-  loadMyRequests();
-  populateSwapForm();
-});
+  schShiftTypes = [];
+  loadAgentSchedule().then(() => {
+    loadMyRequests();
+    populateSwapForm();
+  });
   globalScheduleData = res.schedule       || [];
   globalTeamData     = res.allStaffBreaks || [];
 
@@ -433,72 +417,30 @@ loadAgentSchedule().then(() => {
   if (tof) tof.style.display = 'block';
 
   document.getElementById('app-preloader').classList.add('hidden');
-}
 
-function _applyGASBreaks(todayBreaks) {
-  document.getElementById('br-break1').innerText = todayBreaks?.break1 || 'N/A';
-  document.getElementById('br-lunch').innerText  = todayBreaks?.lunch  || 'N/A';
-  document.getElementById('br-break2').innerText = todayBreaks?.break2 || 'N/A';
-  startBreakChecker(todayBreaks || {});
-}
-
-function refreshData() {
-  const name   = document.getElementById('user-name').innerText.trim();
-  const avatar = document.getElementById('nav-avatar');
-  avatar.style.animation = 'spin 0.8s linear infinite';
-  gasRun('processLogin', name, 'REFRESH_MODE').then(res => {
-    avatar.style.animation = '';
-    if (res.status === 'success') showDashboard(res);
-  }).catch(() => { avatar.style.animation = ''; });
-}
-
-function checkDataAvailability(data) {
-  const banner  = document.getElementById('no-data-banner');
-  const kpiGrid = document.querySelector('.kpi-grid');
-  if (!data) {
-    banner.style.display        = 'block';
-    kpiGrid.style.opacity       = '0.15';
-    kpiGrid.style.filter        = 'grayscale(1)';
-    kpiGrid.style.pointerEvents = 'none';
-    return false;
-  } else {
-    banner.style.display        = 'none';
-    kpiGrid.style.opacity       = '1';
-    kpiGrid.style.filter        = 'none';
-    kpiGrid.style.pointerEvents = 'auto';
-    return true;
-  }
+  // ── KPI من Supabase ──
+  loadKPIData(res.name);
 }
 
 
-/* ─── 12. KPI FILTER ─── */
-function changeMonthData() {
-  const month  = document.getElementById('monthFilter').value;
-  const name   = document.getElementById('user-name').innerText.trim();
-  const loader = document.getElementById('filter-loader');
-  loader.classList.remove('hidden');
-  document.getElementById('annual-label').innerText = month === 'CURRENT' ? 'Annual Left' : 'Annual Used';
-  gasRun('getFilteredData', name, month).then(data => {
-    loader.classList.add('hidden');
-(async () => {
+/* ─── KPI LOADER ─── */
+async function loadKPIData(agentName) {
   try {
-    const agentName = res.name;
-    const now       = new Date();
-    const year      = now.getFullYear();
-    const month     = now.getMonth(); // 0-indexed
-    const monthStr  = String(month + 1).padStart(2, '0');
-    const dateFrom  = `${year}-${monthStr}-01`;
-    const lastDay   = new Date(year, month + 1, 0).getDate();
-    const dateTo    = `${year}-${monthStr}-${String(lastDay).padStart(2, '0')}T23:59:59`;
+    const now      = new Date();
+    const year     = now.getFullYear();
+    const month    = now.getMonth();
+    const monthStr = String(month + 1).padStart(2, '0');
+    const dateFrom = `${year}-${monthStr}-01`;
+    const lastDay  = new Date(year, month + 1, 0).getDate();
+    const dateTo   = `${year}-${monthStr}-${String(lastDay).padStart(2, '0')}T23:59:59`;
 
     const MONTH_NAMES_SHORT = ['jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec'];
     const MONTH_NAMES_FULL  = ['January','February','March','April','May','June','July','August','September','October','November','December'];
-    const monthKey          = 'used_' + MONTH_NAMES_SHORT[month];
-    const monthFull         = MONTH_NAMES_FULL[month];
+    const monthKey  = 'used_' + MONTH_NAMES_SHORT[month];
+    const monthFull = MONTH_NAMES_FULL[month];
+    const headers   = { 'apikey': SB_KEY_SCH, 'Authorization': `Bearer ${SB_KEY_SCH}` };
 
-    const headers = { 'apikey': SB_KEY_SCH, 'Authorization': `Bearer ${SB_KEY_SCH}` };
-
-    // جيب الـ agent_id الأول
+    // جيب agent_id
     const agentRes  = await fetch(
       `${SB_URL_SCH}/rest/v1/agents?select=id&formal_name=eq.${encodeURIComponent(agentName)}&limit=1`,
       { headers }
@@ -506,48 +448,32 @@ function changeMonthData() {
     const agentData = await agentRes.json();
     const agentId   = agentData?.[0]?.id;
 
-    // ── 1. KPI (conf, missing, aht, exceptions) ──
-    const kpiRes  = await fetch(
-      `${SB_URL_SCH}/rest/v1/kpis?agent_name=eq.${encodeURIComponent(agentName)}&month=eq.${monthFull}&year=eq.${year}&limit=1`,
-      { headers }
-    );
-    const kpiData = await kpiRes.json();
-    const kpi     = kpiData?.[0] || null;
+    // كل الـ requests بالتوازي
+    const [kpiRes, callsRes, annRes, qualRes] = await Promise.all([
+      fetch(`${SB_URL_SCH}/rest/v1/kpis?agent_name=eq.${encodeURIComponent(agentName)}&month=eq.${monthFull}&year=eq.${year}&limit=1`, { headers }),
+      fetch(`${SB_URL_SCH}/rest/v1/call_logs?agent_name=eq.${encodeURIComponent(agentName)}&logged_at=gte.${dateFrom}&logged_at=lte.${dateTo}&select=id`, { headers }),
+      fetch(`${SB_URL_SCH}/rest/v1/annual_leave?agent_id=eq.${agentId}&year=eq.${year}&limit=1`, { headers }),
+      fetch(`${SB_URL_SCH}/rest/v1/quality_scores?agent_id=eq.${agentId}&month=eq.${monthFull}&year=eq.${year}&limit=1`, { headers }),
+    ]);
 
-    // ── 2. Total Calls من call_logs ──
-    const callsRes  = await fetch(
-      `${SB_URL_SCH}/rest/v1/call_logs?agent_name=eq.${encodeURIComponent(agentName)}&logged_at=gte.${dateFrom}&logged_at=lte.${dateTo}&select=id`,
-      { headers }
-    );
-    const callsData = await callsRes.json();
+    const [kpiData, callsData, annData, qualData] = await Promise.all([
+      kpiRes.json(), callsRes.json(), annRes.json(), qualRes.json()
+    ]);
+
+    const kpi        = kpiData?.[0]  || null;
+    const ann        = annData?.[0]  || null;
     const totalCalls = callsData ? callsData.length : 0;
+    const quality    = qualData?.[0]?.score || '-';
+    const annLeft    = ann ? ann.remaining : '-';
+    const annUsed    = ann ? (ann[monthKey] || 0) : 0;
 
-    // ── 3. Annual من annual_leave ──
-    const annRes  = await fetch(
-      `${SB_URL_SCH}/rest/v1/annual_leave?agent_id=eq.${agentId}&year=eq.${year}&limit=1`,
-      { headers }
-    );
-    const annData = await annRes.json();
-    const ann     = annData?.[0] || null;
-    const annLeft = ann ? ann.remaining : '-';
-    const annUsed = ann ? (ann[monthKey] || 0) : 0;
-
-    // ── 4. Quality من quality_scores ──
-    const qualRes  = await fetch(
-      `${SB_URL_SCH}/rest/v1/quality_scores?agent_id=eq.${agentId}&month=eq.${monthFull}&year=eq.${year}&limit=1`,
-      { headers }
-    );
-    const qualData = await qualRes.json();
-    const quality  = qualData?.[0]?.score || '-';
-
-    // ── حط الأرقام في الـ cards ──
     const hasData = kpi || totalCalls > 0 || ann || qualData?.[0];
     checkDataAvailability(hasData ? {} : null);
 
     document.getElementById('d-conformance').innerText = kpi?.conformance  || '-';
     document.getElementById('d-missing').innerText     = kpi?.missing_time || '-';
     document.getElementById('d-aht').innerText         = kpi?.avg_aht      || '-';
-    document.getElementById('d-calls').innerText       = totalCalls        || '-';
+    document.getElementById('d-calls').innerText       = totalCalls || '-';
     document.getElementById('d-annual').innerText      = annLeft;
     document.getElementById('d-exceptions').innerText  = kpi?.exceptions   || '-';
     document.getElementById('d-quality').innerText     = quality;
@@ -559,7 +485,87 @@ function changeMonthData() {
     console.error('KPI fetch error:', e);
     checkDataAvailability(null);
   }
-})();
+}
+
+
+/* ─── 12. KPI FILTER ─── */
+async function changeMonthData() {
+  const selectedMonth = document.getElementById('monthFilter').value;
+  const agentName     = document.getElementById('user-name').innerText.trim();
+  const loader        = document.getElementById('filter-loader');
+  loader.classList.remove('hidden');
+  document.getElementById('annual-label').innerText = selectedMonth === 'CURRENT' ? 'Annual Left' : 'Annual Used';
+
+  try {
+    const now   = new Date();
+    const year  = now.getFullYear();
+    const MONTH_NAMES_FULL  = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+    const MONTH_NAMES_SHORT = ['jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec'];
+
+    let monthFull, monthStr, monthIdx;
+    if (selectedMonth === 'CURRENT') {
+      monthIdx  = now.getMonth();
+      monthFull = MONTH_NAMES_FULL[monthIdx];
+      monthStr  = String(monthIdx + 1).padStart(2, '0');
+    } else {
+      const MONTHS_SHORT_MAP = {'Jan':0,'Feb':1,'Mar':2,'Apr':3,'May':4,'Jun':5,'Jul':6,'Aug':7,'Sep':8,'Oct':9,'Nov':10,'Dec':11};
+      monthIdx  = MONTHS_SHORT_MAP[selectedMonth] ?? now.getMonth();
+      monthFull = MONTH_NAMES_FULL[monthIdx];
+      monthStr  = String(monthIdx + 1).padStart(2, '0');
+    }
+    const dateFrom = `${year}-${monthStr}-01`;
+    const lastDay  = new Date(year, monthIdx + 1, 0).getDate();
+    const dateTo   = `${year}-${monthStr}-${String(lastDay).padStart(2, '0')}T23:59:59`;
+    const monthKey = 'used_' + MONTH_NAMES_SHORT[monthIdx];
+    const headers  = { 'apikey': SB_KEY_SCH, 'Authorization': `Bearer ${SB_KEY_SCH}` };
+
+    const agentRes  = await fetch(
+      `${SB_URL_SCH}/rest/v1/agents?select=id&formal_name=eq.${encodeURIComponent(agentName)}&limit=1`,
+      { headers }
+    );
+    const agentData = await agentRes.json();
+    const agentId   = agentData?.[0]?.id;
+
+    const [kpiRes, callsRes, annRes, qualRes] = await Promise.all([
+      fetch(`${SB_URL_SCH}/rest/v1/kpis?agent_name=eq.${encodeURIComponent(agentName)}&month=eq.${monthFull}&year=eq.${year}&limit=1`, { headers }),
+      fetch(`${SB_URL_SCH}/rest/v1/call_logs?agent_name=eq.${encodeURIComponent(agentName)}&logged_at=gte.${dateFrom}&logged_at=lte.${dateTo}&select=id`, { headers }),
+      fetch(`${SB_URL_SCH}/rest/v1/annual_leave?agent_id=eq.${agentId}&year=eq.${year}&limit=1`, { headers }),
+      fetch(`${SB_URL_SCH}/rest/v1/quality_scores?agent_id=eq.${agentId}&month=eq.${monthFull}&year=eq.${year}&limit=1`, { headers }),
+    ]);
+
+    const [kpiData, callsData, annData, qualData] = await Promise.all([
+      kpiRes.json(), callsRes.json(), annRes.json(), qualRes.json()
+    ]);
+
+    loader.classList.add('hidden');
+
+    const kpi        = kpiData?.[0]  || null;
+    const ann        = annData?.[0]  || null;
+    const totalCalls = callsData ? callsData.length : 0;
+    const quality    = qualData?.[0]?.score || '-';
+    const annLeft    = ann ? ann.remaining : '-';
+    const annUsed    = ann ? (ann[monthKey] || 0) : 0;
+
+    const hasData = kpi || totalCalls > 0 || ann || qualData?.[0];
+    checkDataAvailability(hasData ? {} : null);
+
+    document.getElementById('d-conformance').innerText = kpi?.conformance  || '-';
+    document.getElementById('d-missing').innerText     = kpi?.missing_time || '-';
+    document.getElementById('d-aht').innerText         = kpi?.avg_aht      || '-';
+    document.getElementById('d-calls').innerText       = totalCalls || '-';
+    document.getElementById('d-annual').innerText      = selectedMonth === 'CURRENT' ? annLeft : annUsed;
+    document.getElementById('d-exceptions').innerText  = kpi?.exceptions   || '-';
+    document.getElementById('d-quality').innerText     = quality;
+
+    currentAnnualData.left = annLeft || 0;
+    currentAnnualData.used = annUsed || 0;
+
+  } catch(e) {
+    loader.classList.add('hidden');
+    console.error('KPI filter error:', e);
+  }
+}
+
      
 
 /* ─── 21. ANNUAL LEAVE ─── */
@@ -583,7 +589,6 @@ function showAnnualDetails() {
       : '';
   });
 }
-
 
 /* ─── 22. MISSING PUNCH ─── */
 async function sendMissingPunch() {
