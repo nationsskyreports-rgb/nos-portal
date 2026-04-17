@@ -53,7 +53,7 @@ async function initSchTab() {
 
 function autoSelectCurrentWeek() {
   if (!schWeeks.length) return;
-  const todayIso = new Date().toISOString().split('T')[0];
+  const todayIso = getLocalDateStr();
   let targetWeek = schWeeks.find(w => w.week_start <= todayIso && w.week_end >= todayIso);
   if (!targetWeek) {
     const future = schWeeks.filter(w => w.week_start > todayIso).sort((a,b) => a.week_start.localeCompare(b.week_start));
@@ -69,7 +69,7 @@ async function loadCurrentAndNextWeeks(currentWeek) {
   const gridEl = document.getElementById('sch-table-grid');
   gridEl.innerHTML = '<div class="empty-state"><i class="fas fa-spinner spinner"></i> Loading...</div>';
 
-  const todayIso = new Date().toISOString().split('T')[0];
+  const todayIso = getLocalDateStr();
   const nextWeek = schWeeks.filter(w => w.week_start > currentWeek.week_end)
     .sort((a,b) => a.week_start.localeCompare(b.week_start))[0];
 
