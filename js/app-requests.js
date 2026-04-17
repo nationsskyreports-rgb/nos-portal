@@ -4,10 +4,23 @@
 
 /* ─── 11. REQUESTS RENDER ─── */
 async function loadMyRequests() {
-  if (!schMyAgentId) return;
   try {
+    // جيب الـ agent_id من الـ session لو schMyAgentId مش موجود
+    let agentId = schMyAgentId;
+    if (!agentId) {
+      const agentName = document.getElementById('user-name')?.innerText.trim();
+      if (!agentName) return;
+      const res  = await fetch(
+        `${SB_URL_SCH}/rest/v1/agents?select=id&formal_name=eq.${encodeURIComponent(agentName)}&status=eq.Active&limit=1`,
+        { headers: { 'apikey': SB_KEY_SCH, 'Authorization': `Bearer ${window._authToken || SB_KEY_SCH}` } }
+      );
+      const data = await res.json();
+      if (!data || !data.length) return;
+      agentId = data[0].id;
+      schMyAgentId = agentId;
+    }
     const res  = await fetch(
-      `${SB_URL_SCH}/rest/v1/requests?agent_id=eq.${schMyAgentId}&order=created_at.desc`,
+      `${SB_URL_SCH}/rest/v1/requests?agent_id=eq.${agentId}&order=created_at.desc`,
       { headers: { 'apikey': SB_KEY_SCH, 'Authorization': `Bearer ${window._authToken || SB_KEY_SCH}` } }
     );
     const data = await res.json();
