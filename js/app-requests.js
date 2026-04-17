@@ -123,17 +123,43 @@ async function sendExcuse() {
 }
 
 function undoLastExcuse() {
-  const name = document.getElementById('user-name').innerText.trim();
-  customConfirm('Confirm', 'Remove your last excuse request?').then(r => {
+  customConfirm('Confirm', 'Remove your last excuse request?').then(async r => {
     if (!r) return;
-    gasRun('undoExcuseFromWeb', name).then(res => {
-      document.getElementById('excuse-msg').style.color = res.status === 'success' ? 'var(--warn)' : 'var(--danger)';
-      document.getElementById('excuse-msg').innerText   = res.msg;
-      if (res.status === 'success') customAlert('Success', res.msg);
-    });
+    if (!schMyAgentId) { customAlert('Error', 'Agent not found — please refresh!'); return; }
+
+    const msg = document.getElementById('excuse-msg');
+    try {
+      const res  = await fetch(
+        `${SB_URL_SCH}/rest/v1/excuses?agent_id=eq.${schMyAgentId}&order=created_at.desc&limit=1`,
+        { headers: { 'apikey': SB_KEY_SCH, 'Authorization': `Bearer ${SB_KEY_SCH}` } }
+      );
+      const data = await res.json();
+
+      if (!data || !data.length) {
+        msg.style.color = 'var(--danger)';
+        msg.innerText   = 'No excuses found to undo.';
+        return;
+      }
+
+      const delRes = await fetch(
+        `${SB_URL_SCH}/rest/v1/excuses?id=eq.${data[0].id}`,
+        { method: 'DELETE', headers: { 'apikey': SB_KEY_SCH, 'Authorization': `Bearer ${SB_KEY_SCH}` } }
+      );
+
+      if (delRes.ok) {
+        msg.style.color = 'var(--warn)';
+        msg.innerText   = '✅ Last excuse removed successfully.';
+        customAlert('Success', 'Last excuse removed successfully.');
+      } else {
+        msg.style.color = 'var(--danger)';
+        msg.innerText   = '❌ Failed. Try again.';
+      }
+    } catch(e) {
+      msg.style.color = 'var(--danger)';
+      msg.innerText   = '❌ Connection error!';
+    }
   });
 }
-
 function selectTimeOffType(type) {
   selectedTimeOffType = type;
   const form = document.getElementById('time-off-form');
@@ -287,17 +313,29 @@ function onSwapDayChange() {
 
   colleagueSelect.innerHTML = '<option value="">Choose a colleague...</option>';
   const currentName = document.getElementById('user-name').innerText.trim();
-  gasRun('getDayShifts', date).then(res => {
-    if (res && res.shifts && res.shifts.length) {
-      res.shifts.forEach(s => {
-        if (s.name !== currentName) {
-          const opt = document.createElement('option');
-          opt.value = s.name; opt.textContent = s.name + '  —  ' + (s.shift || 'OFF');
-          colleagueSelect.appendChild(opt);
-        }
-      });
-    }
-  });
+
+  const [y, mo, d2] = [date.split('/')[2], date.split('/')[1], date.split('/')[0]];
+  const dateISO = `${y}-${mo.padStart(2,'0')}-${d2.padStart(2,'0')}`;
+
+  fetch(
+    `${SB_URL_SCH}/rest/v1/schedule?shift_date=eq.${dateISO}&select=day_type,shift_type_id,agents(formal_name),shift_types(start_time,end_time)`,
+    { headers: { 'apikey': SB_KEY_SCH, 'Authorization': `Bearer ${SB_KEY_SCH}` } }
+  )
+  .then(r => r.json())
+  .then(rows => {
+    (rows || []).forEach(s => {
+      const name = s.agents?.formal_name || '';
+      if (!name || name === currentName) return;
+      const shift = s.day_type === 'Work' && s.shift_types
+        ? s.shift_types.start_time.substring(0,5) + ' - ' + s.shift_types.end_time.substring(0,5)
+        : s.day_type || 'OFF';
+      const opt       = document.createElement('option');
+      opt.value       = name;
+      opt.textContent = name + '  —  ' + shift;
+      colleagueSelect.appendChild(opt);
+    });
+  })
+  .catch(() => {});
 }
 
 function onSwapColleagueChange() {
@@ -314,13 +352,30 @@ function onSwapColleagueChange() {
   shiftEl.innerText = 'Loading...'; shiftEl.className = 'swap-compare-value swap-empty';
   boxEl.classList.remove('swap-active');
 
-  gasRun('getColleagueShift', colleague, date).then(res => {
-    if (res && res.shift) {
-      shiftEl.innerText = res.shift; shiftEl.className = 'swap-compare-value'; boxEl.classList.add('swap-active');
+  const [y, mo, d2] = [date.split('/')[2], date.split('/')[1], date.split('/')[0]];
+  const dateISO     = `${y}-${mo.padStart(2,'0')}-${d2.padStart(2,'0')}`;
+
+  fetch(
+    `${SB_URL_SCH}/rest/v1/schedule?shift_date=eq.${dateISO}&select=day_type,shift_types(start_time,end_time),agents(formal_name)`,
+    { headers: { 'apikey': SB_KEY_SCH, 'Authorization': `Bearer ${SB_KEY_SCH}` } }
+  )
+  .then(r => r.json())
+  .then(rows => {
+    const row = (rows || []).find(s => s.agents?.formal_name === colleague);
+    if (row && row.day_type === 'Work' && row.shift_types) {
+      const shift = row.shift_types.start_time.substring(0,5) + ' - ' + row.shift_types.end_time.substring(0,5);
+      shiftEl.innerText = shift;
+      shiftEl.className = 'swap-compare-value';
+      boxEl.classList.add('swap-active');
     } else {
-      shiftEl.innerText = 'No shift on this day'; shiftEl.className = 'swap-compare-value swap-empty';
+      shiftEl.innerText = 'No shift on this day';
+      shiftEl.className = 'swap-compare-value swap-empty';
     }
-  }).catch(() => { shiftEl.innerText = 'Error loading'; shiftEl.className = 'swap-compare-value swap-empty'; });
+  })
+  .catch(() => {
+    shiftEl.innerText = 'Error loading';
+    shiftEl.className = 'swap-compare-value swap-empty';
+  });
 }
 
 function submitShiftSwap() {
