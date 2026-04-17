@@ -109,11 +109,10 @@ function submitChangePassword() {
 
 
 /* ─── 05. APP INIT (FIXED — parallel GAS calls) ─── */
+
 window.onload = async function() {
   applyTheme();
   if ('Notification' in window) Notification.requestPermission();
-
-  // 1. جيب الـ session
   let savedSession = null;
   try {
     const saved = sessionStorage.getItem('ns-session');
@@ -122,8 +121,6 @@ window.onload = async function() {
       if (sess && sess.name) savedSession = sess;
     }
   } catch(e) {}
-
-  // 2. جيب agent list من Supabase مش GAS ⚡
   const agentListCall = fetch(
     `${SB_URL_SCH}/rest/v1/agents?select=formal_name&status=eq.Active&order=formal_name`,
     { headers: { 'apikey': SB_KEY_SCH, 'Authorization': `Bearer ${SB_KEY_SCH}` } }
@@ -131,16 +128,10 @@ window.onload = async function() {
   .then(r => r.json())
   .then(data => (data || []).map(a => ({ name: a.formal_name, code: '' })))
   .catch(() => []);
-
-  // 3. لو فيه session — GAS login وSupabase مع بعض
   const loginCall = savedSession
     ? gasRun('processLogin', savedSession.name, 'REFRESH_MODE').catch(() => null)
     : Promise.resolve(null);
-
-  // 4. شغل الاتنين مع بعض
   const [agentResult, loginRes] = await Promise.all([agentListCall, loginCall]);
-
-  // 5. ملي agent dropdown
   const s2 = document.getElementById('f-agent');
   s2.innerHTML = '<option value="">Select agent...</option>';
   if (agentResult && agentResult.length) {
@@ -149,18 +140,28 @@ window.onload = async function() {
       s2.add(new Option(item.name, item.name));
     });
   }
-
-  // 6. لو فيه session محفوظة
   if (loginRes && loginRes.status === 'success') {
     showDashboard(loginRes);
   } else {
     if (savedSession) sessionStorage.removeItem('ns-session');
     document.getElementById('app-preloader').classList.add('hidden');
   }
-
   const tof = document.getElementById('time-off-form');
   if (tof) tof.style.display = 'block';
+  scheduleNightlyRefresh();
 };
+
+function scheduleNightlyRefresh() {
+  const now    = new Date();
+  const target = new Date();
+  target.setHours(3, 0, 0, 0);
+  if (now >= target) target.setDate(target.getDate() + 1);
+  const msUntil3AM = target - now;
+  setTimeout(() => {
+    window.location.reload(true);
+  }, msUntil3AM);
+  console.log(`Auto refresh in ${Math.round(msUntil3AM / 1000 / 60)} minutes`);
+}
 
 /* ─── 07. LOGIN & AUTH ─── */
 function handleLoginSubmit(event) { event.preventDefault(); login(); }
@@ -528,18 +529,3 @@ document.addEventListener('touchmove', e => {
     if (target && !dashboard.contains(target)) e.preventDefault();
   }
 }, { passive: false });
-/* ─── AUTO REFRESH AT 3AM ─── */
-function scheduleNightlyRefresh() {
-  const now     = new Date();
-  const target  = new Date();
-  target.setHours(3, 0, 0, 0);
-  if (now >= target) target.setDate(target.getDate() + 1);
-
-  const msUntil3AM = target - now;
-
-  setTimeout(() => {
-  window.location.reload(true);
-  }, msUntil3AM);
-
-  console.log(`🕒 Auto refresh scheduled in ${Math.round(msUntil3AM / 1000 / 60)} minutes`);
-}
