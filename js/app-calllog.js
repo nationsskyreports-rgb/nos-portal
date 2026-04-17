@@ -383,8 +383,8 @@ async function fetchMyCallLog(agent) {
     const toDate   = document.getElementById('mylog-to')?.value;
     if (!fromDate || !toDate) return;
 
-    const fromISO = new Date(fromDate).toISOString();
-    const toISO   = new Date(toDate + 'T23:59:59').toISOString();
+    const fromISO = new Date(fromDate + 'T00:00:00+03:00').toISOString();
+    const toISO   = new Date(toDate   + 'T23:59:59+03:00').toISOString();
 
     const res  = await fetch(
       `${SB_URL_SCH}/rest/v1/call_logs?agent_name=eq.${encodeURIComponent(agent)}&logged_at=gte.${fromISO}&logged_at=lte.${toISO}&order=logged_at.desc`,
