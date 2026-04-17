@@ -370,7 +370,7 @@ async function loadMyCallLog() {
         <div style="display:flex;gap:8px;align-items:center;">
           <input type="date" id="mylog-from" class="form-input" style="width:140px;font-size:13px;" value="${today}">
           <input type="date" id="mylog-to"   class="form-input" style="width:140px;font-size:13px;" value="${today}">
-          <button class="action-btn c-accent" onclick="fetchMyCallLog('${agent}')"><i class="fas fa-search"></i> Filter</button>
+          <button class="action-btn c-accent" onclick="fetchMyCallLog(document.getElementById('user-name').innerText.trim())"><i class="fas fa-search"></i> Filter</button>
         </div>
       </div>
       <div id="mylog-content"><div class="empty-state"><i class="fas fa-spinner spinner"></i> Loading...</div></div>
