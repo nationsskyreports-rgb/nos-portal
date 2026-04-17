@@ -412,12 +412,13 @@ function showDashboard(res) {
     knownSwapStatuses = {};
   }
 
-  schShiftTypes = [];
-  loadAgentSchedule();
+schShiftTypes = [];
+loadAgentSchedule().then(() => {
   loadMyRequests();
+  populateSwapForm();
+});
   globalScheduleData = res.schedule       || [];
   globalTeamData     = res.allStaffBreaks || [];
-  populateSwapForm();
 
   const tof = document.getElementById('time-off-form');
   if (tof) tof.style.display = 'block';
