@@ -140,7 +140,7 @@ window.onload = async function() {
   } catch(e) {}
   const agentListCall = fetch(
     `${SB_URL_SCH}/rest/v1/agents?select=formal_name&status=eq.Active&order=formal_name`,
-    { headers: { 'apikey': SB_KEY_SCH, 'Authorization': `Bearer ${SB_KEY_SCH}` } }
+    { headers: { 'apikey': SB_KEY_SCH, 'Authorization': `Bearer ${window._authToken || SB_KEY_SCH}` } }
   )
   .then(r => r.json())
   .then(data => (data || []).map(a => ({ name: a.formal_name, code: '' })))
@@ -149,6 +149,7 @@ window.onload = async function() {
     ? sbClient.auth.getSession()
       .then(async ({ data: { session } }) => {
         if (!session) return null;
+        window._authToken = session.access_token;
         const res  = await fetch(
           `${SB_URL_SCH}/rest/v1/agents?select=id,formal_name,role&formal_name=eq.${encodeURIComponent(savedSession.name)}&status=eq.Active&limit=1`,
           { headers: { 'apikey': SB_KEY_SCH, 'Authorization': `Bearer ${session.access_token}` } }
@@ -235,7 +236,7 @@ async function login() {
     // 1. جيب الـ email من اسم الـ agent
     const lookupRes  = await fetch(
       `${SB_URL_SCH}/rest/v1/agents?select=id,formal_name,role,email,status&formal_name=eq.${encodeURIComponent(name)}&status=eq.Active&limit=1`,
-      { headers: { 'apikey': SB_KEY_SCH, 'Authorization': `Bearer ${SB_KEY_SCH}` } }
+      { headers: { 'apikey': SB_KEY_SCH, 'Authorization': `Bearer ${window._authToken || SB_KEY_SCH}` } }
     );
     const lookupData = await lookupRes.json();
 
@@ -262,6 +263,8 @@ async function login() {
       msg.innerHTML   = '<i class="fas fa-times-circle"></i> Invalid Password';
       return;
     }
+
+    window._authToken = authData.session.access_token;
 
     schMyAgentId = agent.id;
     const loginRes = {
@@ -293,7 +296,7 @@ async function submitReset() {
   try {
     const res  = await fetch(
       `${SB_URL_SCH}/rest/v1/agents?select=id,email&formal_name=eq.${encodeURIComponent(name)}&limit=1`,
-      { headers: { 'apikey': SB_KEY_SCH, 'Authorization': `Bearer ${SB_KEY_SCH}` } }
+      { headers: { 'apikey': SB_KEY_SCH, 'Authorization': `Bearer ${window._authToken || SB_KEY_SCH}` } }
     );
     const data = await res.json();
     if (!data || !data.length) { customAlert('Error', 'User not found'); return; }
@@ -309,7 +312,7 @@ async function submitReset() {
 
     await fetch(`${SB_URL_SCH}/rest/v1/agents?id=eq.${data[0].id}`, {
       method: 'PATCH',
-      headers: { 'apikey': SB_KEY_SCH, 'Authorization': `Bearer ${SB_KEY_SCH}`, 'Content-Type': 'application/json' },
+      headers: { 'apikey': SB_KEY_SCH, 'Authorization': `Bearer ${window._authToken || SB_KEY_SCH}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({ password_hash: newP, updated_at: new Date().toISOString() })
     });
 
@@ -478,7 +481,7 @@ async function loadKPIData(agentName) {
     const MONTH_NAMES_FULL  = ['January','February','March','April','May','June','July','August','September','October','November','December'];
     const monthKey  = 'used_' + MONTH_NAMES_SHORT[month];
     const monthFull = MONTH_NAMES_FULL[month];
-    const headers   = { 'apikey': SB_KEY_SCH, 'Authorization': `Bearer ${SB_KEY_SCH}` };
+    const headers   = { 'apikey': SB_KEY_SCH, 'Authorization': `Bearer ${window._authToken || SB_KEY_SCH}` };
 
     // جيب agent_id
     const agentRes  = await fetch(
@@ -598,7 +601,7 @@ async function changeMonthData() {
     const lastDay   = new Date(year, monthIdx + 1, 0).getDate();
     const dateTo    = `${year}-${monthStr}-${String(lastDay).padStart(2, '0')}`;
 
-    const headers = { 'apikey': SB_KEY_SCH, 'Authorization': `Bearer ${SB_KEY_SCH}` };
+    const headers = { 'apikey': SB_KEY_SCH, 'Authorization': `Bearer ${window._authToken || SB_KEY_SCH}` };
 
     // جيب agent_id
     const agentRes  = await fetch(
@@ -697,7 +700,7 @@ async function showAnnualDetails() {
 
   try {
     const year    = new Date().getFullYear();
-    const headers = { 'apikey': SB_KEY_SCH, 'Authorization': `Bearer ${SB_KEY_SCH}` };
+    const headers = { 'apikey': SB_KEY_SCH, 'Authorization': `Bearer ${window._authToken || SB_KEY_SCH}` };
 
     const res  = await fetch(
       `${SB_URL_SCH}/rest/v1/annual_leave?agent_id=eq.${schMyAgentId}&year=eq.${year}&limit=1`,
@@ -751,7 +754,7 @@ async function sendMissingPunch() {
     try {
       const res = await fetch(`${SB_URL_SCH}/rest/v1/requests`, {
         method:  'POST',
-        headers: { 'apikey': SB_KEY_SCH, 'Authorization': `Bearer ${SB_KEY_SCH}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+        headers: { 'apikey': SB_KEY_SCH, 'Authorization': `Bearer ${window._authToken || SB_KEY_SCH}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
         body: JSON.stringify({
           agent_id: schMyAgentId, agent_name: name, type: 'Missing Punch', status: 'Pending',
           details: JSON.stringify({ date: missingPunchDate }),
