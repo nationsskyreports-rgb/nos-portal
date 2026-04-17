@@ -378,8 +378,7 @@ async function showDashboard(res) {
   // ── جيب الشيفت الحقيقي من schedule table ──
   let todayShift = 'N/A';
   try {
-    const _now      = new Date();
-    const today     = new Date(_now.getTime() + 3*60*60*1000).toISOString().split('T')[0];
+    const today     = getLocalDateStr();
     const agentData = await sbFetchSch(`agents?select=id&formal_name=eq.${encodeURIComponent(res.name)}&status=eq.Active&limit=1`);
     if (agentData && agentData[0]) {
       schMyAgentId = agentData[0].id;
