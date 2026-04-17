@@ -25,7 +25,7 @@ function renderTeam(staff) {
 }
 
 async function loadTeamBreaksFromSB() {
-  const today = new Date().toISOString().split('T')[0];
+  const today = getLocalDateStr();
   try {
     const breaksRes = await fetch(
       `${SB_URL_SCH}/rest/v1/breaks?break_date=eq.${today}&select=*,agents(id,formal_name)`,
@@ -67,7 +67,7 @@ async function loadTeamBreaksFromSB() {
 
 /* ─── LOAD TODAY BREAKS FROM SB ─── */
 async function loadTodayBreaksFromSB(agentId) {
-  const today = new Date().toISOString().split('T')[0];
+  const today = getLocalDateStr();
   try {
     const res  = await fetch(
       `${SB_URL_SCH}/rest/v1/breaks?agent_id=eq.${agentId}&break_date=eq.${today}&select=*`,
@@ -114,7 +114,7 @@ function applyBreaksToUI(breaks) {
 }
 
 function subscribeTodayBreaks(agentId) {
-  const today = new Date().toISOString().split('T')[0];
+  const today = getLocalDateStr();
   if (sbBreaksChannel) { sbClient.removeChannel(sbBreaksChannel); sbBreaksChannel = null; }
   sbBreaksChannel = sbClient
     .channel('agent-breaks-' + agentId)
@@ -314,7 +314,7 @@ function minsToTimeStr(m) {
 }
 
 async function findAvailableBreakSlot(requestedTime, breakType, agentShiftStart, agentShiftEnd) {
-  const today  = new Date().toISOString().split('T')[0];
+  const today  = getLocalDateStr();
   const colMap = { 'Break 1': 'break1', 'Lunch': 'lunch', 'Break 2': 'break2' };
   const col    = colMap[breakType];
   const durMap = { 'Break 1': 15, 'Lunch': 30, 'Break 2': 15 };
@@ -354,7 +354,7 @@ async function findAvailableBreakSlot(requestedTime, breakType, agentShiftStart,
 
 async function confirmBreakTime(time) {
   if (!schMyAgentId) { showToast('❌','Error','Agent not found!','danger',4000); return; }
-  const today  = new Date().toISOString().split('T')[0];
+  const today  = getLocalDateStr();
   const colMap = { 'Break 1': 'break1', 'Lunch': 'lunch', 'Break 2': 'break2' };
   const col    = colMap[selectedBreakType];
   const btn    = document.getElementById('swapBtn');
