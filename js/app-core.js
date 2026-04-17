@@ -148,7 +148,26 @@ window.onload = async function() {
   .then(data => (data || []).map(a => ({ name: a.formal_name, code: '' })))
   .catch(() => []);
   const loginCall = savedSession
-    ? gasRun('processLogin', savedSession.name, 'REFRESH_MODE').catch(() => null)
+    ? fetch(
+        `${SB_URL_SCH}/rest/v1/agents?select=id,formal_name,role&formal_name=eq.${encodeURIComponent(savedSession.name)}&status=eq.Active&limit=1`,
+        { headers: { 'apikey': SB_KEY_SCH, 'Authorization': `Bearer ${SB_KEY_SCH}` } }
+      )
+      .then(r => r.json())
+      .then(data => {
+        if (!data || !data.length) return null;
+        schMyAgentId = data[0].id;
+        return {
+          status:         'success',
+          name:           data[0].formal_name,
+          role:           data[0].role || 'Agent',
+          data:           null,
+          schedule:       [],
+          todayBreaks:    { shift: 'N/A', break1: '-', lunch: '-', break2: '-' },
+          allStaffBreaks: [],
+          userRequests:   []
+        };
+      })
+      .catch(() => null)
     : Promise.resolve(null);
   const [agentResult, loginRes] = await Promise.all([agentListCall, loginCall]);
   const s2 = document.getElementById('f-agent');
@@ -267,17 +286,36 @@ async function login() {
   }
 }
 
-function submitReset() {
+async function submitReset() {
   const name  = document.getElementById('empList').value;
   const oldP  = document.getElementById('old-pass').value;
   const newP  = document.getElementById('new-pass').value;
   const confP = document.getElementById('confirm-pass').value;
   if (!oldP || !newP || !confP) { customAlert('Error', 'Fill all fields'); return; }
   if (newP !== confP)           { customAlert('Error', "Passwords don't match!"); return; }
-  gasRun('updatePassword', name, oldP, newP).then(res => {
-    if (res.status === 'success') customAlert('Success', 'Password updated!').then(() => toggleReset(false));
-    else customAlert('Error', res.msg);
-  });
+
+  try {
+    const res  = await fetch(
+      `${SB_URL_SCH}/rest/v1/agents?select=id,password_hash&formal_name=eq.${encodeURIComponent(name)}&limit=1`,
+      { headers: { 'apikey': SB_KEY_SCH, 'Authorization': `Bearer ${SB_KEY_SCH}` } }
+    );
+    const data = await res.json();
+    if (!data || !data.length)          { customAlert('Error', 'User not found'); return; }
+    if (data[0].password_hash !== oldP) { customAlert('Error', 'Old password incorrect'); return; }
+
+    const upd = await fetch(
+      `${SB_URL_SCH}/rest/v1/agents?id=eq.${data[0].id}`,
+      {
+        method:  'PATCH',
+        headers: { 'apikey': SB_KEY_SCH, 'Authorization': `Bearer ${SB_KEY_SCH}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password_hash: newP, updated_at: new Date().toISOString() })
+      }
+    );
+    if (upd.ok) customAlert('Success', 'Password updated!').then(() => toggleReset(false));
+    else        customAlert('Error', 'Update failed. Try again.');
+  } catch(e) {
+    customAlert('Error', 'Connection error!');
+  }
 }
 
 function logout() {
@@ -647,25 +685,54 @@ async function changeMonthData() {
 }     
 
 /* ─── 21. ANNUAL LEAVE ─── */
-function showAnnualDetails() {
+async function showAnnualDetails() {
   const details = document.getElementById('annual-details');
   if (details.style.display !== 'none') { details.style.display = 'none'; return; }
   const name = document.getElementById('user-name').innerText.trim();
   details.style.display = 'block';
   ['annual-entitlement','annual-carry','annual-total','annual-used','annual-remaining']
     .forEach(id => document.getElementById(id).innerText = '...');
-  gasRun('getAnnualData', name).then(data => {
-    if (!data) { details.style.display = 'none'; return; }
-    document.getElementById('annual-entitlement').innerText = data.entitlement + ' Days';
-    document.getElementById('annual-carry').innerText       = data.carryOver   + ' Days';
-    document.getElementById('annual-total').innerText       = data.total       + ' Days';
-    document.getElementById('annual-used').innerText        = data.used        + ' Days';
-    document.getElementById('annual-remaining').innerText   = data.remaining   + ' Days';
+
+  try {
+    const year    = new Date().getFullYear();
+    const headers = { 'apikey': SB_KEY_SCH, 'Authorization': `Bearer ${SB_KEY_SCH}` };
+
+    const res  = await fetch(
+      `${SB_URL_SCH}/rest/v1/annual_leave?agent_id=eq.${schMyAgentId}&year=eq.${year}&limit=1`,
+      { headers }
+    );
+    const data = await res.json();
+    const row  = data?.[0];
+
+    if (!row) { details.style.display = 'none'; return; }
+
+    const MONTHS_SHORT = ['jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec'];
+    const MONTHS_FULL  = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+
+    const entitlement = row.entitlement || 0;
+    const carryOver   = row.carry_over  || 0;
+    const total       = entitlement + carryOver;
+    const used        = MONTHS_SHORT.reduce((s, m) => s + (row['used_' + m] || 0), 0);
+    const remaining   = row.remaining ?? (total - used);
+
+    document.getElementById('annual-entitlement').innerText = entitlement + ' Days';
+    document.getElementById('annual-carry').innerText       = carryOver   + ' Days';
+    document.getElementById('annual-total').innerText       = total       + ' Days';
+    document.getElementById('annual-used').innerText        = used        + ' Days';
+    document.getElementById('annual-remaining').innerText   = remaining   + ' Days';
+
+    const months = MONTHS_SHORT
+      .map((m, i) => ({ month: MONTHS_FULL[i], used: row['used_' + m] || 0 }))
+      .filter(m => m.used > 0);
+
     const monthsDiv = document.getElementById('annual-months');
-    monthsDiv.innerHTML = data.months && data.months.length
-      ? data.months.map(m => '📅 '+m.month+': <b>'+m.used+' Days</b>').join(' &nbsp;|&nbsp; ')
+    monthsDiv.innerHTML = months.length
+      ? months.map(m => '📅 ' + m.month + ': <b>' + m.used + ' Days</b>').join(' &nbsp;|&nbsp; ')
       : '';
-  });
+  } catch(e) {
+    details.style.display = 'none';
+    console.error('Annual details error:', e);
+  }
 }
 
 /* ─── 22. MISSING PUNCH ─── */
