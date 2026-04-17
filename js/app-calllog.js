@@ -220,11 +220,11 @@ function searchCustomer() {
   const searchBtn = document.querySelector('[onclick="searchCustomer()"]');
   if (searchBtn) setButtonLoading(searchBtn, true, 'Searching...');
 
+  const normalizedQuery = query.replace(/^0+/, '');
+
   fetch(
-const normalizedQuery = query.replace(/^0+/, ''); 
-const url = `${SB_URL_SCH}/rest/v1/call_logs?or=(customer_name.ilike.%25${encodeURIComponent(query)}%25,customer_mobile.ilike.%25${encodeURIComponent(query)}%25,customer_mobile.ilike.%25${encodeURIComponent(normalizedQuery)}%25)&order=logged_at.desc&limit=20`;
-     
-     { headers: { 'apikey': SB_KEY_SCH, 'Authorization': `Bearer ${SB_KEY_SCH}` } }
+    `${SB_URL_SCH}/rest/v1/call_logs?or=(customer_name.ilike.%25${encodeURIComponent(query)}%25,customer_mobile.ilike.%25${encodeURIComponent(query)}%25,customer_mobile.ilike.%25${encodeURIComponent(normalizedQuery)}%25)&order=logged_at.desc&limit=20`,
+    { headers: { 'apikey': SB_KEY_SCH, 'Authorization': `Bearer ${SB_KEY_SCH}` } }
   )
   .then(r => r.json())
   .then(results => {
