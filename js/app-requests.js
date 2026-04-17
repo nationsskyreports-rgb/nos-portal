@@ -36,6 +36,10 @@ function renderRequests(requests) {
       else if (req.type === 'Shift Swap')    details = `${d.date||''} · with ${d.colleague||''}`;
       else if (req.type === 'Missing Punch') details = `Date: ${d.date||''}`;
       else if (req.type === 'Schedule Request') details = `أسبوع: ${d.week_start||''}`;
+      else if (req.type === 'Break Change') {
+      const d = typeof req.details === 'string' ? JSON.parse(req.details) : req.details;
+      details = `${d.break_type} → ${d.new_time} (${d.date||''})`;
+    }   
       else details = req.details || '';
     } catch(e) { details = ''; }
 
