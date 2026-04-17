@@ -209,16 +209,11 @@ async function syncOfflineCalls() {
   for (const call of calls) {
     try {
       const { _offlineId, _savedAt, ...data } = call;
-      const action = data._channel === 'whatsapp' ? 'submitWhatsAppLog' : 'submitCallLog';
       delete data._channel;
 
       await sbInsertCallLog(data, _savedAt);
-
-      const res = await gasRun(action, data);
-      if (res.status === 'success') {
-        removeOfflineCall(_offlineId);
-        synced++;
-      }
+      removeOfflineCall(_offlineId);
+      synced++;
     } catch(e) {
       console.warn('Sync failed for call:', call._offlineId);
     }
