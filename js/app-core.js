@@ -357,7 +357,7 @@ function logout() {
 
 
 /* ─── 08. DASHBOARD ─── */
-function showDashboard(res) {
+async function showDashboard(res) {
   const logo = document.getElementById('nsdAnimatedLogo');
   if (logo) logo.classList.add('logo-exit');
 
@@ -375,7 +375,31 @@ function showDashboard(res) {
   document.getElementById('f-agent').value        = res.name;
   loadLastTwoCalls(res.name);
 
-  const shift     = res.todayBreaks ? res.todayBreaks.shift : 'N/A';
+  // ── جيب الشيفت الحقيقي من schedule table ──
+  let todayShift = 'N/A';
+  try {
+    const today     = getLocalDateStr();
+    const agentData = await sbFetchSch(`agents?select=id&formal_name=eq.${encodeURIComponent(res.name)}&status=eq.Active&limit=1`);
+    if (agentData && agentData[0]) {
+      schMyAgentId = agentData[0].id;
+      const pubWeeks = await sbFetchSch(`schedule_weeks?select=id&status=eq.Published`);
+      const weekIds  = (pubWeeks||[]).map(w => w.id).join(',');
+      if (weekIds) {
+        const schData = await sbFetchSch(`schedule?select=day_type,shift_types(start_time,end_time)&agent_id=eq.${schMyAgentId}&shift_date=eq.${today}&week_id=in.(${weekIds})&limit=1`);
+        if (schData && schData[0]) {
+          const dayType = schData[0].day_type;
+          const st      = schData[0].shift_types;
+          if (dayType === 'Work' && st) {
+            todayShift = st.start_time.substring(0,5) + ' - ' + st.end_time.substring(0,5);
+          } else if (dayType && dayType !== 'Work') {
+            todayShift = dayType;
+          }
+        }
+      }
+    }
+  } catch(e) { console.warn('Could not load today shift:', e); }
+
+  const shift     = todayShift;
   const isWorking = shift && shift !== 'OFF' && shift !== 'N/A' && shift !== '-'
     && shift.trim() !== '' && !/^(annual|sick|casual|ph|task)$/i.test(shift.trim());
 
@@ -427,7 +451,7 @@ function showDashboard(res) {
           applyBreaksToUI(breaks);
         } else {
           // fallback — جيب الشيفت من schedule مباشرة
-          const today = new Date().toISOString().split('T')[0];
+          const today = getLocalDateStr();
           const sch   = await sbFetchSch(`schedule?select=shift_types(start_time,end_time)&agent_id=eq.${agentId}&shift_date=eq.${today}&limit=1`);
           if (sch && sch[0] && sch[0].shift_types) {
             const st    = sch[0].shift_types;
