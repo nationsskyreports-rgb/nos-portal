@@ -65,10 +65,6 @@ function quickLogCall(reason) {
     console.error('Quick Log Error:', e);
     showFormErr('Connection error. Please try again.');
   });
-
-  // 2. GAS — Fire and Forget في الخلفية 🔥
-  gasRun(gasAction, data)
-    .catch(e => console.warn('GAS sync failed (non-critical):', e));
 }
 
 /* ─── SUBMIT FORM (FIXED) ─── */
@@ -163,9 +159,7 @@ function submitCallLogForm() {
     console.error('submitCallLogForm error:', err);
   });
 
-  // GAS — Fire and Forget
-  const gasAction = (_activeChannel === 'whatsapp') ? 'submitWhatsAppLog' : 'submitCallLog';
-  gasRun(gasAction, data).catch(e => console.warn('GAS sync failed:', e));
+  // Supabase save handles everything — no GAS needed
 }
 function resetCallForm() {
   ['f-reason','f-mobile','f-extra'].forEach(id => document.getElementById(id).value = '');
