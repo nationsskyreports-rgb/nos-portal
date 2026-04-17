@@ -419,12 +419,25 @@ function showDashboard(res) {
     const agentName = res.name;
     sbFetchSch(`agents?select=id&formal_name=eq.${encodeURIComponent(agentName)}&status=eq.Active`)
       .then(async agents => {
-        if (!agents || !agents.length) { _applyGASBreaks(res.todayBreaks); return; }
+        if (!agents || !agents.length) return;
         const agentId = agents[0].id;
         schMyAgentId  = agentId;
         const breaks  = await loadTodayBreaksFromSB(agentId);
-        if (breaks) applyBreaksToUI(breaks);
-        else _applyGASBreaks(res.todayBreaks);
+        if (breaks) {
+          applyBreaksToUI(breaks);
+        } else {
+          // fallback — جيب الشيفت من schedule مباشرة
+          const today = new Date().toISOString().split('T')[0];
+          const sch   = await sbFetchSch(`schedule?select=shift_types(start_time,end_time)&agent_id=eq.${agentId}&shift_date=eq.${today}&limit=1`);
+          if (sch && sch[0] && sch[0].shift_types) {
+            const st    = sch[0].shift_types;
+            const sTime = (st.start_time||'').substring(0,5) + ' - ' + (st.end_time||'').substring(0,5);
+            const statusTextEl = document.getElementById('status-text');
+            if (statusTextEl) { statusTextEl.innerText = sTime; statusTextEl.style.color = 'var(--primary)'; }
+            const brShiftEl = document.getElementById('br-shift');
+            if (brShiftEl)    brShiftEl.innerText = 'SHIFT: ' + sTime;
+          }
+        }
         subscribeTodayBreaks(agentId);
       });
 
