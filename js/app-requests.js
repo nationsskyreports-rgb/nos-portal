@@ -233,23 +233,63 @@ async function submitTimeOffRequest() {
 
 
 /* ─── 19. SHIFT SWAP ─── */
-function populateSwapForm() {
+async function populateSwapForm() {
   const daySelect       = document.getElementById('swap-day-select');
   const colleagueSelect = document.getElementById('swap-colleague-select');
   const now             = new Date();
+  const agentName       = document.getElementById('user-name').innerText.trim();
 
-  daySelect.innerHTML = '<option value="">Choose a day...</option>';
-  globalScheduleData.forEach(d => {
-    const shift   = (d.shift || '').toString().trim();
-    const parts   = d.date.split('/');
-    const dayDate = new Date(parseInt(parts[2]), parseInt(parts[1])-1, parseInt(parts[0]));
-    dayDate.setHours(23,59,59,999);
-    if (dayDate < now) return;
-    const opt = document.createElement('option');
-    opt.value       = d.date;
-    opt.textContent = d.day + ' — ' + d.date + ' (' + (shift || 'Off') + ')' + (d.isToday ? '  ◀ Today' : '');
-    daySelect.appendChild(opt);
-  });
+  daySelect.innerHTML = '<option value="">Loading...</option>';
+
+  try {
+    // جيب الأسبوعين من Supabase
+    const today = new Date(); today.setHours(0,0,0,0);
+    const curDay = today.getDay();
+    const thisWeekStart = new Date(today); thisWeekStart.setDate(today.getDate() - curDay);
+    const nextWeekEnd   = new Date(thisWeekStart); nextWeekEnd.setDate(thisWeekStart.getDate() + 13);
+
+    const fmt = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+
+    // جيب الـ published weeks
+    const pubWeeks = await sbFetchSch('schedule_weeks?select=id&status=eq.Published');
+    const weekIds  = (pubWeeks || []).map(w => w.id).join(',');
+    if (!weekIds) { daySelect.innerHTML = '<option value="">No schedule found</option>'; return; }
+
+    // جيب schedule الـ agent للأسبوعين
+    const records = await sbFetchSch(
+      `schedule?select=shift_date,day_type,shift_types(start_time,end_time)&agent_id=eq.${schMyAgentId}&shift_date=gte.${fmt(thisWeekStart)}&shift_date=lte.${fmt(nextWeekEnd)}&week_id=in.(${weekIds})&order=shift_date`
+    );
+
+    daySelect.innerHTML = '<option value="">Choose a day...</option>';
+    const days = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+
+    (records || []).forEach(s => {
+      if (s.day_type !== 'Work') return;
+
+      const dt = new Date(s.shift_date + 'T12:00:00');
+      dt.setHours(23, 59, 59, 999);
+      if (dt < now) return;
+
+      const shift   = s.shift_types
+        ? s.shift_types.start_time.substring(0,5) + ' - ' + s.shift_types.end_time.substring(0,5)
+        : 'Working';
+
+      const [y, m, d] = s.shift_date.split('-');
+      const dateStr   = `${d}/${m}/${y}`;
+      const dayName   = days[dt.getDay()];
+      const isToday   = s.shift_date === fmt(today);
+
+      const opt = document.createElement('option');
+      opt.value       = dateStr;
+      opt.dataset.shift = shift;
+      opt.textContent = dayName + ' — ' + dateStr + ' (' + shift + ')' + (isToday ? '  ◀ Today' : '');
+      daySelect.appendChild(opt);
+    });
+
+  } catch(e) {
+    console.error('populateSwapForm error:', e);
+    daySelect.innerHTML = '<option value="">Error loading schedule</option>';
+  }
 
   colleagueSelect.innerHTML = '<option value="">Choose a colleague...</option>';
   const currentName = document.getElementById('user-name').innerText.trim();
@@ -300,11 +340,12 @@ function onSwapDayChange() {
     return;
   }
 
-  const day = globalScheduleData.find(d => d.date === date);
-  if (!day || !day.shift) { shiftEl.innerText = 'N/A'; shiftEl.className = 'swap-compare-value swap-empty'; return; }
-  shiftEl.innerText = day.shift; shiftEl.className = 'swap-compare-value'; boxEl.classList.add('swap-active');
-
-  const mins = getMinutesToShift(date, day.shift);
+const selectedOpt = document.querySelector(`#swap-day-select option[value="${date}"]`);
+const shift = selectedOpt?.dataset?.shift || '';
+if (!shift) { shiftEl.innerText = 'N/A'; shiftEl.className = 'swap-compare-value swap-empty'; return; }
+shiftEl.innerText = shift; shiftEl.className = 'swap-compare-value'; boxEl.classList.add('swap-active');
+const mins = getMinutesToShift(date, shift);
+const mins = getMinutesToShift(date, day.shift);
   if (mins < 120) {
     const h = Math.floor(Math.abs(mins)/60), m = Math.abs(mins)%60;
     warningText.innerText   = 'Your shift starts in ' + (h>0?h+'h '+m+'m':m+'m') + '. Swap requests must be submitted at least 2 hours before.';
