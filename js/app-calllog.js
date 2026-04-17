@@ -355,7 +355,7 @@ document.addEventListener('DOMContentLoaded', () => {
 async function loadMyCallLog() {
   const agent     = document.getElementById('user-name').innerText.trim();
   const container = document.getElementById('tab-mylog');
-  const today     = new Date().toISOString().split('T')[0];
+  const today     = getLocalDateStr();
 
   container.innerHTML = `
     <div style="padding:16px;">
