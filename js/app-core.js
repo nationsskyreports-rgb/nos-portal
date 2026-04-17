@@ -480,15 +480,87 @@ function changeMonthData() {
   document.getElementById('annual-label').innerText = month === 'CURRENT' ? 'Annual Left' : 'Annual Used';
   gasRun('getFilteredData', name, month).then(data => {
     loader.classList.add('hidden');
-    if (checkDataAvailability(data)) {
-      if (month === 'CURRENT') currentAnnualData.left = data.annual || 0;
-      currentAnnualData.used = data.totalUsed || 0;
-      ['conformance','missing','aht','calls','annual','exceptions','quality']
-        .forEach(k => document.getElementById('d-' + k).innerText = data[k] || '-');
-    }
-  });
-}
+(async () => {
+  try {
+    const agentName = res.name;
+    const now       = new Date();
+    const year      = now.getFullYear();
+    const month     = now.getMonth(); // 0-indexed
+    const monthStr  = String(month + 1).padStart(2, '0');
+    const dateFrom  = `${year}-${monthStr}-01`;
+    const lastDay   = new Date(year, month + 1, 0).getDate();
+    const dateTo    = `${year}-${monthStr}-${String(lastDay).padStart(2, '0')}T23:59:59`;
 
+    const MONTH_NAMES_SHORT = ['jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec'];
+    const MONTH_NAMES_FULL  = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+    const monthKey          = 'used_' + MONTH_NAMES_SHORT[month];
+    const monthFull         = MONTH_NAMES_FULL[month];
+
+    const headers = { 'apikey': SB_KEY_SCH, 'Authorization': `Bearer ${SB_KEY_SCH}` };
+
+    // جيب الـ agent_id الأول
+    const agentRes  = await fetch(
+      `${SB_URL_SCH}/rest/v1/agents?select=id&formal_name=eq.${encodeURIComponent(agentName)}&limit=1`,
+      { headers }
+    );
+    const agentData = await agentRes.json();
+    const agentId   = agentData?.[0]?.id;
+
+    // ── 1. KPI (conf, missing, aht, exceptions) ──
+    const kpiRes  = await fetch(
+      `${SB_URL_SCH}/rest/v1/kpis?agent_name=eq.${encodeURIComponent(agentName)}&month=eq.${monthFull}&year=eq.${year}&limit=1`,
+      { headers }
+    );
+    const kpiData = await kpiRes.json();
+    const kpi     = kpiData?.[0] || null;
+
+    // ── 2. Total Calls من call_logs ──
+    const callsRes  = await fetch(
+      `${SB_URL_SCH}/rest/v1/call_logs?agent_name=eq.${encodeURIComponent(agentName)}&logged_at=gte.${dateFrom}&logged_at=lte.${dateTo}&select=id`,
+      { headers }
+    );
+    const callsData = await callsRes.json();
+    const totalCalls = callsData ? callsData.length : 0;
+
+    // ── 3. Annual من annual_leave ──
+    const annRes  = await fetch(
+      `${SB_URL_SCH}/rest/v1/annual_leave?agent_id=eq.${agentId}&year=eq.${year}&limit=1`,
+      { headers }
+    );
+    const annData = await annRes.json();
+    const ann     = annData?.[0] || null;
+    const annLeft = ann ? ann.remaining : '-';
+    const annUsed = ann ? (ann[monthKey] || 0) : 0;
+
+    // ── 4. Quality من quality_scores ──
+    const qualRes  = await fetch(
+      `${SB_URL_SCH}/rest/v1/quality_scores?agent_id=eq.${agentId}&month=eq.${monthFull}&year=eq.${year}&limit=1`,
+      { headers }
+    );
+    const qualData = await qualRes.json();
+    const quality  = qualData?.[0]?.score || '-';
+
+    // ── حط الأرقام في الـ cards ──
+    const hasData = kpi || totalCalls > 0 || ann || qualData?.[0];
+    checkDataAvailability(hasData ? {} : null);
+
+    document.getElementById('d-conformance').innerText = kpi?.conformance  || '-';
+    document.getElementById('d-missing').innerText     = kpi?.missing_time || '-';
+    document.getElementById('d-aht').innerText         = kpi?.avg_aht      || '-';
+    document.getElementById('d-calls').innerText       = totalCalls        || '-';
+    document.getElementById('d-annual').innerText      = annLeft;
+    document.getElementById('d-exceptions').innerText  = kpi?.exceptions   || '-';
+    document.getElementById('d-quality').innerText     = quality;
+
+    currentAnnualData.left = annLeft || 0;
+    currentAnnualData.used = annUsed || 0;
+
+  } catch(e) {
+    console.error('KPI fetch error:', e);
+    checkDataAvailability(null);
+  }
+})();
+     
 
 /* ─── 21. ANNUAL LEAVE ─── */
 function showAnnualDetails() {
