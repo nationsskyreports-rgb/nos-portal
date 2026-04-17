@@ -231,18 +231,20 @@ async function submitTimeOffRequest() {
   }
 }
 
-
 /* ─── 19. SHIFT SWAP ─── */
 async function populateSwapForm() {
   const daySelect       = document.getElementById('swap-day-select');
   const colleagueSelect = document.getElementById('swap-colleague-select');
   const now             = new Date();
-  const agentName       = document.getElementById('user-name').innerText.trim();
 
   daySelect.innerHTML = '<option value="">Loading...</option>';
 
   try {
-    // جيب الأسبوعين من Supabase
+    if (!schMyAgentId) {
+      daySelect.innerHTML = '<option value="">Please refresh!</option>';
+      return;
+    }
+
     const today = new Date(); today.setHours(0,0,0,0);
     const curDay = today.getDay();
     const thisWeekStart = new Date(today); thisWeekStart.setDate(today.getDate() - curDay);
@@ -250,27 +252,39 @@ async function populateSwapForm() {
 
     const fmt = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 
-    // جيب الـ published weeks
-    const pubWeeks = await sbFetchSch('schedule_weeks?select=id&status=eq.Published');
-    const weekIds  = (pubWeeks || []).map(w => w.id).join(',');
-    if (!weekIds) { daySelect.innerHTML = '<option value="">No schedule found</option>'; return; }
+    const pubWeeks = await fetch(
+      `${SB_URL_SCH}/rest/v1/schedule_weeks?select=id&status=eq.Published`,
+      { headers: { 'apikey': SB_KEY_SCH, 'Authorization': `Bearer ${SB_KEY_SCH}` } }
+    ).then(r => r.json());
 
-    // جيب schedule الـ agent للأسبوعين
-    const records = await sbFetchSch(
-      `schedule?select=shift_date,day_type,shift_types(start_time,end_time)&agent_id=eq.${schMyAgentId}&shift_date=gte.${fmt(thisWeekStart)}&shift_date=lte.${fmt(nextWeekEnd)}&week_id=in.(${weekIds})&order=shift_date`
-    );
+    const publishedWeekIds = (pubWeeks || []).map(w => w.id).join(',');
+    if (!publishedWeekIds) {
+      daySelect.innerHTML = '<option value="">No schedule found</option>';
+      return;
+    }
+
+    const records = await fetch(
+      `${SB_URL_SCH}/rest/v1/schedule?select=shift_date,day_type,shift_types(start_time,end_time)&agent_id=eq.${schMyAgentId}&shift_date=gte.${fmt(thisWeekStart)}&shift_date=lte.${fmt(nextWeekEnd)}&week_id=in.(${publishedWeekIds})&order=shift_date`,
+      { headers: { 'apikey': SB_KEY_SCH, 'Authorization': `Bearer ${SB_KEY_SCH}` } }
+    ).then(r => r.json());
 
     daySelect.innerHTML = '<option value="">Choose a day...</option>';
     const days = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
 
-    (records || []).forEach(s => {
+    if (!Array.isArray(records)) {
+      console.error('populateSwapForm: unexpected response', records);
+      daySelect.innerHTML = '<option value="">Error loading schedule</option>';
+      return;
+    }
+
+    records.forEach(s => {
       if (s.day_type !== 'Work') return;
 
       const dt = new Date(s.shift_date + 'T12:00:00');
       dt.setHours(23, 59, 59, 999);
       if (dt < now) return;
 
-      const shift   = s.shift_types
+      const shift = s.shift_types
         ? s.shift_types.start_time.substring(0,5) + ' - ' + s.shift_types.end_time.substring(0,5)
         : 'Working';
 
@@ -279,10 +293,10 @@ async function populateSwapForm() {
       const dayName   = days[dt.getDay()];
       const isToday   = s.shift_date === fmt(today);
 
-      const opt = document.createElement('option');
-      opt.value       = dateStr;
+      const opt         = document.createElement('option');
+      opt.value         = dateStr;
       opt.dataset.shift = shift;
-      opt.textContent = dayName + ' — ' + dateStr + ' (' + shift + ')' + (isToday ? '  ◀ Today' : '');
+      opt.textContent   = dayName + ' — ' + dateStr + ' (' + shift + ')' + (isToday ? '  ◀ Today' : '');
       daySelect.appendChild(opt);
     });
 
@@ -295,8 +309,9 @@ async function populateSwapForm() {
   const currentName = document.getElementById('user-name').innerText.trim();
   globalTeamData.forEach(s => {
     if (s.name !== currentName) {
-      const opt = document.createElement('option');
-      opt.value = s.name; opt.textContent = s.name + '  —  ' + (s.shift || 'OFF');
+      const opt       = document.createElement('option');
+      opt.value       = s.name;
+      opt.textContent = s.name + '  —  ' + (s.shift || 'OFF');
       colleagueSelect.appendChild(opt);
     }
   });
