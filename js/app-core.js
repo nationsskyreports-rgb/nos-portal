@@ -109,11 +109,11 @@ function submitChangePassword() {
 
 
 /* ─── 05. APP INIT (FIXED — parallel GAS calls) ─── */
-window.onload = function() {
+window.onload = async function() {
   applyTheme();
   if ('Notification' in window) Notification.requestPermission();
 
-  /* ─── FIX: نشغل الكالين بالتوازي بدل ورا بعض ─── */
+  // 1. جيب الـ session
   let savedSession = null;
   try {
     const saved = sessionStorage.getItem('ns-session');
@@ -123,41 +123,44 @@ window.onload = function() {
     }
   } catch(e) {}
 
-  /* بنبعت الكالين في نفس الوقت — كل واحد مستقل عن التاني */
-  const agentListCall = gasRun('getAgentList').catch(() => []);
-  const loginCall     = savedSession
+  // 2. جيب agent list من Supabase مش GAS ⚡
+  const agentListCall = fetch(
+    `${SB_URL_SCH}/rest/v1/agents?select=formal_name&status=eq.Active&order=formal_name`,
+    { headers: { 'apikey': SB_KEY_SCH, 'Authorization': `Bearer ${SB_KEY_SCH}` } }
+  )
+  .then(r => r.json())
+  .then(data => (data || []).map(a => ({ name: a.formal_name, code: '' })))
+  .catch(() => []);
+
+  // 3. لو فيه session — GAS login وSupabase مع بعض
+  const loginCall = savedSession
     ? gasRun('processLogin', savedSession.name, 'REFRESH_MODE').catch(() => null)
     : Promise.resolve(null);
 
-  Promise.all([agentListCall, loginCall])
-    .then(([agentResult, loginRes]) => {
+  // 4. شغل الاتنين مع بعض
+  const [agentResult, loginRes] = await Promise.all([agentListCall, loginCall]);
 
-      /* ─── ملي agent dropdown ─── */
-      const s2 = document.getElementById('f-agent');
-      s2.innerHTML = '<option value="">Select agent...</option>';
-      if (agentResult && agentResult.length) {
-        agentResult.forEach(item => {
-          agentCodeMap[item.name] = item.code;
-          s2.add(new Option(item.name, item.name));
-        });
-      }
-
-      /* ─── لو فيه session محفوظة ─── */
-      if (loginRes && loginRes.status === 'success') {
-        showDashboard(loginRes);
-      } else {
-        if (savedSession) sessionStorage.removeItem('ns-session');
-        document.getElementById('app-preloader').classList.add('hidden');
-      }
-    })
-    .catch(() => {
-      document.getElementById('app-preloader').classList.add('hidden');
+  // 5. ملي agent dropdown
+  const s2 = document.getElementById('f-agent');
+  s2.innerHTML = '<option value="">Select agent...</option>';
+  if (agentResult && agentResult.length) {
+    agentResult.forEach(item => {
+      agentCodeMap[item.name] = item.code;
+      s2.add(new Option(item.name, item.name));
     });
+  }
+
+  // 6. لو فيه session محفوظة
+  if (loginRes && loginRes.status === 'success') {
+    showDashboard(loginRes);
+  } else {
+    if (savedSession) sessionStorage.removeItem('ns-session');
+    document.getElementById('app-preloader').classList.add('hidden');
+  }
 
   const tof = document.getElementById('time-off-form');
   if (tof) tof.style.display = 'block';
 };
-
 
 /* ─── 07. LOGIN & AUTH ─── */
 function handleLoginSubmit(event) { event.preventDefault(); login(); }
