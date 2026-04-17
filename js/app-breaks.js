@@ -393,6 +393,29 @@ async function confirmBreakTime(time) {
       body: JSON.stringify({ [col]: time + ':00', updated_at: new Date().toISOString() })
     });
     if (!res.ok) throw new Error('Update failed');
+     // سجل الـ request في Supabase
+await fetch(`${SB_URL_SCH}/rest/v1/requests`, {
+  method: 'POST',
+  headers: {
+    'apikey': SB_KEY_SCH,
+    'Authorization': `Bearer ${SB_KEY_SCH}`,
+    'Content-Type': 'application/json',
+    'Prefer': 'return=minimal'
+  },
+  body: JSON.stringify({
+    agent_id:   schMyAgentId,
+    agent_name: document.getElementById('user-name').innerText.trim(),
+    type:       'Break Change',
+    status:     'Approved',
+    details: JSON.stringify({
+      break_type: selectedBreakType,
+      new_time:   time,
+      date:       today
+    }),
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  })
+});
 
     if (currentBreaks) currentBreaks[col] = time;
     const elMap = { break1: 'br-break1', lunch: 'br-lunch', break2: 'br-break2' };
