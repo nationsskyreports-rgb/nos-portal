@@ -554,6 +554,7 @@ function switchTab(id, btn, idx) {
   if (id === 'tab-form') { const btn = document.getElementById('formSubmitBtn'); if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-paper-plane"></i> Submit to Database'; } }
   if (id === 'tab-schedule')  loadAgentSchedule();
   if (id === 'tab-sch-table') initSchTab();
+  if (id === 'tab-mylog')     loadMyCallLog(); 
   if (btn) btn.classList.add('active');
   const bnBtns = document.querySelectorAll('.bottom-nav-btn');
   if (bnBtns[idx]) bnBtns[idx].classList.add('active');
