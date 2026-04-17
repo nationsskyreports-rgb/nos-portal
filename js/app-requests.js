@@ -8,7 +8,7 @@ async function loadMyRequests() {
   try {
     const res  = await fetch(
       `${SB_URL_SCH}/rest/v1/requests?agent_id=eq.${schMyAgentId}&order=created_at.desc`,
-      { headers: { 'apikey': SB_KEY_SCH, 'Authorization': `Bearer ${SB_KEY_SCH}` } }
+      { headers: { 'apikey': SB_KEY_SCH, 'Authorization': `Bearer ${window._authToken || SB_KEY_SCH}` } }
     );
     const data = await res.json();
     renderRequests(data || []);
@@ -84,7 +84,7 @@ async function sendExcuse() {
     const my  = d.toLocaleString('en-US', { month: 'long' }) + ' ' + d.getFullYear();
     const balRes  = await fetch(
       `${SB_URL_SCH}/rest/v1/excuses?agent_id=eq.${schMyAgentId}&status=eq.Approved&month_year=eq.${encodeURIComponent(my)}`,
-      { headers: { 'apikey': SB_KEY_SCH, 'Authorization': `Bearer ${SB_KEY_SCH}` } }
+      { headers: { 'apikey': SB_KEY_SCH, 'Authorization': `Bearer ${window._authToken || SB_KEY_SCH}` } }
     );
     const balData = await balRes.json();
     if (balData.length >= 2) {
@@ -94,7 +94,7 @@ async function sendExcuse() {
 
     const schedRes  = await fetch(
       `${SB_URL_SCH}/rest/v1/schedule?agent_id=eq.${schMyAgentId}&shift_date=eq.${rawDate}&select=day_type`,
-      { headers: { 'apikey': SB_KEY_SCH, 'Authorization': `Bearer ${SB_KEY_SCH}` } }
+      { headers: { 'apikey': SB_KEY_SCH, 'Authorization': `Bearer ${window._authToken || SB_KEY_SCH}` } }
     );
     const schedData = await schedRes.json();
     if (!schedData.length || schedData[0].day_type !== 'Work') {
@@ -104,7 +104,7 @@ async function sendExcuse() {
 
     const res = await fetch(`${SB_URL_SCH}/rest/v1/excuses`, {
       method:  'POST',
-      headers: { 'apikey': SB_KEY_SCH, 'Authorization': `Bearer ${SB_KEY_SCH}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+      headers: { 'apikey': SB_KEY_SCH, 'Authorization': `Bearer ${window._authToken || SB_KEY_SCH}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
       body: JSON.stringify({
         agent_id: schMyAgentId, agent_name: name, excuse_date: rawDate, excuse_type: excuseType,
         status: 'Approved', month_year: my, created_at: new Date().toISOString(), updated_at: new Date().toISOString(),
@@ -135,7 +135,7 @@ function undoLastExcuse() {
     try {
       const res  = await fetch(
         `${SB_URL_SCH}/rest/v1/excuses?agent_id=eq.${schMyAgentId}&order=created_at.desc&limit=1`,
-        { headers: { 'apikey': SB_KEY_SCH, 'Authorization': `Bearer ${SB_KEY_SCH}` } }
+        { headers: { 'apikey': SB_KEY_SCH, 'Authorization': `Bearer ${window._authToken || SB_KEY_SCH}` } }
       );
       const data = await res.json();
 
@@ -147,7 +147,7 @@ function undoLastExcuse() {
 
       const delRes = await fetch(
         `${SB_URL_SCH}/rest/v1/excuses?id=eq.${data[0].id}`,
-        { method: 'DELETE', headers: { 'apikey': SB_KEY_SCH, 'Authorization': `Bearer ${SB_KEY_SCH}` } }
+        { method: 'DELETE', headers: { 'apikey': SB_KEY_SCH, 'Authorization': `Bearer ${window._authToken || SB_KEY_SCH}` } }
       );
 
       if (delRes.ok) {
@@ -213,7 +213,7 @@ async function submitTimeOffRequest() {
   try {
     const res = await fetch(`${SB_URL_SCH}/rest/v1/requests`, {
       method:  'POST',
-      headers: { 'apikey': SB_KEY_SCH, 'Authorization': `Bearer ${SB_KEY_SCH}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+      headers: { 'apikey': SB_KEY_SCH, 'Authorization': `Bearer ${window._authToken || SB_KEY_SCH}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
       body: JSON.stringify({
         agent_id: schMyAgentId, agent_name: name, type: 'Time Off', status: 'Pending',
         details: JSON.stringify({ request_type: type, from_date: from, to_date: to, notes: notes || '' }),
@@ -258,7 +258,7 @@ async function populateSwapForm() {
 
     const pubWeeks = await fetch(
       `${SB_URL_SCH}/rest/v1/schedule_weeks?select=id&status=eq.Published`,
-      { headers: { 'apikey': SB_KEY_SCH, 'Authorization': `Bearer ${SB_KEY_SCH}` } }
+      { headers: { 'apikey': SB_KEY_SCH, 'Authorization': `Bearer ${window._authToken || SB_KEY_SCH}` } }
     ).then(r => r.json());
 
     const publishedWeekIds = (pubWeeks || []).map(w => w.id).join(',');
@@ -269,7 +269,7 @@ async function populateSwapForm() {
 
     const records = await fetch(
       `${SB_URL_SCH}/rest/v1/schedule?select=shift_date,day_type,shift_types(start_time,end_time)&agent_id=eq.${schMyAgentId}&shift_date=gte.${fmt(thisWeekStart)}&shift_date=lte.${fmt(nextWeekEnd)}&week_id=in.(${publishedWeekIds})&order=shift_date`,
-      { headers: { 'apikey': SB_KEY_SCH, 'Authorization': `Bearer ${SB_KEY_SCH}` } }
+      { headers: { 'apikey': SB_KEY_SCH, 'Authorization': `Bearer ${window._authToken || SB_KEY_SCH}` } }
     ).then(r => r.json());
 
     daySelect.innerHTML = '<option value="">Choose a day...</option>';
@@ -387,7 +387,7 @@ function onSwapDayChange() {
 
   fetch(
     `${SB_URL_SCH}/rest/v1/schedule?shift_date=eq.${dateISO}&select=day_type,shift_type_id,agents(formal_name),shift_types(start_time,end_time)`,
-    { headers: { 'apikey': SB_KEY_SCH, 'Authorization': `Bearer ${SB_KEY_SCH}` } }
+    { headers: { 'apikey': SB_KEY_SCH, 'Authorization': `Bearer ${window._authToken || SB_KEY_SCH}` } }
   )
   .then(r => r.json())
   .then(rows => {
@@ -425,7 +425,7 @@ function onSwapColleagueChange() {
 
   fetch(
     `${SB_URL_SCH}/rest/v1/schedule?shift_date=eq.${dateISO}&select=day_type,shift_types(start_time,end_time),agents(formal_name)`,
-    { headers: { 'apikey': SB_KEY_SCH, 'Authorization': `Bearer ${SB_KEY_SCH}` } }
+    { headers: { 'apikey': SB_KEY_SCH, 'Authorization': `Bearer ${window._authToken || SB_KEY_SCH}` } }
   )
   .then(r => r.json())
   .then(rows => {
@@ -474,7 +474,7 @@ function submitShiftSwap() {
     try {
       const res = await fetch(`${SB_URL_SCH}/rest/v1/requests`, {
         method:  'POST',
-        headers: { 'apikey': SB_KEY_SCH, 'Authorization': `Bearer ${SB_KEY_SCH}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+        headers: { 'apikey': SB_KEY_SCH, 'Authorization': `Bearer ${window._authToken || SB_KEY_SCH}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
         body: JSON.stringify({
           agent_id: schMyAgentId, agent_name: name, type: 'Shift Swap', status: 'Pending',
           details: JSON.stringify({ date, agent_shift: yourShift, colleague, their_shift: theirShift, notes: notes || '' }),
