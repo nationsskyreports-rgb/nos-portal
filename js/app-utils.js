@@ -3,7 +3,7 @@
    ═══════════════════════════════════════════════════ */
 
 /* ─── 01. GLOBAL VARIABLES ─── */
-const GAS_URL = 'https://script.google.com/macros/s/AKfycbwmXpUbgCU_AL461j65I2oxE_VIVXGQXl4qOzg29Zr-8xdQju4ETkZTiBElDIyrBUBG/exec';
+const GAS_URL = 'https://script.google.com/macros/s/AKfycbzoZ9UyMCmaJ8oB1peBRRsHwEh2pYng_OeJ2v49Mu17wy1_j1O-vOKCDsj86FpnQk01/exec';
 
 let isDark             = true;
 let radioValues        = {};
