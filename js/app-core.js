@@ -467,9 +467,10 @@ async function loadKPIData(agentName) {
     const annLeft    = ann ? ann.remaining : '-';
     const annUsed    = ann ? (ann[monthKey] || 0) : 0;
 
-    const hasData = kpi || totalCalls > 0 || ann || qualData?.[0];
-    checkDataAvailability(hasData ? {} : null);
-
+   const hasData = kpi || totalCalls > 0 || ann || qualData?.[0];
+   if (typeof checkDataAvailability === 'function') {
+   checkDataAvailability(hasData ? {} : null);
+  }
     document.getElementById('d-conformance').innerText = kpi?.conformance  || '-';
     document.getElementById('d-missing').innerText     = kpi?.missing_time || '-';
     document.getElementById('d-aht').innerText         = kpi?.avg_aht      || '-';
@@ -481,9 +482,9 @@ async function loadKPIData(agentName) {
     currentAnnualData.left = annLeft || 0;
     currentAnnualData.used = annUsed || 0;
 
-  } catch(e) {
+} catch(e) {
     console.error('KPI fetch error:', e);
-    checkDataAvailability(null);
+    if (typeof checkDataAvailability === 'function') checkDataAvailability(null);
   }
 }
 
