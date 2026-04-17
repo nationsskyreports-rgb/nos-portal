@@ -86,7 +86,6 @@ function closeChangePassword() {
 }
 
 async function submitChangePassword() {
-  const name  = document.getElementById('user-name').innerText.trim();
   const oldP  = document.getElementById('cp-old').value;
   const newP  = document.getElementById('cp-new').value;
   const confP = document.getElementById('cp-confirm').value;
@@ -98,31 +97,30 @@ async function submitChangePassword() {
   msg.style.color = 'var(--primary)'; msg.innerText = 'Updating...';
 
   try {
-    const res  = await fetch(
-      `${SB_URL_SCH}/rest/v1/agents?select=id,password_hash&formal_name=eq.${encodeURIComponent(name)}&limit=1`,
-      { headers: { 'apikey': SB_KEY_SCH, 'Authorization': `Bearer ${SB_KEY_SCH}` } }
-    );
-    const data = await res.json();
+    // تحقق من الـ session الحالية
+    const { data: { session } } = await sbClient.auth.getSession();
+    if (!session) { msg.style.color = 'var(--danger)'; msg.innerText = 'Session expired. Please login again.'; return; }
 
-    if (!data || !data.length) { msg.style.color = 'var(--danger)'; msg.innerText = 'User not found'; return; }
+    // تحقق من الباسورد القديم
+    const { error: signInErr } = await sbClient.auth.signInWithPassword({
+      email: session.user.email, password: oldP
+    });
+    if (signInErr) { msg.style.color = 'var(--danger)'; msg.innerText = 'Old password incorrect'; return; }
 
-    if (data[0].password_hash !== oldP) { msg.style.color = 'var(--danger)'; msg.innerText = 'Old password incorrect'; return; }
-    const upd = await fetch(
-      `${SB_URL_SCH}/rest/v1/agents?id=eq.${data[0].id}`,
-      {
-        method:  'PATCH',
-        headers: { 'apikey': SB_KEY_SCH, 'Authorization': `Bearer ${SB_KEY_SCH}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ password_hash: newP, updated_at: new Date().toISOString() })
-      }
-    );
+    // حدّث الباسورد في Supabase Auth
+    const { error: updateErr } = await sbClient.auth.updateUser({ password: newP });
+    if (updateErr) { msg.style.color = 'var(--danger)'; msg.innerText = 'Update failed. Try again.'; return; }
 
-    if (upd.ok) {
-      msg.style.color = '#059669';
-      msg.innerText   = 'Password updated successfully!';
-      setTimeout(() => closeChangePassword(), 2000);
-    } else {
-      msg.style.color = 'var(--danger)'; msg.innerText = 'Update failed. Try again.';
-    }
+    // حدّث password_hash في agents table (backward compat)
+    await fetch(`${SB_URL_SCH}/rest/v1/agents?id=eq.${schMyAgentId}`, {
+      method: 'PATCH',
+      headers: { 'apikey': SB_KEY_SCH, 'Authorization': `Bearer ${session.access_token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password_hash: newP, updated_at: new Date().toISOString() })
+    });
+
+    msg.style.color = '#059669';
+    msg.innerText   = 'Password updated successfully!';
+    setTimeout(() => closeChangePassword(), 2000);
   } catch(e) {
     msg.style.color = 'var(--danger)'; msg.innerText = 'Connection error!';
   }
@@ -148,23 +146,20 @@ window.onload = async function() {
   .then(data => (data || []).map(a => ({ name: a.formal_name, code: '' })))
   .catch(() => []);
   const loginCall = savedSession
-    ? fetch(
-        `${SB_URL_SCH}/rest/v1/agents?select=id,formal_name,role&formal_name=eq.${encodeURIComponent(savedSession.name)}&status=eq.Active&limit=1`,
-        { headers: { 'apikey': SB_KEY_SCH, 'Authorization': `Bearer ${SB_KEY_SCH}` } }
-      )
-      .then(r => r.json())
-      .then(data => {
+    ? sbClient.auth.getSession()
+      .then(async ({ data: { session } }) => {
+        if (!session) return null;
+        const res  = await fetch(
+          `${SB_URL_SCH}/rest/v1/agents?select=id,formal_name,role&formal_name=eq.${encodeURIComponent(savedSession.name)}&status=eq.Active&limit=1`,
+          { headers: { 'apikey': SB_KEY_SCH, 'Authorization': `Bearer ${session.access_token}` } }
+        );
+        const data = await res.json();
         if (!data || !data.length) return null;
         schMyAgentId = data[0].id;
         return {
-          status:         'success',
-          name:           data[0].formal_name,
-          role:           data[0].role || 'Agent',
-          data:           null,
-          schedule:       [],
-          todayBreaks:    { shift: 'N/A', break1: '-', lunch: '-', break2: '-' },
-          allStaffBreaks: [],
-          userRequests:   []
+          status: 'success', name: data[0].formal_name, role: data[0].role || 'Agent',
+          data: null, schedule: [], todayBreaks: { shift: 'N/A', break1: '-', lunch: '-', break2: '-' },
+          allStaffBreaks: [], userRequests: []
         };
       })
       .catch(() => null)
@@ -237,25 +232,31 @@ async function login() {
   setButtonLoading(btn, true, 'Verifying...');
 
   try {
-    const res  = await fetch(
-      `${SB_URL_SCH}/rest/v1/agents?select=id,formal_name,role,password_hash,status&formal_name=eq.${encodeURIComponent(name)}&status=eq.Active&limit=1`,
+    // 1. جيب الـ email من اسم الـ agent
+    const lookupRes  = await fetch(
+      `${SB_URL_SCH}/rest/v1/agents?select=id,formal_name,role,email,status&formal_name=eq.${encodeURIComponent(name)}&status=eq.Active&limit=1`,
       { headers: { 'apikey': SB_KEY_SCH, 'Authorization': `Bearer ${SB_KEY_SCH}` } }
     );
-    const data = await res.json();
+    const lookupData = await lookupRes.json();
 
     setButtonLoading(btn, false, 'Login');
     btn.disabled = false;
 
-    if (!data || !data.length) {
+    if (!lookupData || !lookupData.length) {
       document.getElementById('app-preloader').classList.add('hidden');
       msg.style.color = 'var(--danger)';
       msg.innerHTML   = '<i class="fas fa-times-circle"></i> Account not found!';
       return;
     }
 
-    const agent = data[0];
+    const agent = lookupData[0];
+    const email = agent.email?.trim() ||
+      agent.formal_name.toLowerCase().replace(/\s+/g, '.') + '@nos.internal';
 
-    if (agent.password_hash !== pass) {
+    // 2. سجّل دخول بـ Supabase Auth
+    const { data: authData, error: authError } = await sbClient.auth.signInWithPassword({ email, password: pass });
+
+    if (authError) {
       document.getElementById('app-preloader').classList.add('hidden');
       msg.style.color = 'var(--danger)';
       msg.innerHTML   = '<i class="fas fa-times-circle"></i> Invalid Password';
@@ -264,14 +265,9 @@ async function login() {
 
     schMyAgentId = agent.id;
     const loginRes = {
-      status:         'success',
-      name:           agent.formal_name,
-      role:           agent.role || 'Agent',
-      data:           null,
-      schedule:       [],
-      todayBreaks:    { shift: 'N/A', break1: '-', lunch: '-', break2: '-' },
-      allStaffBreaks: [],
-      userRequests:   []
+      status: 'success', name: agent.formal_name, role: agent.role || 'Agent',
+      data: null, schedule: [], todayBreaks: { shift: 'N/A', break1: '-', lunch: '-', break2: '-' },
+      allStaffBreaks: [], userRequests: []
     };
 
     showDashboard(loginRes);
@@ -296,23 +292,28 @@ async function submitReset() {
 
   try {
     const res  = await fetch(
-      `${SB_URL_SCH}/rest/v1/agents?select=id,password_hash&formal_name=eq.${encodeURIComponent(name)}&limit=1`,
+      `${SB_URL_SCH}/rest/v1/agents?select=id,email&formal_name=eq.${encodeURIComponent(name)}&limit=1`,
       { headers: { 'apikey': SB_KEY_SCH, 'Authorization': `Bearer ${SB_KEY_SCH}` } }
     );
     const data = await res.json();
-    if (!data || !data.length)          { customAlert('Error', 'User not found'); return; }
-    if (data[0].password_hash !== oldP) { customAlert('Error', 'Old password incorrect'); return; }
+    if (!data || !data.length) { customAlert('Error', 'User not found'); return; }
 
-    const upd = await fetch(
-      `${SB_URL_SCH}/rest/v1/agents?id=eq.${data[0].id}`,
-      {
-        method:  'PATCH',
-        headers: { 'apikey': SB_KEY_SCH, 'Authorization': `Bearer ${SB_KEY_SCH}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ password_hash: newP, updated_at: new Date().toISOString() })
-      }
-    );
-    if (upd.ok) customAlert('Success', 'Password updated!').then(() => toggleReset(false));
-    else        customAlert('Error', 'Update failed. Try again.');
+    const email = (data[0].email || '').trim() ||
+      name.toLowerCase().replace(/\s+/g, '.') + '@nos.internal';
+
+    const { error: signInErr } = await sbClient.auth.signInWithPassword({ email, password: oldP });
+    if (signInErr) { customAlert('Error', 'Old password incorrect'); return; }
+
+    const { error: updateErr } = await sbClient.auth.updateUser({ password: newP });
+    if (updateErr) { customAlert('Error', 'Update failed. Try again.'); return; }
+
+    await fetch(`${SB_URL_SCH}/rest/v1/agents?id=eq.${data[0].id}`, {
+      method: 'PATCH',
+      headers: { 'apikey': SB_KEY_SCH, 'Authorization': `Bearer ${SB_KEY_SCH}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password_hash: newP, updated_at: new Date().toISOString() })
+    });
+
+    customAlert('Success', 'Password updated!').then(() => toggleReset(false));
   } catch(e) {
     customAlert('Error', 'Connection error!');
   }
@@ -320,6 +321,7 @@ async function submitReset() {
 
 function logout() {
   logoutToast();
+  sbClient.auth.signOut();
   document.getElementById('side-menu').style.display         = 'none';
   document.getElementById('side-menu-overlay').style.display = 'none';
   try { sessionStorage.removeItem('ns-session'); } catch(e) {}
