@@ -19,6 +19,7 @@ function toggleFormSections() {
 }
 
 /* ─── QUICK LOG (WITH SUPABASE) ─── */
+
 function quickLogCall(reason) {
   const agent = document.getElementById('f-agent').value;
   if (!agent) { customAlert('Error', 'Please select Agent Name first!'); return; }
@@ -32,10 +33,9 @@ function quickLogCall(reason) {
     channel: '', media: '', budget: '', unit: '', extra: ''
   };
 
-  /* ─── FIX: Quick Log ليها submission ID خاص بيها ─── */
   const submissionId = ++_activeSubmission;
 
-  // 1. إرسال لـ Supabase
+  // 1. Supabase — بنستنى الرد ✅
   fetch(`${SB_URL_SCH}/rest/v1/call_logs`, {
     method: 'POST',
     headers: { 'apikey': SB_KEY_SCH, 'Authorization': `Bearer ${SB_KEY_SCH}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
@@ -46,34 +46,29 @@ function quickLogCall(reason) {
       budget: '', unit_type: '', extra_notes: '',
       logged_at: new Date().toISOString(),
     })
-  }).catch(e => console.warn('SB quick log failed:', e));
-
-  // 2. إرسال لـ GAS
-  Promise.race([
-    gasRun(gasAction, data),
-    new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 15000))
-  ]).then(res => {
-    /* ─── FIX: لو في submission تانية جديدة، متعملش حاجة ─── */
+  })
+  .then(() => {
     if (submissionId !== _activeSubmission) return;
 
-    if (res.status === 'success') {
-      const bar = document.getElementById('call-summary-bar');
-      document.getElementById('cs-name').innerText   = '—';
-      document.getElementById('cs-mobile').innerText = '—';
-      document.getElementById('cs-reason').innerText = reason;
-      if (bar) { bar.style.display = 'flex'; setTimeout(() => bar.style.display = 'none', 30000); }
-      
-      resetCallForm();
-      showToast('✅', 'Quick Logged!', reason, 'success', 3000);
-      loadLastTwoCalls(agent);
-    } else {
-      showFormErr(res.msg || 'Something went wrong.');
-    }
-  }).catch(err => {
+    const bar = document.getElementById('call-summary-bar');
+    document.getElementById('cs-name').innerText   = '—';
+    document.getElementById('cs-mobile').innerText = '—';
+    document.getElementById('cs-reason').innerText = reason;
+    if (bar) { bar.style.display = 'flex'; setTimeout(() => bar.style.display = 'none', 30000); }
+
+    resetCallForm();
+    showToast('✅', 'Quick Logged!', reason, 'success', 3000);
+    loadLastTwoCalls(agent);
+  })
+  .catch(e => {
     if (submissionId !== _activeSubmission) return;
-    console.error('Quick Log Error:', err);
-    showFormErr(err.message === 'Timeout' ? 'Request timed out. Try again.' : 'Network error.');
+    console.error('Quick Log Error:', e);
+    showFormErr('Connection error. Please try again.');
   });
+
+  // 2. GAS — Fire and Forget في الخلفية 🔥
+  gasRun(gasAction, data)
+    .catch(e => console.warn('GAS sync failed (non-critical):', e));
 }
 
 /* ─── SUBMIT FORM (FIXED) ─── */
