@@ -1,9 +1,5 @@
-const CACHE_NAME = 'ns-portal-v12';
-const STATIC_ASSETS = [
-  '/',
-  '/index.html',
-  '/styles.css',
-  '/mobile.css',
+const CACHE_NAME = 'ns-portal-v13';
+const CACHE_ASSETS = [
   '/manifest.json',
   'https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap',
   'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css'
@@ -11,32 +7,41 @@ const STATIC_ASSETS = [
 
 self.addEventListener('install', e => {
   e.waitUntil(
-    caches.open(CACHE_NAME).then(cache => cache.addAll(STATIC_ASSETS).catch(() => {}))
+    caches.open(CACHE_NAME)
+      .then(cache => cache.addAll(CACHE_ASSETS).catch(() => {}))
+      .then(() => self.skipWaiting())
   );
-  self.skipWaiting();
 });
 
 self.addEventListener('activate', e => {
   e.waitUntil(
-    caches.keys().then(keys =>
-      Promise.all(keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k)))
-    )
+    caches.keys()
+      .then(keys => Promise.all(
+        keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k))
+      ))
+      .then(() => self.clients.claim())
+      .then(() => {
+        self.clients.matchAll({ type: 'window' }).then(clients => {
+          clients.forEach(client => client.postMessage({ type: 'SW_UPDATED' }));
+        });
+      })
   );
-  self.clients.claim();
 });
 
 self.addEventListener('fetch', e => {
-  if (e.request.url.includes('script.google.com')) return;
-  if (e.request.url.includes('supabase.co')) return;
-  if (e.request.url.includes('app.js') || e.request.url.includes('offline-calllog.js') || e.request.url.includes('.js')) {
-    e.respondWith(
-      fetch(e.request).catch(() => caches.match(e.request))
-    );
+  const url = e.request.url;
+  if (url.includes('supabase.co')) return;
+  if (url.includes('script.google.com')) return;
+  if (url.includes('firebase')) return;
+
+  // HTML - always network
+  if (e.request.destination === 'document' || url.endsWith('.html') || url === '/') {
+    e.respondWith(fetch(e.request).catch(() => caches.match('/index.html')));
     return;
   }
-  if (e.request.destination === 'script' ||
-      e.request.destination === 'style'  ||
-      e.request.destination === 'document') {
+
+  // JS/CSS - network first
+  if (e.request.destination === 'script' || e.request.destination === 'style' || url.endsWith('.js') || url.endsWith('.css')) {
     e.respondWith(
       fetch(e.request)
         .then(res => {
@@ -48,13 +53,12 @@ self.addEventListener('fetch', e => {
     );
     return;
   }
+
   e.respondWith(
-    caches.match(e.request).then(cached => cached || fetch(e.request).catch(() => caches.match('/index.html')))
+    caches.match(e.request).then(cached => cached || fetch(e.request).catch(() => {}))
   );
 });
 
 self.addEventListener('message', e => {
-  if (e.data && e.data.type === 'SKIP_WAITING') {
-    self.skipWaiting();
-  }
+  if (e.data && e.data.type === 'SKIP_WAITING') self.skipWaiting();
 });
