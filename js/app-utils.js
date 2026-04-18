@@ -43,7 +43,8 @@ const SB_KEY_SCH = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSI
 const sbClient = window.supabase.createClient(SB_URL_SCH, SB_KEY_SCH);
 
 /* ─── AUTH TOKEN — بيتحدّث بعد الـ login ─── */
-window._authToken = SB_KEY_SCH;
+// Restore token from session if exists
+window._authToken = sessionStorage.getItem('ns-auth-token') || SB_KEY_SCH;
 
 
 /* ─── LOCAL DATE (Cairo timezone) ─── */
