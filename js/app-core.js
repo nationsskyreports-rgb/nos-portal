@@ -150,6 +150,7 @@ window.onload = async function() {
       .then(async ({ data: { session } }) => {
         if (!session) return null;
         window._authToken = session.access_token;
+        sessionStorage.setItem('ns-auth-token', session.access_token);
         const res  = await fetch(
           `${SB_URL_SCH}/rest/v1/agents?select=id,formal_name,role&formal_name=eq.${encodeURIComponent(savedSession.name)}&status=eq.Active&limit=1`,
           { headers: { 'apikey': SB_KEY_SCH, 'Authorization': `Bearer ${session.access_token}` } }
@@ -265,6 +266,7 @@ async function login() {
     }
 
     window._authToken = authData.session.access_token;
+    sessionStorage.setItem('ns-auth-token', authData.session.access_token);
 
     schMyAgentId = agent.id;
     const loginRes = {
@@ -327,7 +329,7 @@ function logout() {
   sbClient.auth.signOut();
   document.getElementById('side-menu').style.display         = 'none';
   document.getElementById('side-menu-overlay').style.display = 'none';
-  try { sessionStorage.removeItem('ns-session'); } catch(e) {}
+  try { sessionStorage.removeItem('ns-session'); sessionStorage.removeItem('ns-auth-token'); } catch(e) {}
   sessionAgent = null;
   if (breakCheckTimer) clearInterval(breakCheckTimer);
   if (window._teamRefreshTimer) clearInterval(window._teamRefreshTimer);
