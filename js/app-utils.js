@@ -40,21 +40,42 @@ let _notifFired = {
 /* ─── SUPABASE ─── */
 const SB_URL_SCH = 'https://xzxdaupwwwdcwfnqweub.supabase.co';
 const SB_KEY_SCH = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh6eGRhdXB3d3dkY3dmbnF3ZXViIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUzMTM5NTAsImV4cCI6MjA5MDg4OTk1MH0.KjNZpFvLxh8XfDDoWdpVsIQZAh1PjzGXOrfDmApZ4K8';
-const sbClient = window.supabase.createClient(SB_URL_SCH, SB_KEY_SCH);
+const sbClient = window.supabase.createClient(SB_URL_SCH, SB_KEY_SCH, {
+  auth: {
+    persistSession: true,
+    autoRefreshToken: true,
+    storageKey: 'ns-auth-session',
+  }
+});
 
-/* ─── AUTH TOKEN — بيتحدّث بعد الـ login ─── */
 // Restore token from session if exists
 window._authToken = sessionStorage.getItem('ns-auth-token') || SB_KEY_SCH;
+
+// Auto-update token when session refreshes
+sbClient.auth.onAuthStateChange((event, session) => {
+  if (session && session.access_token) {
+    window._authToken = session.access_token;
+    sessionStorage.setItem('ns-auth-token', session.access_token);
+  }
+});
 
 
 /* ─── LOCAL DATE (Cairo timezone) ─── */
 function getLocalDateStr() {
   return new Intl.DateTimeFormat('en-CA', { timeZone: 'Africa/Cairo' }).format(new Date());
 }
-function getAuthHeaders(extra) {
+async function getAuthHeaders(extra) {
+  // دايماً جيب أحدث token من الـ session
+  try {
+    const { data: { session } } = await sbClient.auth.getSession();
+    if (session && session.access_token) {
+      window._authToken = session.access_token;
+      sessionStorage.setItem('ns-auth-token', session.access_token);
+    }
+  } catch(e) {}
   return Object.assign({
     'apikey':        SB_KEY_SCH,
-    'Authorization': `Bearer ${window._authToken}`,
+    'Authorization': `Bearer ${window._authToken || SB_KEY_SCH}`,
     'Content-Type':  'application/json'
   }, extra || {});
 }
@@ -64,7 +85,8 @@ window.SB_URL_SCH = SB_URL_SCH;
 window.SB_KEY_SCH = SB_KEY_SCH;
 
 async function sbFetchSch(path) {
-  const res = await fetch(`${SB_URL_SCH}/rest/v1/${path}`, { headers: getAuthHeaders() });
+  const headers = await getAuthHeaders();
+  const res = await fetch(`${SB_URL_SCH}/rest/v1/${path}`, { headers });
   return res.json();
 }
 
