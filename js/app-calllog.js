@@ -58,7 +58,6 @@ function quickLogCall(reason) {
 
     resetCallForm();
     showToast('✅', 'Quick Logged!', reason, 'success', 3000);
-    loadLastTwoCalls(agent);
   })
   .catch(e => {
     if (submissionId !== _activeSubmission) return;
@@ -145,7 +144,6 @@ function submitCallLogForm() {
       if (bar) { bar.style.display = 'flex'; setTimeout(() => bar.style.display = 'none', 30000); }
       resetCallForm();
       showToast('✅', 'Call Logged!', cname ? cname + ' — ' + mobile : reason, 'success', 5000);
-      loadLastTwoCalls(data.agent);
     } else {
       showFormErr('Something went wrong. Please try again.');
     }
