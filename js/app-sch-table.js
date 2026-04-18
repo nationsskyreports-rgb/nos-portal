@@ -113,13 +113,20 @@ function getSchWeekDates(start, end) {
   return dates;
 }
 
-function schCellStyle(dayType) {
-  if (dayType === 'Work')   return 'color:#10b981;border-color:rgba(16,185,129,0.4);background:rgba(16,185,129,0.06)';
-  if (dayType === 'Annual') return 'color:#8b5cf6;border-color:rgba(139,92,246,0.4);background:rgba(139,92,246,0.06)';
-  if (dayType === 'Sick')   return 'color:#ef4444;border-color:rgba(239,68,68,0.4);background:rgba(239,68,68,0.06)';
-  if (dayType === 'Casual') return 'color:#f59e0b;border-color:rgba(245,158,11,0.4);background:rgba(245,158,11,0.06)';
-  if (dayType === 'PH')     return 'color:#3b82f6;border-color:rgba(59,130,246,0.4);background:rgba(59,130,246,0.06)';
-  return 'color:var(--muted);border-color:var(--border);background:var(--surface2)';
+function schCellStyle(dayType, shiftTypeId) {
+  if (dayType === 'Work') {
+    const st = schShiftTypes.find(s => s.id === shiftTypeId);
+    const hr = st ? parseInt(st.start_time.substring(0,2)) : 8;
+    if (hr < 12)      return 'color:#fff;border-color:#10b981;background:#10b981;font-weight:800;';
+    else if (hr < 14) return 'color:#fff;border-color:#0ea5e9;background:#0ea5e9;font-weight:800;';
+    else              return 'color:#000;border-color:#f59e0b;background:#f59e0b;font-weight:800;';
+  }
+  if (dayType === 'Annual') return 'color:#fff;border-color:#8b5cf6;background:#8b5cf6;font-weight:800;';
+  if (dayType === 'Sick')   return 'color:#fff;border-color:#f43f5e;background:#f43f5e;font-weight:800;';
+  if (dayType === 'Casual') return 'color:#000;border-color:#f59e0b;background:#f59e0b;font-weight:800;';
+  if (dayType === 'PH')     return 'color:#fff;border-color:#3b82f6;background:#3b82f6;font-weight:800;';
+  if (dayType === 'Task')   return 'color:#fff;border-color:#06b6d4;background:#06b6d4;font-weight:800;';
+  return 'color:#94a3b8;border-color:#334155;background:#1e293b;font-weight:700;';
 }
 
 function schShiftLabel(dayType, shiftTypeId) {
@@ -152,21 +159,20 @@ function buildSchGrid(agents, dates, schedMap, today) {
       const dt = e ? e.day_type : 'Off';
       const st = schShiftTypes.find(s => s.id === (e ? e.shift_type_id : null));
       const isTd = d.iso === today;
-      let cell='— Off —', color='var(--muted)', bg='transparent', border='transparent';
+      let cell='— Off —', color='#fff', bg='#64748b', border='#64748b';
       if (dt==='Work'&&st) {
         cell = st.start_time.substring(0,5)+' - '+st.end_time.substring(0,5);
         const hr = parseInt(st.start_time.substring(0,2));
-        if (hr < 12)      { color='#059669'; bg='rgba(16,185,129,0.18)';  border='rgba(16,185,129,0.6)'; }
-        else if (hr < 14) { color='#1d4ed8'; bg='rgba(59,130,246,0.18)';  border='rgba(59,130,246,0.6)'; }
-        else              { color='#92400e'; bg='rgba(251,191,36,0.25)';   border='rgba(251,191,36,0.7)'; }
+        if (hr < 12)      { bg='#10b981'; border='#10b981'; color='#fff'; }
+        else if (hr < 14) { bg='#0ea5e9'; border='#0ea5e9'; color='#fff'; }
+        else              { bg='#f59e0b'; border='#f59e0b'; color='#000'; }
       }
-      else if (dt==='Annual') { cell='Annual'; color='#8b5cf6'; bg='rgba(139,92,246,0.05)'; border='rgba(139,92,246,0.3)'; }
-      else if (dt==='Sick')   { cell='Sick';   color='#ef4444'; bg='rgba(239,68,68,0.05)';  border='rgba(239,68,68,0.3)'; }
-      else if (dt==='Casual') { cell='Casual'; color='#f59e0b'; bg='rgba(245,158,11,0.05)'; border='rgba(245,158,11,0.3)'; }
-      else if (dt==='PH')     { cell='PH';     color='#3b82f6'; bg='rgba(59,130,246,0.05)'; border='rgba(59,130,246,0.3)'; }
-      else if (dt==='Task')   { cell='Task';   color='#06b6d4'; bg='rgba(6,182,212,0.05)';  border='rgba(6,182,212,0.3)'; }
-      const isYellow = dt==='Work' && st && parseInt(st.start_time.substring(0,2)) >= 14;
-      html += `<td style="padding:5px;border-bottom:1px solid var(--border);text-align:center;${isTd?'background:rgba(212,175,55,0.04);':''}"><div style="background:${bg};border:1.5px solid ${border};border-radius:8px;padding:5px 4px;font-size:${isYellow?'13px':'12px'};font-weight:800;color:${color};white-space:nowrap;">${cell}</div></td>`;
+      else if (dt==='Annual') { bg='#8b5cf6'; border='#8b5cf6'; color='#fff'; cell='Annual'; }
+      else if (dt==='Sick')   { bg='#f43f5e'; border='#f43f5e'; color='#fff'; cell='Sick';   }
+      else if (dt==='Casual') { bg='#f59e0b'; border='#f59e0b'; color='#000'; cell='Casual'; }
+      else if (dt==='PH')     { bg='#3b82f6'; border='#3b82f6'; color='#fff'; cell='PH';     }
+      else if (dt==='Task')   { bg='#06b6d4'; border='#06b6d4'; color='#fff'; cell='Task';   }
+      html += `<td style="padding:5px;border-bottom:1px solid var(--border);text-align:center;${isTd?'background:rgba(212,175,55,0.06);':''}"><div style="background:${bg};border:1.5px solid ${border};border-radius:8px;padding:5px 4px;font-size:11px;font-weight:800;color:${color};white-space:nowrap;">${cell}</div></td>`;
     });
     html += `</tr>`;
   });
@@ -197,7 +203,7 @@ async function loadSchTable(weekId) {
 }
 
 function buildShiftSelect(agentId, date, dayType, shiftTypeId, isEditable) {
-  const style = schCellStyle(dayType);
+  const style = schCellStyle(dayType, shiftTypeId);
   if (!isEditable) {
     return `<div style="padding:6px 4px;border:1.5px solid;border-radius:8px;font-size:10px;font-weight:700;text-align:center;${style};white-space:nowrap;">${schShiftLabel(dayType, shiftTypeId)}</div>`;
   }
@@ -287,7 +293,7 @@ function onSchDraftChange(sel) {
   let dayType = val, shiftTypeId = null;
   if (val.startsWith('Work__')) { dayType = 'Work'; shiftTypeId = val.split('__')[1]; }
   schMyDraft[date] = { day_type: dayType, shift_type_id: shiftTypeId };
-  sel.style.cssText += ';' + schCellStyle(dayType);
+  sel.style.cssText += ';' + schCellStyle(dayType, shiftTypeId);
 }
 
 function isSchRequestOpen() {
