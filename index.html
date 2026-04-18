@@ -851,6 +851,38 @@
       });
       window.location.reload();
     }
+
+    // ── Register Service Worker ──
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js').then(reg => {
+
+        // لو في SW جديد waiting — اعرض toast
+        if (reg.waiting) showUpdateToast();
+
+        reg.addEventListener('updatefound', () => {
+          const newWorker = reg.installing;
+          newWorker.addEventListener('statechange', () => {
+            if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+              showUpdateToast();
+            }
+          });
+        });
+
+      }).catch(err => console.warn('SW registration failed:', err));
+
+      // لما الـ SW الجديد يتفعّل — reload تلقائي
+      navigator.serviceWorker.addEventListener('message', e => {
+        if (e.data && e.data.type === 'SW_UPDATED') {
+          window.location.reload();
+        }
+      });
+
+      // لما يتغير الـ controller (SW جديد أخد السيطرة) — reload
+      let refreshing = false;
+      navigator.serviceWorker.addEventListener('controllerchange', () => {
+        if (!refreshing) { refreshing = true; window.location.reload(); }
+      });
+    }
   </script>
 
 <div id="nos-result-popup" style="display:none"></div>
