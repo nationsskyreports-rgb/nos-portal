@@ -349,7 +349,7 @@ function logout() {
   document.getElementById('pass').value         = '';
   document.getElementById('login-msg').innerHTML = '';
   document.getElementById('empList').selectedIndex = 0;
-  ['conformance','missing','aht','calls','annual','exceptions','quality']
+  ['conformance','missing','aht','calls','annual','exceptions','quality','adherence']
     .forEach(k => document.getElementById('d-' + k).innerText = '-');
 
   switchTab('tab-dashboard', null, 0);
@@ -530,16 +530,17 @@ async function loadKPIData(agentName) {
     if (!agentId) { checkDataAvailability(null); return; }
 
     // كل الـ requests بالتوازي
-    const [perfRes, excusesRes, annRes, qualRes, callsRes] = await Promise.all([
+    const [perfRes, excusesRes, annRes, qualRes, callsRes, adherenceRes] = await Promise.all([
       fetch(`${SB_URL_SCH}/rest/v1/daily_performance?agent_id=eq.${agentId}&perf_date=gte.${dateFrom}&perf_date=lte.${dateTo}&select=conformance,missing_sec,avg_aht,calls`, { headers }),
       fetch(`${SB_URL_SCH}/rest/v1/excuses?agent_id=eq.${agentId}&status=eq.Approved&excuse_date=gte.${dateFrom}&excuse_date=lte.${dateTo}&select=id`, { headers }),
       fetch(`${SB_URL_SCH}/rest/v1/annual_leave?agent_id=eq.${agentId}&year=eq.${year}&limit=1`, { headers }),
       fetch(`${SB_URL_SCH}/rest/v1/quality_scores?agent_id=eq.${agentId}&month=eq.${monthFull}&year=eq.${year}&limit=1&select=score`, { headers }),
       fetch(`${SB_URL_SCH}/rest/v1/call_logs?agent_name=eq.${encodeURIComponent(agentName)}&logged_at=gte.${dateFrom}&logged_at=lte.${dateTo}T23:59:59&select=id`, { headers }),
+      fetch(`${SB_URL_SCH}/rest/v1/adherence_deviations?agent_id=eq.${agentId}&deviation_date=gte.${dateFrom}&deviation_date=lte.${dateTo}&select=id,is_waived`, { headers }),
     ]);
 
-    const [perfData, excusesData, annData, qualData, callsData] = await Promise.all([
-      perfRes.json(), excusesRes.json(), annRes.json(), qualRes.json(), callsRes.json()
+    const [perfData, excusesData, annData, qualData, callsData, adherenceData] = await Promise.all([
+      perfRes.json(), excusesRes.json(), annRes.json(), qualRes.json(), callsRes.json(), adherenceRes.json()
     ]);
 
     // ── حساب الـ KPIs ──
@@ -596,6 +597,21 @@ async function loadKPIData(agentName) {
     document.getElementById('d-exceptions').innerText  = exceptions;
     document.getElementById('d-quality').innerText     = quality;
 
+    // Adherence
+    const adherenceArr  = adherenceData || [];
+    const activeDevs    = adherenceArr.filter(d => !d.is_waived).length;
+    const waivedDevs    = adherenceArr.filter(d => d.is_waived).length;
+    const adherenceEl   = document.getElementById('d-adherence');
+    if (adherenceEl) {
+      if (!adherenceArr.length) {
+        adherenceEl.innerText = 'Clean';
+        adherenceEl.style.color = 'var(--green, #10b981)';
+      } else {
+        adherenceEl.innerText = activeDevs + (waivedDevs ? ` (${waivedDevs} waived)` : '');
+        adherenceEl.style.color = activeDevs > 0 ? '#ef4444' : '#10b981';
+      }
+    }
+
     currentAnnualData.left = annLeft || 0;
     currentAnnualData.used = annUsed || 0;
 
@@ -650,16 +666,17 @@ async function changeMonthData() {
     if (!agentId) { loader.classList.add('hidden'); checkDataAvailability(null); return; }
 
     // كل الـ requests بالتوازي — نفس منطق loadKPIData
-    const [perfRes, excusesRes, annRes, qualRes, callsRes] = await Promise.all([
+    const [perfRes, excusesRes, annRes, qualRes, callsRes, adherenceRes] = await Promise.all([
       fetch(`${SB_URL_SCH}/rest/v1/daily_performance?agent_id=eq.${agentId}&perf_date=gte.${dateFrom}&perf_date=lte.${dateTo}&select=conformance,missing_sec,avg_aht,calls`, { headers }),
       fetch(`${SB_URL_SCH}/rest/v1/excuses?agent_id=eq.${agentId}&status=eq.Approved&excuse_date=gte.${dateFrom}&excuse_date=lte.${dateTo}&select=id`, { headers }),
       fetch(`${SB_URL_SCH}/rest/v1/annual_leave?agent_id=eq.${agentId}&year=eq.${year}&limit=1`, { headers }),
       fetch(`${SB_URL_SCH}/rest/v1/quality_scores?agent_id=eq.${agentId}&month=eq.${monthFull}&year=eq.${year}&limit=1&select=score`, { headers }),
       fetch(`${SB_URL_SCH}/rest/v1/call_logs?agent_name=eq.${encodeURIComponent(agentName)}&logged_at=gte.${dateFrom}&logged_at=lte.${dateTo}T23:59:59&select=id`, { headers }),
+      fetch(`${SB_URL_SCH}/rest/v1/adherence_deviations?agent_id=eq.${agentId}&deviation_date=gte.${dateFrom}&deviation_date=lte.${dateTo}&select=id,is_waived`, { headers }),
     ]);
 
-    const [perfData, excusesData, annData, qualData, callsData] = await Promise.all([
-      perfRes.json(), excusesRes.json(), annRes.json(), qualRes.json(), callsRes.json()
+    const [perfData, excusesData, annData, qualData, callsData, adherenceData] = await Promise.all([
+      perfRes.json(), excusesRes.json(), annRes.json(), qualRes.json(), callsRes.json(), adherenceRes.json()
     ]);
 
     loader.classList.add('hidden');
@@ -716,6 +733,21 @@ async function changeMonthData() {
     document.getElementById('d-annual').innerText      = selectedMonth === 'CURRENT' ? annLeft : annUsed;
     document.getElementById('d-exceptions').innerText  = exceptions;
     document.getElementById('d-quality').innerText     = quality;
+
+    // Adherence
+    const adherenceArr2 = adherenceData || [];
+    const activeDevs2   = adherenceArr2.filter(d => !d.is_waived).length;
+    const waivedDevs2   = adherenceArr2.filter(d => d.is_waived).length;
+    const adherenceEl2  = document.getElementById('d-adherence');
+    if (adherenceEl2) {
+      if (!adherenceArr2.length) {
+        adherenceEl2.innerText = 'Clean';
+        adherenceEl2.style.color = 'var(--green, #10b981)';
+      } else {
+        adherenceEl2.innerText = activeDevs2 + (waivedDevs2 ? ` (${waivedDevs2} waived)` : '');
+        adherenceEl2.style.color = activeDevs2 > 0 ? '#ef4444' : '#10b981';
+      }
+    }
 
     currentAnnualData.left = annLeft || 0;
     currentAnnualData.used = annUsed || 0;
