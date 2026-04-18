@@ -73,7 +73,6 @@ function renderSchedule(scheduleData) {
 
 /* ─── 09. LOAD AGENT SCHEDULE (Supabase) ─── */
 async function loadAgentSchedule() {
-  schMyAgentId  = null;
   schShiftTypes = [];
   const agentName = document.getElementById('user-name').innerText.trim();
   const container = document.getElementById('schedule-content');
