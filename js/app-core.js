@@ -373,7 +373,6 @@ async function showDashboard(res) {
   document.getElementById('nav-avatar').innerText = initials;
   document.getElementById('user-name').innerText  = res.name;
   document.getElementById('f-agent').value        = res.name;
-  loadLastTwoCalls(res.name);
 
   // ── جيب الشيفت الحقيقي من schedule table ──
   let todayShift = 'N/A';
