@@ -158,9 +158,22 @@ async function loadAgentSchedule() {
     return html;
   }
 
+  const thisWeekDays = buildDays(thisWeekStart, thisWeekEnd);
+  const nextWeekDays = buildDays(nextWeekStart, nextWeekEnd);
+  const nextWeekHasData = nextWeekDays.some(d => d.dayType !== null);
+  const nextWeekSection = nextWeekHasData
+    ? buildWeekHtml(nextWeekDays, '📆 NEXT WEEK')
+    : `<div class="week-section">
+        <div class="nos-week-label">📆 NEXT WEEK</div>
+        <div style="text-align:center;padding:32px 16px;color:var(--muted);font-size:13px;font-weight:600;">
+          <div style="font-size:28px;margin-bottom:8px;">⏳</div>
+          Schedule not published yet
+        </div>
+      </div>`;
+
   container.innerHTML = `<div class="sched-container">
-    ${buildWeekHtml(buildDays(thisWeekStart, thisWeekEnd), '📅 THIS WEEK')}
-    ${buildWeekHtml(buildDays(nextWeekStart, nextWeekEnd), '📆 NEXT WEEK')}
+    ${buildWeekHtml(thisWeekDays, '📅 THIS WEEK')}
+    ${nextWeekSection}
   </div>`;
 }
 
