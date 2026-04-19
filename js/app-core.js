@@ -526,10 +526,11 @@ async function loadKPIData(agentName) {
     const agentData = await agentRes.json();
     const agentId   = agentData?.[0]?.id;
     if (!agentId) { if (typeof checkDataAvailability === "function") checkDataAvailability(null); return; }
+    if (!schMyAgentId) schMyAgentId = agentId; // cache for showAnnualDetails
 
     // كل الـ requests بالتوازي
     const [perfRes, excusesRes, annRes, qualRes, callsRes, adherenceRes] = await Promise.all([
-      fetch(`${SB_URL_SCH}/rest/v1/daily_performance?agent_id=eq.${agentId}&perf_date=gte.${dateFrom}&perf_date=lte.${dateTo}&select=conformance,missing_sec,avg_aht,calls`, { headers }),
+      fetch(`${SB_URL_SCH}/rest/v1/daily_performance?agent_id=eq.${agentId}&perf_date=gte.${dateFrom}&perf_date=lte.${dateTo}&select=conformance,missing_sec,avg_aht`, { headers }),
       fetch(`${SB_URL_SCH}/rest/v1/excuses?agent_id=eq.${agentId}&status=eq.Approved&excuse_date=gte.${dateFrom}&excuse_date=lte.${dateTo}&select=id`, { headers }),
       fetch(`${SB_URL_SCH}/rest/v1/annual_leave?agent_id=eq.${agentId}&year=eq.${year}&limit=1`, { headers }),
       fetch(`${SB_URL_SCH}/rest/v1/quality_scores?agent_id=eq.${agentId}&month=eq.${monthFull}&year=eq.${year}&limit=1&select=score`, { headers }),
@@ -639,7 +640,7 @@ async function changeMonthData() {
     const MONTHS_SHORT_MAP  = {
       'Jan':0,'Feb':1,'Mar':2,'Apr':3,'May':4,'Jun':5,
       'Jul':6,'Aug':7,'Sep':8,'Oct':9,'Nov':10,'Dec':11,
-      'January':0,'February':1,'March':2,'April':3,'June':5,
+      'January':0,'February':1,'March':2,'April':3,'May':4,'June':5,
       'July':6,'August':7,'September':8,'October':9,'November':10,'December':11
     };
 
@@ -667,7 +668,7 @@ async function changeMonthData() {
 
     // كل الـ requests بالتوازي — نفس منطق loadKPIData
     const [perfRes, excusesRes, annRes, qualRes, callsRes, adherenceRes] = await Promise.all([
-      fetch(`${SB_URL_SCH}/rest/v1/daily_performance?agent_id=eq.${agentId}&perf_date=gte.${dateFrom}&perf_date=lte.${dateTo}&select=conformance,missing_sec,avg_aht,calls`, { headers }),
+      fetch(`${SB_URL_SCH}/rest/v1/daily_performance?agent_id=eq.${agentId}&perf_date=gte.${dateFrom}&perf_date=lte.${dateTo}&select=conformance,missing_sec,avg_aht`, { headers }),
       fetch(`${SB_URL_SCH}/rest/v1/excuses?agent_id=eq.${agentId}&status=eq.Approved&excuse_date=gte.${dateFrom}&excuse_date=lte.${dateTo}&select=id`, { headers }),
       fetch(`${SB_URL_SCH}/rest/v1/annual_leave?agent_id=eq.${agentId}&year=eq.${year}&limit=1`, { headers }),
       fetch(`${SB_URL_SCH}/rest/v1/quality_scores?agent_id=eq.${agentId}&month=eq.${monthFull}&year=eq.${year}&limit=1&select=score`, { headers }),
@@ -857,7 +858,7 @@ function switchTab(id, btn, idx) {
   document.querySelectorAll('.bottom-nav-btn').forEach(b => b.classList.remove('active'));
   document.getElementById(id).classList.add('active');
   if (id === 'tab-kb')        loadKBSections();
-  if (id === 'tab-form') { const btn = document.getElementById('formSubmitBtn'); if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-paper-plane"></i> Submit to Database'; } }
+  if (id === 'tab-form') { const submitBtn = document.getElementById('formSubmitBtn'); if (submitBtn) { submitBtn.disabled = false; submitBtn.innerHTML = '<i class="fas fa-paper-plane"></i> Submit to Database'; } }
   if (id === 'tab-schedule')  loadAgentSchedule();
   if (id === 'tab-sch-table') initSchTab();
   if (id === 'tab-mylog')     loadMyCallLog(); 
