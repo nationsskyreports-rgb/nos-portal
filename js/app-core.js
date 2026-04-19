@@ -528,7 +528,7 @@ async function loadKPIData(agentName) {
     );
     const agentData = await agentRes.json();
     const agentId   = agentData?.[0]?.id;
-    if (!agentId) { checkDataAvailability(null); return; }
+    if (!agentId) { if (typeof checkDataAvailability === "function") checkDataAvailability(null); return; }
 
     // كل الـ requests بالتوازي
     const [perfRes, excusesRes, annRes, qualRes, callsRes, adherenceRes] = await Promise.all([
@@ -641,7 +641,9 @@ async function changeMonthData() {
                                'jul','aug','sep','oct','nov','dec'];
     const MONTHS_SHORT_MAP  = {
       'Jan':0,'Feb':1,'Mar':2,'Apr':3,'May':4,'Jun':5,
-      'Jul':6,'Aug':7,'Sep':8,'Oct':9,'Nov':10,'Dec':11
+      'Jul':6,'Aug':7,'Sep':8,'Oct':9,'Nov':10,'Dec':11,
+      'January':0,'February':1,'March':2,'April':3,'June':5,
+      'July':6,'August':7,'September':8,'October':9,'November':10,'December':11
     };
 
     const monthIdx  = selectedMonth === 'CURRENT'
@@ -664,7 +666,7 @@ async function changeMonthData() {
     );
     const agentData = await agentRes.json();
     const agentId   = agentData?.[0]?.id;
-    if (!agentId) { loader.classList.add('hidden'); checkDataAvailability(null); return; }
+    if (!agentId) { loader.classList.add('hidden'); if (typeof checkDataAvailability === "function") checkDataAvailability(null); return; }
 
     // كل الـ requests بالتوازي — نفس منطق loadKPIData
     const [perfRes, excusesRes, annRes, qualRes, callsRes, adherenceRes] = await Promise.all([
@@ -725,7 +727,7 @@ async function changeMonthData() {
 
     // ── Update UI ──
     const hasData = perf.length > 0 || totalCalls > 0 || ann || qualData?.[0];
-    checkDataAvailability(hasData ? {} : null);
+    if (typeof checkDataAvailability === "function") checkDataAvailability(hasData ? {} : null);
 
     document.getElementById('d-conformance').innerText = conformance;
     document.getElementById('d-missing').innerText     = missingTime;
