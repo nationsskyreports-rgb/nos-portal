@@ -35,7 +35,6 @@ function quickLogCall(reason) {
 
   const submissionId = ++_activeSubmission;
 
-  // 1. Supabase — بنستنى الرد ✅
   fetch(`${SB_URL_SCH}/rest/v1/call_logs`, {
     method: 'POST',
     headers: { 'apikey': SB_KEY_SCH, 'Authorization': `Bearer ${window._authToken || SB_KEY_SCH}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
@@ -61,7 +60,6 @@ function quickLogCall(reason) {
   })
   .catch(() => {
     if (submissionId !== _activeSubmission) return;
-    /* فشل الـ fetch (offline أو مشكلة شبكة) — احفظ محلياً */
     if (typeof addOfflineCall === 'function') {
       addOfflineCall({ agent, reason, cname:'', mobile:'', bizrel:'', salescall:'',
         channel:'', media:'', budget:'', unit:'', extra:'', _channel: window._activeChannel||'call' });
@@ -117,7 +115,6 @@ function submitCallLogForm() {
     extra: document.getElementById('f-extra').value.trim()
   };
 
-  // Supabase
   fetch(`${SB_URL_SCH}/rest/v1/call_logs`, {
     method: 'POST',
     headers: { 'apikey': SB_KEY_SCH, 'Authorization': `Bearer ${window._authToken || SB_KEY_SCH}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
@@ -160,7 +157,6 @@ function submitCallLogForm() {
     if (submissionId !== _activeSubmission) return;
     const liveBtnErr = document.getElementById('formSubmitBtn');
     if (liveBtnErr) setButtonLoading(liveBtnErr, false, '📤 Submit to Database');
-    /* فشل الـ fetch (offline أو مشكلة شبكة) — احفظ محلياً */
     if (typeof addOfflineCall === 'function') {
       addOfflineCall({ ...data, _channel: window._activeChannel||'call' });
       if (window.showResultPopup) {
@@ -176,9 +172,8 @@ function submitCallLogForm() {
       showFormErr('Connection error. Please try again.');
     }
   });
-
-  // Supabase save handles everything — no GAS needed
 }
+
 function resetCallForm() {
   ['f-reason','f-mobile','f-extra'].forEach(id => document.getElementById(id).value = '');
   document.getElementById('f-cname').value = '';
@@ -358,6 +353,7 @@ async function step1SearchCustomer() {
     setButtonLoading(btn, false, '🔍 Search');
   }
 }
+
 function clearStep1Search() {
   const input   = document.getElementById('step1-search-input');
   const results = document.getElementById('step1-search-results');
@@ -370,6 +366,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const tof = document.getElementById('time-off-form');
   if (tof) tof.style.display = 'block';
 });
+
 async function loadMyCallLog() {
   const agent     = document.getElementById('user-name').innerText.trim();
   const container = document.getElementById('tab-mylog');
@@ -452,9 +449,15 @@ async function fetchMyCallLog(agent) {
                 <div style="font-size:12px;color:var(--muted);font-family:monospace;">${c.customer_mobile || '—'}</div>
               </div>
             </div>
-            <div style="text-align:right;">
-              <div style="font-size:13px;font-weight:700;color:var(--primary);">${time}</div>
-              <div style="font-size:11px;color:var(--muted);">${date}</div>
+            <div style="display:flex;align-items:center;gap:10px;">
+              <div style="text-align:right;">
+                <div style="font-size:13px;font-weight:700;color:var(--primary);">${time}</div>
+                <div style="font-size:11px;color:var(--muted);">${date}</div>
+              </div>
+              <button onclick="openEditCallModal(${JSON.stringify(c).replace(/"/g,'&quot;')})"
+                style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:7px 13px;font-size:12px;font-weight:700;color:var(--primary);cursor:pointer;display:flex;align-items:center;gap:5px;white-space:nowrap;">
+                ✏️ Edit
+              </button>
             </div>
           </div>
           <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;font-size:12px;">
@@ -479,4 +482,189 @@ async function fetchMyCallLog(agent) {
     container.innerHTML = '<div class="empty-state">Connection error. Try again.</div>';
     console.error('fetchMyCallLog error:', e);
   }
+}
+
+/* ─── EDIT CALL LOG MODAL ─── */
+
+function openEditCallModal(callData) {
+  const existing = document.getElementById('edit-call-modal');
+  if (existing) existing.remove();
+
+  const reasonOptions  = ['Inquiry','Follow Up','Complaint','Wrong Number','Call Dropped','Sales Call','After Sales','Other'];
+  const channelOptions = ['Phone','WhatsApp','Email','Walk-In','Other'];
+  const mediaOptions   = ['Facebook','Instagram','Website','Referral','Outdoor','TV','Radio','Other'];
+  const budgetOptions  = ['< 1M','1M - 2M','2M - 3M','3M - 5M','5M+'];
+  const unitOptions    = ['Apartment','Villa','Townhouse','Duplex','Studio','Office','Other'];
+  const bizrelOptions  = ['Business Related','Not Business Related'];
+  const salesOptions   = ['Yes','No'];
+
+  function opts(list, current) {
+    return list.map(o => `<option value="${o}" ${current === o ? 'selected' : ''}>${o}</option>`).join('');
+  }
+
+  const isQ = callData.call_reason === 'Wrong Number' || callData.call_reason === 'Call Dropped';
+
+  const modal = document.createElement('div');
+  modal.id = 'edit-call-modal';
+  modal.style.cssText = `
+    position:fixed;inset:0;z-index:9999;
+    background:rgba(0,0,0,0.7);backdrop-filter:blur(4px);
+    display:flex;align-items:center;justify-content:center;padding:16px;`;
+
+  modal.innerHTML = `
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:20px;
+      width:100%;max-width:520px;max-height:90vh;overflow-y:auto;padding:24px;position:relative;">
+
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
+        <div style="font-size:16px;font-weight:800;color:var(--text);">✏️ Edit Call Log</div>
+        <button onclick="document.getElementById('edit-call-modal').remove()"
+          style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;
+          width:34px;height:34px;font-size:16px;cursor:pointer;color:var(--muted);">✕</button>
+      </div>
+
+      <input type="hidden" id="edit-call-id" value="${callData.id}">
+
+      <div style="display:flex;flex-direction:column;gap:14px;">
+
+        <div>
+          <label style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;display:block;margin-bottom:6px;">Customer Name</label>
+          <input id="edit-cname" class="form-input" type="text" value="${callData.customer_name || ''}" placeholder="Customer Name">
+        </div>
+
+        <div>
+          <label style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;display:block;margin-bottom:6px;">Customer Mobile</label>
+          <input id="edit-mobile" class="form-input" type="text" value="${callData.customer_mobile || ''}" placeholder="Customer Mobile">
+        </div>
+
+        <div>
+          <label style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;display:block;margin-bottom:6px;">Call Reason</label>
+          <select id="edit-reason" class="form-input" onchange="toggleEditSections()">
+            ${opts(reasonOptions, callData.call_reason)}
+          </select>
+        </div>
+
+        <div id="edit-extra-fields" style="${isQ ? 'display:none' : ''}">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px;">
+            <div>
+              <label style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;display:block;margin-bottom:6px;">Channel</label>
+              <select id="edit-channel" class="form-input">${opts(channelOptions, callData.communication_channel)}</select>
+            </div>
+            <div>
+              <label style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;display:block;margin-bottom:6px;">Media Source</label>
+              <select id="edit-media" class="form-input">${opts(mediaOptions, callData.media_source)}</select>
+            </div>
+            <div>
+              <label style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;display:block;margin-bottom:6px;">Budget</label>
+              <select id="edit-budget" class="form-input">${opts(budgetOptions, callData.budget)}</select>
+            </div>
+            <div>
+              <label style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;display:block;margin-bottom:6px;">Unit Type</label>
+              <select id="edit-unit" class="form-input">${opts(unitOptions, callData.unit_type)}</select>
+            </div>
+            <div>
+              <label style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;display:block;margin-bottom:6px;">Business Relativity</label>
+              <select id="edit-bizrel" class="form-input">${opts(bizrelOptions, callData.business_relativity)}</select>
+            </div>
+            <div>
+              <label style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;display:block;margin-bottom:6px;">Sales Call Requested</label>
+              <select id="edit-salescall" class="form-input">${opts(salesOptions, callData.sales_call_requested)}</select>
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <label style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;display:block;margin-bottom:6px;">Extra Notes</label>
+          <textarea id="edit-extra" class="form-input" rows="3" placeholder="Extra Notes..." style="resize:vertical;">${callData.extra_notes || ''}</textarea>
+        </div>
+
+        <div id="edit-error-msg" style="display:none;background:#fee2e2;border-radius:10px;padding:10px;font-size:13px;font-weight:600;color:#dc2626;"></div>
+
+        <button id="edit-save-btn" onclick="saveEditCallLog()"
+          style="background:var(--primary-gradient);border:none;border-radius:12px;padding:14px;
+          font-size:14px;font-weight:800;color:white;cursor:pointer;width:100%;">
+          💾 Save Changes
+        </button>
+
+      </div>
+    </div>`;
+
+  document.body.appendChild(modal);
+  modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
+}
+
+function toggleEditSections() {
+  const reason = document.getElementById('edit-reason')?.value;
+  const isQ = reason === 'Wrong Number' || reason === 'Call Dropped';
+  const extra = document.getElementById('edit-extra-fields');
+  if (extra) extra.style.display = isQ ? 'none' : '';
+}
+
+async function saveEditCallLog() {
+  const id       = document.getElementById('edit-call-id').value;
+  const reason   = document.getElementById('edit-reason').value;
+  const isQ      = reason === 'Wrong Number' || reason === 'Call Dropped';
+  const errEl    = document.getElementById('edit-error-msg');
+  const saveBtn  = document.getElementById('edit-save-btn');
+
+  const cname     = document.getElementById('edit-cname').value.trim();
+  const mobile    = document.getElementById('edit-mobile').value.trim();
+  const channel   = isQ ? '' : document.getElementById('edit-channel').value;
+  const media     = isQ ? '' : document.getElementById('edit-media').value;
+  const budget    = isQ ? '' : document.getElementById('edit-budget').value;
+  const unit      = isQ ? '' : document.getElementById('edit-unit').value;
+  const bizrel    = isQ ? '' : document.getElementById('edit-bizrel').value;
+  const salescall = isQ ? '' : document.getElementById('edit-salescall').value;
+  const extra     = document.getElementById('edit-extra').value.trim();
+
+  if (!isQ && !cname)  { showEditError('Please enter Customer Name'); return; }
+  if (!isQ && !mobile) { showEditError('Please enter Customer Mobile'); return; }
+
+  errEl.style.display = 'none';
+  setButtonLoading(saveBtn, true, 'Saving...');
+
+  try {
+    const res = await fetch(
+      `${SB_URL_SCH}/rest/v1/call_logs?id=eq.${id}`,
+      {
+        method: 'PATCH',
+        headers: {
+          'apikey': SB_KEY_SCH,
+          'Authorization': `Bearer ${window._authToken || SB_KEY_SCH}`,
+          'Content-Type': 'application/json',
+          'Prefer': 'return=minimal'
+        },
+        body: JSON.stringify({
+          customer_name:         isQ ? '' : cname,
+          customer_mobile:       isQ ? '' : mobile,
+          call_reason:           reason,
+          communication_channel: channel,
+          media_source:          media,
+          budget:                budget,
+          unit_type:             unit,
+          business_relativity:   bizrel,
+          sales_call_requested:  salescall,
+          extra_notes:           extra,
+        })
+      }
+    );
+
+    if (res.ok) {
+      document.getElementById('edit-call-modal').remove();
+      if (window.showToast) showToast('✅', 'Updated!', 'Call log updated successfully.', 'success', 3000);
+      const agent = document.getElementById('user-name')?.innerText.trim();
+      if (agent && typeof fetchMyCallLog === 'function') fetchMyCallLog(agent);
+    } else {
+      const err = await res.text();
+      showEditError('Save failed: ' + err);
+      setButtonLoading(saveBtn, false, '💾 Save Changes');
+    }
+  } catch(e) {
+    showEditError('Connection error. Please try again.');
+    setButtonLoading(saveBtn, false, '💾 Save Changes');
+  }
+}
+
+function showEditError(msg) {
+  const el = document.getElementById('edit-error-msg');
+  if (el) { el.textContent = msg; el.style.display = 'block'; }
 }
