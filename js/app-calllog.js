@@ -490,13 +490,20 @@ function openEditCallModal(callData) {
   const existing = document.getElementById('edit-call-modal');
   if (existing) existing.remove();
 
-  const reasonOptions  = ['Inquiry','Follow Up','Complaint','Wrong Number','Call Dropped','Sales Call','After Sales','Other'];
-  const channelOptions = ['Phone','WhatsApp','Email','Walk-In','Other'];
-  const mediaOptions   = ['Facebook','Instagram','Website','Referral','Outdoor','TV','Radio','Other'];
-  const budgetOptions  = ['< 1M','1M - 2M','2M - 3M','3M - 5M','5M+'];
-  const unitOptions    = ['Apartment','Villa','Townhouse','Duplex','Studio','Office','Other'];
-  const bizrelOptions  = ['Business Related','Not Business Related'];
-  const salesOptions   = ['Yes','No'];
+  const reasonOptions = [
+    'Wrong Number','Call Dropped','Asking about the projects',
+    'Jirian campaign','Jirian Island campaign','Sky Ridge Elite',
+    'Sky Ridge Executives','Zomra','ISLA','Upviews','Broker',
+    'Delayed sales call','EOI Refund','Collaboration request',
+    'Non-Business General Inquiry','Business General Inquiry',
+    'Complaint',"Shakira's Event"
+  ];
+  const channelOptions = ['Whatsapp','Mobile','Email','Alternative Mobile','SMS','N/A'];
+  const mediaOptions   = ['Billboards','Saw site','Facebook','Instagram','Linkedin','Word of mouth','TV ad.','Youtube','N/A'];
+  const budgetOptions  = ['0 - 10','10 - 20','20 +','N/A'];
+  const unitOptions    = ['Apartment','Villa','Commercial','Admin','Twin House','Stand Alone House','Town House','N/A'];
+  const bizrelOptions  = ['Business Related','Non-Business Related'];
+  const salesOptions   = ['Yes','No','N/A'];
 
   function opts(list, current) {
     return list.map(o => `<option value="${o}" ${current === o ? 'selected' : ''}>${o}</option>`).join('');
@@ -544,31 +551,38 @@ function openEditCallModal(callData) {
         </div>
 
         <div id="edit-extra-fields" style="${isQ ? 'display:none' : ''}">
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px;">
-            <div>
-              <label style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;display:block;margin-bottom:6px;">Channel</label>
-              <select id="edit-channel" class="form-input">${opts(channelOptions, callData.communication_channel)}</select>
-            </div>
-            <div>
-              <label style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;display:block;margin-bottom:6px;">Media Source</label>
-              <select id="edit-media" class="form-input">${opts(mediaOptions, callData.media_source)}</select>
-            </div>
-            <div>
-              <label style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;display:block;margin-bottom:6px;">Budget</label>
-              <select id="edit-budget" class="form-input">${opts(budgetOptions, callData.budget)}</select>
-            </div>
-            <div>
-              <label style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;display:block;margin-bottom:6px;">Unit Type</label>
-              <select id="edit-unit" class="form-input">${opts(unitOptions, callData.unit_type)}</select>
-            </div>
+          <div style="display:flex;flex-direction:column;gap:12px;">
+
             <div>
               <label style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;display:block;margin-bottom:6px;">Business Relativity</label>
               <select id="edit-bizrel" class="form-input">${opts(bizrelOptions, callData.business_relativity)}</select>
             </div>
+
             <div>
               <label style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;display:block;margin-bottom:6px;">Sales Call Requested</label>
               <select id="edit-salescall" class="form-input">${opts(salesOptions, callData.sales_call_requested)}</select>
             </div>
+
+            <div>
+              <label style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;display:block;margin-bottom:6px;">Communication Channel</label>
+              <select id="edit-channel" class="form-input">${opts(channelOptions, callData.communication_channel)}</select>
+            </div>
+
+            <div>
+              <label style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;display:block;margin-bottom:6px;">Media Source</label>
+              <select id="edit-media" class="form-input">${opts(mediaOptions, callData.media_source)}</select>
+            </div>
+
+            <div>
+              <label style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;display:block;margin-bottom:6px;">Budget</label>
+              <select id="edit-budget" class="form-input">${opts(budgetOptions, callData.budget)}</select>
+            </div>
+
+            <div>
+              <label style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;display:block;margin-bottom:6px;">Unit Type</label>
+              <select id="edit-unit" class="form-input">${opts(unitOptions, callData.unit_type)}</select>
+            </div>
+
           </div>
         </div>
 
