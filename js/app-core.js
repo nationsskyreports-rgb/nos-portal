@@ -377,7 +377,7 @@ async function showDashboard(res) {
   document.getElementById('f-agent').value        = res.name;
 
   // ── جيب الشيفت الحقيقي من schedule table ──
-  let todayShift = 'N/A';
+  let todayShift = 'OFF';
   try {
     const today     = getLocalDateStr();
     const agentData = await sbFetchSch(`agents?select=id&formal_name=eq.${encodeURIComponent(res.name)}&status=eq.Active&limit=1`);
