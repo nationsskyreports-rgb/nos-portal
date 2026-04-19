@@ -386,13 +386,12 @@ async function showDashboard(res) {
       const schRaw  = await sbFetchSch(`schedule?select=day_type,shift_types(start_time,end_time),schedule_weeks(status)&agent_id=eq.${schMyAgentId}&shift_date=eq.${today}&limit=5`);
       const schData = (schRaw||[]).filter(s=>s.schedule_weeks?.status==='Published');
       if (schData && schData[0]) {
-          const dayType = schData[0].day_type;
-          const st      = schData[0].shift_types;
-          if (dayType === 'Work' && st) {
-            todayShift = st.start_time.substring(0,5) + ' - ' + st.end_time.substring(0,5);
-          } else if (dayType && dayType !== 'Work') {
-            todayShift = dayType;
-          }
+        const dayType = schData[0].day_type;
+        const st      = schData[0].shift_types;
+        if (dayType === 'Work' && st) {
+          todayShift = st.start_time.substring(0,5) + ' - ' + st.end_time.substring(0,5);
+        } else if (dayType && dayType !== 'Work') {
+          todayShift = dayType;
         }
       }
     }
