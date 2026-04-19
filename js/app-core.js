@@ -383,8 +383,8 @@ async function showDashboard(res) {
     const agentData = await sbFetchSch(`agents?select=id&formal_name=eq.${encodeURIComponent(res.name)}&status=eq.Active&limit=1`);
     if (agentData && agentData[0]) {
       schMyAgentId = agentData[0].id;
-      const schRaw  = await sbFetchSch(`schedule?select=day_type,shift_types(start_time,end_time),schedule_weeks(status)&agent_id=eq.${schMyAgentId}&shift_date=eq.${today}&limit=5`);
-      const schData = (schRaw||[]).filter(s=>s.schedule_weeks?.status==='Published');
+      const schRaw  = await sbFetchSch(`schedule?select=day_type,shift_types(start_time,end_time)&agent_id=eq.${schMyAgentId}&shift_date=eq.${today}&limit=5`);
+      const schData = schRaw || [];
       if (schData && schData[0]) {
         const dayType = schData[0].day_type;
         const st      = schData[0].shift_types;
