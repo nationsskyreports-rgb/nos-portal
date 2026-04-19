@@ -186,6 +186,11 @@ window.onload = async function() {
   scheduleNightlyRefresh();
 };
 
+function checkDataAvailability(data) {
+  const banner = document.getElementById('no-data-banner');
+  if (banner) banner.style.display = data ? 'none' : 'block';
+}
+
 function scheduleNightlyRefresh() {
   const now    = new Date();
   const target = new Date();
