@@ -59,10 +59,17 @@ function quickLogCall(reason) {
     resetCallForm();
     showToast('✅', 'Quick Logged!', reason, 'success', 3000);
   })
-  .catch(e => {
+  .catch(() => {
     if (submissionId !== _activeSubmission) return;
-    console.error('Quick Log Error:', e);
-    showFormErr('Connection error. Please try again.');
+    /* فشل الـ fetch (offline أو مشكلة شبكة) — احفظ محلياً */
+    if (typeof addOfflineCall === 'function') {
+      addOfflineCall({ agent, reason, cname:'', mobile:'', bizrel:'', salescall:'',
+        channel:'', media:'', budget:'', unit:'', extra:'', _channel: window._activeChannel||'call' });
+      if (window.showToast) showToast('📥','Saved Offline!', reason+' — Will sync when back online.','warn',6000);
+      if (typeof setStatusBar === 'function') setStatusBar('offline', `You're offline — ${getOfflineCalls().length} call(s) pending sync`);
+    } else {
+      showFormErr('Connection error. Please try again.');
+    }
   });
 }
 
@@ -148,13 +155,26 @@ function submitCallLogForm() {
       showFormErr('Something went wrong. Please try again.');
     }
   })
-  .catch(err => {
+  .catch(() => {
     clearTimeout(slowTimer);
     if (submissionId !== _activeSubmission) return;
     const liveBtnErr = document.getElementById('formSubmitBtn');
     if (liveBtnErr) setButtonLoading(liveBtnErr, false, '📤 Submit to Database');
-    showFormErr('Connection error. Please try again.');
-    console.error('submitCallLogForm error:', err);
+    /* فشل الـ fetch (offline أو مشكلة شبكة) — احفظ محلياً */
+    if (typeof addOfflineCall === 'function') {
+      addOfflineCall({ ...data, _channel: window._activeChannel||'call' });
+      if (window.showResultPopup) {
+        showResultPopup('success','Saved Offline 📥',
+          "No internet. Call saved and will sync automatically when you're back online.",
+          'Got it!', () => { if (typeof resetCallForm==='function') resetCallForm(); });
+      } else if (window.showToast) {
+        showToast('📥','Saved Offline!','Will sync when connection is restored.','warn',6000);
+        if (typeof resetCallForm==='function') resetCallForm();
+      }
+      if (typeof setStatusBar==='function') setStatusBar('offline', `You're offline — ${getOfflineCalls().length} call(s) pending sync`);
+    } else {
+      showFormErr('Connection error. Please try again.');
+    }
   });
 
   // Supabase save handles everything — no GAS needed
