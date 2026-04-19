@@ -1,6 +1,6 @@
 const CACHE_NAME = 'ns-portal-v13';
 const CACHE_ASSETS = [
-  '/manifest.json',
+  './manifest.json',
   'https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap',
   'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css'
 ];
@@ -36,7 +36,7 @@ self.addEventListener('fetch', e => {
 
   // HTML - always network
   if (e.request.destination === 'document' || url.endsWith('.html') || url === '/') {
-    e.respondWith(fetch(e.request).catch(() => caches.match('/index.html')));
+    e.respondWith(fetch(e.request).catch(() => caches.match('./index.html')));
     return;
   }
 
