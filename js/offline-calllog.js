@@ -172,7 +172,7 @@ function sbInsertCallLog(data, savedAt) {
     method: 'POST',
     headers: {
       'apikey':        SB_KEY,
-      'Authorization': `Bearer ${SB_KEY}`,
+      'Authorization': `Bearer ${window._authToken || SB_KEY}`,
       'Content-Type':  'application/json',
       'Prefer':        'return=minimal'
     },
@@ -287,6 +287,34 @@ async function syncOfflineCalls() {
         if (typeof window.resetCallForm === 'function') window.resetCallForm();
       }
 
+      setStatusBar('offline', `You're offline — ${getOfflineCalls().length} call(s) pending sync`);
+    };
+
+    /* ── Patch quickLogCall كمان ── */
+    const _origQuickLog = window.quickLogCall;
+
+    window.quickLogCall = function(reason) {
+      if (navigator.onLine) {
+        _origQuickLog.apply(this, arguments);
+        return;
+      }
+
+      /* أوف لاين — احفظ محلياً */
+      const agent = document.getElementById('f-agent')?.value;
+      if (!agent) { if (window.customAlert) customAlert('Error', 'Please select Agent Name first!'); return; }
+
+      const data = {
+        agent, reason,
+        cname: '', mobile: '', bizrel: '', salescall: '',
+        channel: '', media: '', budget: '', unit: '', extra: '',
+        _channel: window._activeChannel || 'call',
+      };
+
+      addOfflineCall(data);
+
+      if (window.showToast) {
+        showToast('📥', 'Saved Offline!', reason + ' — Will sync when connection is restored.', 'warn', 6000);
+      }
       setStatusBar('offline', `You're offline — ${getOfflineCalls().length} call(s) pending sync`);
     };
 
