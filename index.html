@@ -246,11 +246,11 @@
 
             <div class="section-label"><i class="fas fa-calendar-check"></i> Time Off Request</div>
             <div class="action-row">
-              <button class="action-btn" onclick="selectTimeOffType('Annual')" style="color:#a142f4;border-color:rgba(161,66,244,.3)"><i class="fas fa-umbrella-beach"></i> Annual</button>
-              <button class="action-btn c-danger" onclick="selectTimeOffType('Sick')"><i class="fas fa-heartbeat"></i> Sick</button>
-              <button class="action-btn c-warn" onclick="selectTimeOffType('Casual')"><i class="fas fa-coffee"></i> Casual</button>
-              <button class="action-btn c-accent" onclick="selectTimeOffType('PH')"><i class="fas fa-calendar-alt"></i> PH</button>
-              <button class="action-btn c-blue" onclick="selectTimeOffType('Task')"><i class="fas fa-tasks"></i> Task</button>
+              <button class="action-btn" onclick=\"selectTimeOffType('Annual', event)\" style="color:#a142f4;border-color:rgba(161,66,244,.3)"><i class="fas fa-umbrella-beach"></i> Annual</button>
+              <button class="action-btn c-danger" onclick=\"selectTimeOffType('Sick', event)\"><i class="fas fa-heartbeat"></i> Sick</button>
+              <button class="action-btn c-warn" onclick=\"selectTimeOffType('Casual', event)\"><i class="fas fa-coffee"></i> Casual</button>
+              <button class="action-btn c-accent" onclick=\"selectTimeOffType('PH', event)\"><i class="fas fa-calendar-alt"></i> PH</button>
+              <button class="action-btn c-blue" onclick=\"selectTimeOffType('Task', event)\"><i class="fas fa-tasks"></i> Task</button>
             </div>
             <div class="mini-form" id="time-off-form">
               <div class="mini-form-grid">
