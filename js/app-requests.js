@@ -49,10 +49,7 @@ function renderRequests(requests) {
       else if (req.type === 'Shift Swap')    details = `${d.date||''} · with ${d.colleague||''}`;
       else if (req.type === 'Missing Punch') details = `Date: ${d.date||''}`;
       else if (req.type === 'Schedule Request') details = `أسبوع: ${d.week_start||''}`;
-      else if (req.type === 'Break Change') {
-      const d = typeof req.details === 'string' ? JSON.parse(req.details) : req.details;
-      details = `${d.break_type} → ${d.new_time} (${d.date||''})`;
-    }   
+      else if (req.type === 'Break Change') details = `${d.break_type} → ${d.new_time} (${d.date||''})`;
       else details = req.details || '';
     } catch(e) { details = ''; }
 
@@ -177,7 +174,7 @@ function undoLastExcuse() {
     }
   });
 }
-function selectTimeOffType(type) {
+function selectTimeOffType(type, e) {
   selectedTimeOffType = type;
   const form = document.getElementById('time-off-form');
   if (form) form.style.display = 'block';
@@ -191,8 +188,8 @@ function selectTimeOffType(type) {
   document.querySelectorAll('.action-row .action-btn').forEach(b => {
     b.style.opacity = '0.5'; b.style.borderWidth = '1px';
   });
-  if (event && event.currentTarget) {
-    event.currentTarget.style.opacity = '1'; event.currentTarget.style.borderWidth = '2px';
+  if (e && e.currentTarget) {
+    e.currentTarget.style.opacity = '1'; e.currentTarget.style.borderWidth = '2px';
   }
 }
 
@@ -420,43 +417,29 @@ function onSwapDayChange() {
 }
 
 function onSwapColleagueChange() {
-  const date      = document.getElementById('swap-day-select').value;
   const colleague = document.getElementById('swap-colleague-select').value;
   const shiftEl   = document.getElementById('swap-colleague-shift');
   const boxEl     = document.getElementById('swap-colleague-box');
 
-  if (!date || !colleague) {
+  if (!colleague) {
     shiftEl.innerText = 'Select a colleague'; shiftEl.className = 'swap-compare-value swap-empty';
     boxEl.classList.remove('swap-active'); return;
   }
 
-  shiftEl.innerText = 'Loading...'; shiftEl.className = 'swap-compare-value swap-empty';
-  boxEl.classList.remove('swap-active');
+  // قرا الشيفت من الـ option text مباشرة — مش محتاج API call تاني
+  const selectedOpt = document.querySelector(`#swap-colleague-select option[value="${colleague}"]`);
+  const optText     = selectedOpt ? selectedOpt.textContent : '';
+  const shiftMatch  = optText.match(/\d{2}:\d{2} - \d{2}:\d{2}/);
 
-  const [y, mo, d2] = [date.split('/')[2], date.split('/')[1], date.split('/')[0]];
-  const dateISO     = `${y}-${mo.padStart(2,'0')}-${d2.padStart(2,'0')}`;
-
-  fetch(
-    `${SB_URL_SCH}/rest/v1/schedule?shift_date=eq.${dateISO}&select=day_type,shift_types(start_time,end_time),agents(formal_name)`,
-    { headers: { 'apikey': SB_KEY_SCH, 'Authorization': `Bearer ${window._authToken || SB_KEY_SCH}` } }
-  )
-  .then(r => r.json())
-  .then(rows => {
-    const row = (rows || []).find(s => s.agents?.formal_name === colleague);
-    if (row && row.day_type === 'Work' && row.shift_types) {
-      const shift = row.shift_types.start_time.substring(0,5) + ' - ' + row.shift_types.end_time.substring(0,5);
-      shiftEl.innerText = shift;
-      shiftEl.className = 'swap-compare-value';
-      boxEl.classList.add('swap-active');
-    } else {
-      shiftEl.innerText = 'No shift on this day';
-      shiftEl.className = 'swap-compare-value swap-empty';
-    }
-  })
-  .catch(() => {
-    shiftEl.innerText = 'Error loading';
+  if (shiftMatch) {
+    shiftEl.innerText = shiftMatch[0];
+    shiftEl.className = 'swap-compare-value';
+    boxEl.classList.add('swap-active');
+  } else {
+    shiftEl.innerText = 'No shift on this day';
     shiftEl.className = 'swap-compare-value swap-empty';
-  });
+    boxEl.classList.remove('swap-active');
+  }
 }
 
 function submitShiftSwap() {
@@ -475,10 +458,12 @@ function submitShiftSwap() {
   if (yourShift  === 'N/A' || yourShift  === 'Select a day')        { customAlert('Error', 'No valid shift found for you!'); return; }
   if (theirShift === 'No shift on this day' || theirShift === 'Select a colleague') { customAlert('Error', "Colleague has no shift on this day!"); return; }
 
-  const day = globalScheduleData.find(d => d.date === date);
-  if (day && getMinutesToShift(date, day.shift) < 120) {
-    customAlert('Too Late', 'Swap requests must be submitted at least 2 hours before your shift starts.');
-    return;
+  const yourShiftTime = document.getElementById('swap-your-shift').innerText;
+  if (yourShiftTime && yourShiftTime !== 'Select a day' && yourShiftTime !== 'N/A') {
+    if (getMinutesToShift(date, yourShiftTime) < 120) {
+      customAlert('Too Late', 'Swap requests must be submitted at least 2 hours before your shift starts.');
+      return;
+    }
   }
 
   customConfirm('Confirm Swap', `Swap your shift (${yourShift}) with ${colleague} (${theirShift}) on ${date}?`).then(async ok => {
