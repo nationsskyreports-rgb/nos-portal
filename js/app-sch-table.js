@@ -297,8 +297,7 @@ function onSchDraftChange(sel) {
 }
 
 function isSchRequestOpen() {
-  const day = new Date().getDay();
-  return day === 0 || day === 1 || day === 2;
+  return true;
 }
 
 function schRequestClosedMsg() {
