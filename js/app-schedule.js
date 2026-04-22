@@ -223,3 +223,27 @@ function renderAgentWeek() {
   html += '</div>';
   daysEl.innerHTML = html;
 }
+
+/* ─── Time Off Type Selection Function ─── */
+function selectTimeOffType(type, event) {
+  const hiddenInput = document.getElementById('selected_time_off_type');
+  if (hiddenInput) {
+    hiddenInput.value = type;
+  }
+  const actionRow = event.target.closest('.action-row');
+  const buttons = actionRow.querySelectorAll('.action-btn');
+
+  buttons.forEach(btn => {
+    btn.style.opacity = '0.5';
+    btn.style.transform = 'scale(0.95)';
+    btn.style.borderColor = 'var(--border)'; 
+  });
+  event.target.style.opacity = '1';
+  event.target.style.transform = 'scale(1.05)';
+  
+  if(event.target.classList.contains('c-danger')) event.target.style.borderColor = '#ef4444';
+  else if(event.target.classList.contains('c-accent')) event.target.style.borderColor = '#14b8a6';
+  else if(event.target.classList.contains('c-warn')) event.target.style.borderColor = '#f59e0b';
+  else if(event.target.classList.contains('c-blue')) event.target.style.borderColor = '#3b82f6';
+  else event.target.style.borderColor = '#a142f4'; // Default/Purple for Annual
+}
