@@ -245,28 +245,27 @@
             <div class="divider"></div>
 
             <div class="section-label"><i class="fas fa-calendar-check"></i> Time Off Request</div>
-            <div class="action-row">
-              <button class="action-btn" onclick=\"selectTimeOffType('Annual', event)\" style="color:#a142f4;border-color:rgba(161,66,244,.3)"><i class="fas fa-umbrella-beach"></i> Annual</button>
-              <button class="action-btn c-danger" onclick=\"selectTimeOffType('Sick', event)\"><i class="fas fa-heartbeat"></i> Sick</button>
-              <button class="action-btn c-warn" onclick=\"selectTimeOffType('Casual', event)\"><i class="fas fa-coffee"></i> Casual</button>
-              <button class="action-btn c-accent" onclick=\"selectTimeOffType('PH', event)\"><i class="fas fa-calendar-alt"></i> PH</button>
-              <button class="action-btn c-blue" onclick=\"selectTimeOffType('Task', event)\"><i class="fas fa-tasks"></i> Task</button>
-            </div>
-            <div class="mini-form" id="time-off-form">
-              <div class="mini-form-grid">
-                <div><label class="form-label">From Date</label><input type="date" id="timeOffFromDate" class="form-input"></div>
-                <div><label class="form-label">To Date</label><input type="date" id="timeOffToDate" class="form-input"></div>
-              </div>
-              <label class="form-label">Notes</label>
-              <textarea id="timeOffNotes" class="form-input" style="margin-bottom:10px;" rows="2" placeholder="Optional..."></textarea>
-              <div style="display:flex;gap:10px;">
-                <button class="action-btn c-accent" style="flex:1" id="submitTimeOffBtn" onclick="submitTimeOffRequest()"><i class="fas fa-paper-plane"></i> Submit</button>
-                <button class="action-btn" style="flex:1" onclick="cancelTimeOffForm()">Cancel</button>
-              </div>
-              <div id="time-off-msg" style="font-size:13px;font-weight:600;margin-top:8px;"></div>
-            </div>
+             <div class="action-row">
+            <button class="action-btn" onclick="selectTimeOffType('Annual', event)" style="color:#a142f4;border-color:rgba(161,66,244,.3)"><i class="fas fa-umbrella-beach"></i> Annual</button>
+            <button class="action-btn c-danger" onclick="selectTimeOffType('Sick', event)"><i class="fas fa-heartbeat"></i> Sick</button>
+            <button class="action-btn c-warn" onclick="selectTimeOffType('Casual', event)"><i class="fas fa-coffee"></i> Casual</button>
+            <button class="action-btn c-accent" onclick="selectTimeOffType('PH', event)"><i class="fas fa-calendar-alt"></i> PH</button>
+            <button class="action-btn c-blue" onclick="selectTimeOffType('Task', event)"><i class="fas fa-tasks"></i> Task</button>
           </div>
-
+           <div class="mini-form" id="time-off-form">
+           <input type="hidden" id="selected_time_off_type" name="time_off_type" value="">
+        <div class="mini-form-grid">
+        <div><label class="form-label">From Date</label><input type="date" id="timeOffFromDate" class="form-input"></div>
+        <div><label class="form-label">To Date</label><input type="date" id="timeOffToDate" class="form-input"></div>
+    </div>
+         <label class="form-label">Notes</label>
+         <textarea id="timeOffNotes" class="form-input" style="margin-bottom:10px;" rows="2" placeholder="Optional..."></textarea>
+       <div style="display:flex;gap:10px;">
+          <button class="action-btn c-accent" style="flex:1" id="submitTimeOffBtn" onclick="submitTimeOffRequest()"><i class="fas fa-paper-plane"></i> Submit</button>
+          <button class="action-btn" style="flex:1" onclick="cancelTimeOffForm()">Cancel</button>
+    </div>
+       <div id="time-off-msg" style="font-size:13px;font-weight:600;margin-top:8px;"></div>
+     </div>
           <!-- RIGHT COLUMN -->
           <div class="schedule-right-col">
             <div class="section-label"><i class="fas fa-exchange-alt"></i> Shift Swap Request</div>
