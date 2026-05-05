@@ -2,6 +2,20 @@
    app-calllog.js — Call Log Form, Steps, Customer Search
    ═══════════════════════════════════════════════════ */
 
+/* ─── CHANNEL HELPER ─── */
+function getActiveTable() {
+  return (window._activeChannel === 'whatsapp') ? 'whatsapp_logs' : 'call_logs';
+}
+
+function getChannelBadge(channel) {
+  if (channel === 'whatsapp') {
+    return `<span style="display:inline-flex;align-items:center;gap:4px;background:#dcfce7;color:#16a34a;
+      border:1px solid #86efac;border-radius:6px;padding:2px 8px;font-size:10px;font-weight:700;">💬 WhatsApp</span>`;
+  }
+  return `<span style="display:inline-flex;align-items:center;gap:4px;background:#eff6ff;color:#2563eb;
+    border:1px solid #93c5fd;border-radius:6px;padding:2px 8px;font-size:10px;font-weight:700;">📞 Call</span>`;
+}
+
 /* ─── 16. CALL LOG FORM ─── */
 function onAgentSelect() {}
 
@@ -18,29 +32,28 @@ function toggleFormSections() {
   if (mobileSection) mobileSection.style.display = q ? 'none' : 'block';
 }
 
-/* ─── QUICK LOG (WITH SUPABASE) ─── */
-
+/* ─── QUICK LOG ─── */
 function quickLogCall(reason) {
   const agent = document.getElementById('f-agent').value;
   if (!agent) { customAlert('Error', 'Please select Agent Name first!'); return; }
 
+  const table = getActiveTable();
+  const label = (window._activeChannel === 'whatsapp') ? 'WhatsApp' : 'Call';
   showToast('⏳', 'Logging...', reason + ' — Please wait...', 'info', 4000);
-
-  const gasAction = (_activeChannel === 'whatsapp') ? 'submitWhatsAppLog' : 'submitCallLog';
-  const data = {
-    agent, reason,
-    cname: '', mobile: '', bizrel: '', salescall: '',
-    channel: '', media: '', budget: '', unit: '', extra: ''
-  };
 
   const submissionId = ++_activeSubmission;
 
-  fetch(`${SB_URL_SCH}/rest/v1/call_logs`, {
+  fetch(`${SB_URL_SCH}/rest/v1/${table}`, {
     method: 'POST',
-    headers: { 'apikey': SB_KEY_SCH, 'Authorization': `Bearer ${window._authToken || SB_KEY_SCH}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+    headers: {
+      'apikey': SB_KEY_SCH,
+      'Authorization': `Bearer ${window._authToken || SB_KEY_SCH}`,
+      'Content-Type': 'application/json',
+      'Prefer': 'return=minimal'
+    },
     body: JSON.stringify({
-      agent_name: data.agent, customer_name: '', customer_mobile: '',
-      call_reason: data.reason, communication_channel: '', media_source: '',
+      agent_name: agent, customer_name: '', customer_mobile: '',
+      call_reason: reason, communication_channel: '', media_source: '',
       business_relativity: '', sales_call_requested: '',
       budget: '', unit_type: '', extra_notes: '',
       logged_at: new Date().toISOString(),
@@ -48,22 +61,20 @@ function quickLogCall(reason) {
   })
   .then(() => {
     if (submissionId !== _activeSubmission) return;
-
     const bar = document.getElementById('call-summary-bar');
     document.getElementById('cs-name').innerText   = '—';
     document.getElementById('cs-mobile').innerText = '—';
     document.getElementById('cs-reason').innerText = reason;
     if (bar) { bar.style.display = 'flex'; setTimeout(() => bar.style.display = 'none', 30000); }
-
     resetCallForm();
-    showToast('✅', 'Quick Logged!', reason, 'success', 3000);
+    showToast('✅', `${label} Logged!`, reason, 'success', 3000);
   })
   .catch(() => {
     if (submissionId !== _activeSubmission) return;
     if (typeof addOfflineCall === 'function') {
       addOfflineCall({ agent, reason, cname:'', mobile:'', bizrel:'', salescall:'',
-        channel:'', media:'', budget:'', unit:'', extra:'', _channel: window._activeChannel||'call' });
-      if (window.showToast) showToast('📥','Saved Offline!', reason+' — Will sync when back online.','warn',6000);
+        channel:'', media:'', budget:'', unit:'', extra:'', _channel: window._activeChannel || 'call' });
+      if (window.showToast) showToast('📥','Saved Offline!', reason + ' — Will sync when back online.', 'warn', 6000);
       if (typeof setStatusBar === 'function') setStatusBar('offline', `You're offline — ${getOfflineCalls().length} call(s) pending sync`);
     } else {
       showFormErr('Connection error. Please try again.');
@@ -71,7 +82,7 @@ function quickLogCall(reason) {
   });
 }
 
-/* ─── SUBMIT FORM (FIXED) ─── */
+/* ─── SUBMIT FORM ─── */
 function submitCallLogForm() {
   const agent  = document.getElementById('f-agent').value;
   const reason = document.getElementById('f-reason').value;
@@ -90,6 +101,8 @@ function submitCallLogForm() {
   if (!isQ && !radioValues['f-budget'])    { showFormErr('Select Budget!'); return; }
   if (!isQ && !radioValues['f-unit'])      { showFormErr('Select Unit Type!'); return; }
 
+  const table = getActiveTable();
+  const label = (window._activeChannel === 'whatsapp') ? 'WhatsApp' : 'Call';
   const submissionId = ++_activeSubmission;
   const btn = document.getElementById('formSubmitBtn');
   if (btn) setButtonLoading(btn, true, 'Submitting...');
@@ -115,9 +128,14 @@ function submitCallLogForm() {
     extra: document.getElementById('f-extra').value.trim()
   };
 
-  fetch(`${SB_URL_SCH}/rest/v1/call_logs`, {
+  fetch(`${SB_URL_SCH}/rest/v1/${table}`, {
     method: 'POST',
-    headers: { 'apikey': SB_KEY_SCH, 'Authorization': `Bearer ${window._authToken || SB_KEY_SCH}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+    headers: {
+      'apikey': SB_KEY_SCH,
+      'Authorization': `Bearer ${window._authToken || SB_KEY_SCH}`,
+      'Content-Type': 'application/json',
+      'Prefer': 'return=minimal'
+    },
     body: JSON.stringify({
       agent_name:            data.agent,
       customer_name:         data.cname,
@@ -136,10 +154,8 @@ function submitCallLogForm() {
   .then(res => {
     clearTimeout(slowTimer);
     if (submissionId !== _activeSubmission) return;
-
     const liveBtn = document.getElementById('formSubmitBtn');
     if (liveBtn) setButtonLoading(liveBtn, false, '📤 Submit to Database');
-
     if (res.ok) {
       const bar = document.getElementById('call-summary-bar');
       document.getElementById('cs-name').innerText   = cname  || '—';
@@ -147,7 +163,7 @@ function submitCallLogForm() {
       document.getElementById('cs-reason').innerText = reason || '—';
       if (bar) { bar.style.display = 'flex'; setTimeout(() => bar.style.display = 'none', 30000); }
       resetCallForm();
-      showToast('✅', 'Call Logged!', cname ? cname + ' — ' + mobile : reason, 'success', 5000);
+      showToast('✅', `${label} Logged!`, cname ? cname + ' — ' + mobile : reason, 'success', 5000);
     } else {
       showFormErr('Something went wrong. Please try again.');
     }
@@ -158,7 +174,7 @@ function submitCallLogForm() {
     const liveBtnErr = document.getElementById('formSubmitBtn');
     if (liveBtnErr) setButtonLoading(liveBtnErr, false, '📤 Submit to Database');
     if (typeof addOfflineCall === 'function') {
-      addOfflineCall({ ...data, _channel: window._activeChannel||'call' });
+      addOfflineCall({ ...data, _channel: window._activeChannel || 'call' });
       if (window.showResultPopup) {
         showResultPopup('success','Saved Offline 📥',
           "No internet. Call saved and will sync automatically when you're back online.",
@@ -197,7 +213,6 @@ function goStep(n) {
       if (reason === 'Wrong Number' || reason === 'Call Dropped') { n = 4; }
     }
   }
-
   for (let i = 1; i <= 4; i++) {
     const dot  = document.getElementById('sdot-' + i);
     const line = document.getElementById('sline-' + i);
@@ -206,7 +221,6 @@ function goStep(n) {
     else              { dot.className = 'step-dot'; dot.innerHTML = i; }
     if (line) line.className = i < n ? 'step-line done' : 'step-line';
   }
-
   document.querySelectorAll('.step-panel').forEach(p => p.classList.remove('active'));
   document.getElementById('step-' + n).classList.add('active');
   _currentStep = n;
@@ -216,8 +230,7 @@ function showFormErr(msg) {
   showResultPopup('error', 'Check Your Data', msg, 'Got it');
 }
 
-
-/* ─── 17. CUSTOMER SEARCH ─── */
+/* ─── 17. CUSTOMER SEARCH — يبحث في الجدولين ─── */
 function searchCustomer() {
   const query      = document.getElementById('search-query').value.trim();
   const resultsDiv = document.getElementById('search-results');
@@ -228,15 +241,17 @@ function searchCustomer() {
   if (searchBtn) setButtonLoading(searchBtn, true, 'Searching...');
 
   const normalizedQuery = query.replace(/^0+/, '');
+  const qFilter = `or=(customer_name.ilike.%25${encodeURIComponent(query)}%25,customer_mobile.ilike.%25${encodeURIComponent(query)}%25,customer_mobile.ilike.%25${encodeURIComponent(normalizedQuery)}%25)&order=logged_at.desc&limit=20`;
+  const headers = { 'apikey': SB_KEY_SCH, 'Authorization': `Bearer ${window._authToken || SB_KEY_SCH}` };
 
-  fetch(
-    `${SB_URL_SCH}/rest/v1/call_logs?or=(customer_name.ilike.%25${encodeURIComponent(query)}%25,customer_mobile.ilike.%25${encodeURIComponent(query)}%25,customer_mobile.ilike.%25${encodeURIComponent(normalizedQuery)}%25)&order=logged_at.desc&limit=20`,
-    { headers: { 'apikey': SB_KEY_SCH, 'Authorization': `Bearer ${window._authToken || SB_KEY_SCH}` } }
-  )
-  .then(r => r.json())
-  .then(results => {
+  Promise.all([
+    fetch(`${SB_URL_SCH}/rest/v1/call_logs?${qFilter}`, { headers }).then(r => r.json()).then(d => (d||[]).map(r => ({...r, _source:'call'}))),
+    fetch(`${SB_URL_SCH}/rest/v1/whatsapp_logs?${qFilter}`, { headers }).then(r => r.json()).then(d => (d||[]).map(r => ({...r, _source:'whatsapp'}))),
+  ])
+  .then(([calls, wasps]) => {
     if (searchBtn) setButtonLoading(searchBtn, false, '🔍 Search');
-    if (!results || !results.length) {
+    const results = [...calls, ...wasps].sort((a,b) => new Date(b.logged_at) - new Date(a.logged_at)).slice(0, 20);
+    if (!results.length) {
       resultsDiv.innerHTML = `<div class="empty-state">No results found for "${query}"</div>`;
       return;
     }
@@ -244,16 +259,16 @@ function searchCustomer() {
     results.forEach(r => {
       const reasonColor = (r.call_reason === 'Wrong Number' || r.call_reason === 'Call Dropped') ? 'var(--muted)' : 'var(--primary)';
       html += `<div style="background:var(--surface2);border:1px solid var(--border);border-radius:14px;padding:16px;margin-bottom:10px;">
-        <div style="font-size:11px;font-weight:700;color:var(--primary);margin-bottom:8px;">📞 Call</div>
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px;">
-          <div style="display:flex;align-items:center;gap:10px;">
-            <div style="width:36px;height:36px;background:var(--primary-gradient);border-radius:10px;display:flex;align-items:center;justify-content:center;color:white;font-weight:800;font-size:13px;">${r.customer_name?r.customer_name[0].toUpperCase():'?'}</div>
-            <div>
-              <div style="font-weight:700;font-size:14px;color:var(--text);">${r.customer_name||'N/A'}</div>
-              <div style="font-size:12px;color:var(--muted);">${r.customer_mobile||'-'}</div>
-            </div>
-          </div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+          ${getChannelBadge(r._source)}
           <div style="font-size:11px;color:var(--muted);">${r.logged_at ? new Date(r.logged_at).toLocaleDateString('en-GB') : ''}</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
+          <div style="width:36px;height:36px;background:var(--primary-gradient);border-radius:10px;display:flex;align-items:center;justify-content:center;color:white;font-weight:800;font-size:13px;">${r.customer_name?r.customer_name[0].toUpperCase():'?'}</div>
+          <div>
+            <div style="font-weight:700;font-size:14px;color:var(--text);">${r.customer_name||'N/A'}</div>
+            <div style="font-size:12px;color:var(--muted);">${r.customer_mobile||'-'}</div>
+          </div>
         </div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:12px;">
           <div><span style="color:var(--muted);">Reason: </span><span style="font-weight:600;color:${reasonColor};">${r.call_reason||'-'}</span></div>
@@ -279,28 +294,32 @@ function clearSearch() {
   document.getElementById('search-results').innerHTML = '';
 }
 
-/* ─── LAST TWO CALLS ─── */
+/* ─── LAST TWO CALLS — من الجدولين ─── */
 async function loadLastTwoCalls(agentName) {
   try {
-    const res  = await fetch(
-      `${SB_URL_SCH}/rest/v1/call_logs?agent_name=eq.${encodeURIComponent(agentName)}&order=logged_at.desc&limit=2`,
-      { headers: { 'apikey': SB_KEY_SCH, 'Authorization': `Bearer ${window._authToken || SB_KEY_SCH}` } }
-    );
-    const data = await res.json();
-    const el   = document.getElementById('last-two-calls');
+    const headers = { 'apikey': SB_KEY_SCH, 'Authorization': `Bearer ${window._authToken || SB_KEY_SCH}` };
+    const [calls, wasps] = await Promise.all([
+      fetch(`${SB_URL_SCH}/rest/v1/call_logs?agent_name=eq.${encodeURIComponent(agentName)}&order=logged_at.desc&limit=5`, { headers }).then(r => r.json()).then(d => (d||[]).map(r => ({...r, _source:'call'}))),
+      fetch(`${SB_URL_SCH}/rest/v1/whatsapp_logs?agent_name=eq.${encodeURIComponent(agentName)}&order=logged_at.desc&limit=5`, { headers }).then(r => r.json()).then(d => (d||[]).map(r => ({...r, _source:'whatsapp'}))),
+    ]);
+
+    const data = [...calls, ...wasps].sort((a,b) => new Date(b.logged_at) - new Date(a.logged_at)).slice(0, 2);
+    const el = document.getElementById('last-two-calls');
     if (!el) return;
-    if (!data || !data.length) { el.innerHTML = ''; return; }
+    if (!data.length) { el.innerHTML = ''; return; }
+
     el.innerHTML = data.map(c => `
       <div style="background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:12px 14px;">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
-          <div style="display:flex;align-items:center;gap:10px;">
-            <div style="width:34px;height:34px;border-radius:10px;background:var(--primary-gradient);display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;">📞</div>
-            <div>
-              <div style="font-size:13px;font-weight:800;color:var(--text);">${c.customer_name || '—'}</div>
-              <div style="font-size:11px;color:var(--muted);font-family:monospace;">${c.customer_mobile || '—'}</div>
-            </div>
+          ${getChannelBadge(c._source)}
+          <div style="font-size:10px;color:var(--muted);">${c.logged_at ? new Date(c.logged_at).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'}) : ''}</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
+          <div style="width:34px;height:34px;border-radius:10px;background:var(--primary-gradient);display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;">${c._source==='whatsapp'?'💬':'📞'}</div>
+          <div>
+            <div style="font-size:13px;font-weight:800;color:var(--text);">${c.customer_name || '—'}</div>
+            <div style="font-size:11px;color:var(--muted);font-family:monospace;">${c.customer_mobile || '—'}</div>
           </div>
-          <div style="font-size:10px;color:var(--muted);white-space:nowrap;">${c.logged_at ? new Date(c.logged_at).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'}) : ''}</div>
         </div>
         <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;font-size:11px;">
           <div><span style="color:var(--muted);">Reason: </span><span style="font-weight:700;color:var(--primary);">${c.call_reason||'—'}</span></div>
@@ -310,12 +329,12 @@ async function loadLastTwoCalls(agentName) {
           <div><span style="color:var(--muted);">Unit: </span><span style="font-weight:700;color:var(--text);">${c.unit_type||'—'}</span></div>
           <div><span style="color:var(--muted);">Sales: </span><span style="font-weight:700;color:var(--text);">${c.sales_call_requested||'—'}</span></div>
         </div>
-        ${c.extra_notes&&c.extra_notes.trim()&&c.extra_notes!=='-'?`<div style="margin-top:8px;padding:8px;background:var(--surface);border-radius:8px;border:1px solid var(--border);font-size:11px;color:var(--muted);"><i class="fas fa-sticky-note" style="margin-right:5px;color:var(--warn);"></i>${c.extra_notes}</div>`:''}
-      </div>`).join('');
+        ${c.extra_notes&&c.extra_notes.trim()&&c.extra_notes!=='-'?`<div style="margin-top:8px;padding:8px;background:var(--surface);border-radius:8px;border:1px solid var(--border);font-size:11px;color:var(--muted);"><i class="fas fa-sticky-note" style="margin-right:5px;color:var(--warn);"></i>${c.extra_notes}</div>`:''}`
+    ).join('');
   } catch(e) { console.warn('loadLastTwoCalls error:', e); }
 }
 
-/* ─── STEP 1 SEARCH ─── */
+/* ─── STEP 1 SEARCH — من الجدولين ─── */
 async function step1SearchCustomer() {
   const query     = (document.getElementById('step1-search-input')?.value || '').trim();
   const resultsEl = document.getElementById('step1-search-results');
@@ -325,22 +344,27 @@ async function step1SearchCustomer() {
   setButtonLoading(btn, true, 'Searching...');
   resultsEl.innerHTML = '<div style="font-size:12px;color:var(--muted);padding:8px 0;"><i class="fas fa-spinner fa-spin"></i> Searching...</div>';
   const normalizedQuery = query.replace(/^0+/, '');
+  const qFilter = `or=(customer_name.ilike.%25${encodeURIComponent(query)}%25,customer_mobile.ilike.%25${encodeURIComponent(query)}%25,customer_mobile.ilike.%25${encodeURIComponent(normalizedQuery)}%25)&order=logged_at.desc&limit=5`;
+  const headers = { 'apikey': SB_KEY_SCH, 'Authorization': `Bearer ${window._authToken || SB_KEY_SCH}` };
 
   try {
-    const res  = await fetch(
-      `${SB_URL_SCH}/rest/v1/call_logs?or=(customer_name.ilike.%25${encodeURIComponent(query)}%25,customer_mobile.ilike.%25${encodeURIComponent(query)}%25,customer_mobile.ilike.%25${encodeURIComponent(normalizedQuery)}%25)&order=logged_at.desc&limit=5`,
-      { headers: { 'apikey': SB_KEY_SCH, 'Authorization': `Bearer ${window._authToken || SB_KEY_SCH}` } }
-    );
-    const data = await res.json();
+    const [calls, wasps] = await Promise.all([
+      fetch(`${SB_URL_SCH}/rest/v1/call_logs?${qFilter}`, { headers }).then(r => r.json()).then(d => (d||[]).map(r => ({...r, _source:'call'}))),
+      fetch(`${SB_URL_SCH}/rest/v1/whatsapp_logs?${qFilter}`, { headers }).then(r => r.json()).then(d => (d||[]).map(r => ({...r, _source:'whatsapp'}))),
+    ]);
+    const data = [...calls, ...wasps].sort((a,b) => new Date(b.logged_at) - new Date(a.logged_at)).slice(0, 5);
 
     let html = '';
-    if (!data || !data.length) {
+    if (!data.length) {
       html = `<div style="font-size:12px;color:var(--muted);padding:4px 0;">No results for "${query}"</div>`;
     } else {
       html += `<div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">📋 ${data.length} result(s)</div>`;
       html += data.map(c => `
         <div style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:10px;margin-bottom:6px;font-size:12px;">
-          <div style="font-weight:700;color:var(--text);">${c.customer_name || 'N/A'}</div>
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
+            <div style="font-weight:700;color:var(--text);">${c.customer_name || 'N/A'}</div>
+            ${getChannelBadge(c._source)}
+          </div>
           <div style="color:var(--muted);font-family:monospace;">${c.customer_mobile || '-'}</div>
           <div style="color:var(--muted);">${c.call_reason || '-'} · ${c.agent_name || '-'}</div>
           <div style="color:var(--muted);font-size:11px;">${c.logged_at ? new Date(c.logged_at).toLocaleDateString('en-GB') : ''}</div>
@@ -367,6 +391,7 @@ document.addEventListener('DOMContentLoaded', () => {
   if (tof) tof.style.display = 'block';
 });
 
+/* ─── MY CALL LOG — من الجدولين ─── */
 async function loadMyCallLog() {
   const agent     = document.getElementById('user-name').innerText.trim();
   const container = document.getElementById('tab-mylog');
@@ -375,8 +400,8 @@ async function loadMyCallLog() {
   container.innerHTML = `
     <div style="padding:16px;">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:10px;">
-        <div class="section-label" style="margin:0"><i class="fas fa-phone-alt"></i> My Call Log</div>
-        <div style="display:flex;gap:8px;align-items:center;">
+        <div class="section-label" style="margin:0"><i class="fas fa-phone-alt"></i> My Log</div>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
           <input type="date" id="mylog-from" class="form-input" style="width:140px;font-size:13px;" value="${today}">
           <input type="date" id="mylog-to"   class="form-input" style="width:140px;font-size:13px;" value="${today}">
           <button class="action-btn c-accent" onclick="fetchMyCallLog(document.getElementById('user-name').innerText.trim())"><i class="fas fa-search"></i> Filter</button>
@@ -400,35 +425,44 @@ async function fetchMyCallLog(agent) {
 
     const fromISO = new Date(fromDate + 'T00:00:00+03:00').toISOString();
     const toISO   = new Date(toDate   + 'T23:59:59+03:00').toISOString();
+    const headers = { 'apikey': SB_KEY_SCH, 'Authorization': `Bearer ${window._authToken || SB_KEY_SCH}` };
+    const q = `agent_name=eq.${encodeURIComponent(agent)}&logged_at=gte.${fromISO}&logged_at=lte.${toISO}&order=logged_at.desc`;
 
-    const res  = await fetch(
-      `${SB_URL_SCH}/rest/v1/call_logs?agent_name=eq.${encodeURIComponent(agent)}&logged_at=gte.${fromISO}&logged_at=lte.${toISO}&order=logged_at.desc`,
-      { headers: { 'apikey': SB_KEY_SCH, 'Authorization': `Bearer ${window._authToken || SB_KEY_SCH}` } }
-    );
-    const data = await res.json();
+    const [calls, wasps] = await Promise.all([
+      fetch(`${SB_URL_SCH}/rest/v1/call_logs?${q}`, { headers }).then(r => r.json()).then(d => (d||[]).map(r => ({...r, _source:'call'}))),
+      fetch(`${SB_URL_SCH}/rest/v1/whatsapp_logs?${q}`, { headers }).then(r => r.json()).then(d => (d||[]).map(r => ({...r, _source:'whatsapp'}))),
+    ]);
 
-    if (!data || !data.length) {
-      container.innerHTML = '<div class="empty-state">No calls found for this period.</div>';
+    const data = [...calls, ...wasps].sort((a,b) => new Date(b.logged_at) - new Date(a.logged_at));
+
+    if (!data.length) {
+      container.innerHTML = '<div class="empty-state">No logs found for this period.</div>';
       return;
     }
 
-    const total    = data.length;
-    const business = data.filter(c => c.business_relativity === 'Business Related').length;
-    const sales    = data.filter(c => c.sales_call_requested === 'Yes').length;
+    const total      = data.length;
+    const totalCalls = calls.length;
+    const totalWasps = wasps.length;
+    const business   = data.filter(c => c.business_relativity === 'Business Related').length;
+    const sales      = data.filter(c => c.sales_call_requested === 'Yes').length;
 
     let html = `
-      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px;">
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px;">
         <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:14px;text-align:center;">
-          <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;margin-bottom:4px;">Total Calls</div>
+          <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;margin-bottom:4px;">Total</div>
           <div style="font-size:24px;font-weight:800;color:var(--primary);">${total}</div>
         </div>
         <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:14px;text-align:center;">
-          <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;margin-bottom:4px;">Business</div>
-          <div style="font-size:24px;font-weight:800;color:#059669;">${business}</div>
+          <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;margin-bottom:4px;">📞 Calls</div>
+          <div style="font-size:24px;font-weight:800;color:#2563eb;">${totalCalls}</div>
+        </div>
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:14px;text-align:center;">
+          <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;margin-bottom:4px;">💬 WhatsApp</div>
+          <div style="font-size:24px;font-weight:800;color:#16a34a;">${totalWasps}</div>
         </div>
         <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:14px;text-align:center;">
           <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;margin-bottom:4px;">Sales Req.</div>
-          <div style="font-size:24px;font-weight:800;color:#3b82f6;">${sales}</div>
+          <div style="font-size:24px;font-weight:800;color:#7c3aed;">${sales}</div>
         </div>
       </div>
       <div style="display:flex;flex-direction:column;gap:10px;">`;
@@ -438,14 +472,18 @@ async function fetchMyCallLog(agent) {
       const date = c.logged_at ? new Date(c.logged_at).toLocaleDateString('en-GB') : '';
       const isQ  = c.call_reason === 'Wrong Number' || c.call_reason === 'Call Dropped';
       const reasonColor = isQ ? 'var(--muted)' : 'var(--primary)';
+      const icon = c._source === 'whatsapp' ? '💬' : '📞';
 
       html += `
         <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:16px;">
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
             <div style="display:flex;align-items:center;gap:10px;">
-              <div style="width:38px;height:38px;background:var(--primary-gradient);border-radius:10px;display:flex;align-items:center;justify-content:center;color:white;font-size:16px;">📞</div>
+              <div style="width:38px;height:38px;background:var(--primary-gradient);border-radius:10px;display:flex;align-items:center;justify-content:center;color:white;font-size:16px;">${icon}</div>
               <div>
-                <div style="font-weight:800;font-size:14px;color:var(--text);">${c.customer_name || '—'}</div>
+                <div style="display:flex;align-items:center;gap:6px;margin-bottom:2px;">
+                  <div style="font-weight:800;font-size:14px;color:var(--text);">${c.customer_name || '—'}</div>
+                  ${getChannelBadge(c._source)}
+                </div>
                 <div style="font-size:12px;color:var(--muted);font-family:monospace;">${c.customer_mobile || '—'}</div>
               </div>
             </div>
@@ -454,7 +492,7 @@ async function fetchMyCallLog(agent) {
                 <div style="font-size:13px;font-weight:700;color:var(--primary);">${time}</div>
                 <div style="font-size:11px;color:var(--muted);">${date}</div>
               </div>
-              <button onclick="openEditCallModal(${JSON.stringify(c).replace(/"/g,'&quot;')})"
+              <button onclick="openEditCallModal(${JSON.stringify({...c, _sourceTable: c._source === 'whatsapp' ? 'whatsapp_logs' : 'call_logs'}).replace(/"/g,'&quot;')})"
                 style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:7px 13px;font-size:12px;font-weight:700;color:var(--primary);cursor:pointer;display:flex;align-items:center;gap:5px;white-space:nowrap;">
                 ✏️ Edit
               </button>
@@ -484,20 +522,12 @@ async function fetchMyCallLog(agent) {
   }
 }
 
-/* ─── EDIT CALL LOG MODAL ─── */
-
+/* ─── EDIT CALL LOG MODAL — يعدّل في الجدول الصح ─── */
 function openEditCallModal(callData) {
   const existing = document.getElementById('edit-call-modal');
   if (existing) existing.remove();
 
-  const reasonOptions = [
-    'Wrong Number','Call Dropped','Asking about the projects',
-    'Jirian campaign','Jirian Island campaign','Sky Ridge Elite',
-    'Sky Ridge Executives','Zomra','ISLA','Upviews','Broker',
-    'Delayed sales call','EOI Refund','Collaboration request',
-    'Non-Business General Inquiry','Business General Inquiry',
-    'Complaint',"Shakira's Event"
-  ];
+  const reasonOptions  = ['Wrong Number','Call Dropped','Asking about the projects','Jirian campaign','Jirian Island campaign','Sky Ridge Elite','Sky Ridge Executives','Zomra','ISLA','Upviews','Broker','Delayed sales call','EOI Refund','Collaboration request','Non-Business General Inquiry','Business General Inquiry','Complaint',"Shakira's Event"];
   const channelOptions = ['Whatsapp','Mobile','Email','Alternative Mobile','SMS','N/A'];
   const mediaOptions   = ['Billboards','Saw site','Facebook','Instagram','Linkedin','Word of mouth','TV ad.','Youtube','N/A'];
   const budgetOptions  = ['0 - 10','10 - 20','20 +','N/A'];
@@ -509,96 +539,78 @@ function openEditCallModal(callData) {
     return list.map(o => `<option value="${o}" ${current === o ? 'selected' : ''}>${o}</option>`).join('');
   }
 
-  const isQ = callData.call_reason === 'Wrong Number' || callData.call_reason === 'Call Dropped';
+  const isQ          = callData.call_reason === 'Wrong Number' || callData.call_reason === 'Call Dropped';
+  const sourceTable  = callData._sourceTable || 'call_logs';
+  const sourceLabel  = sourceTable === 'whatsapp_logs' ? 'WhatsApp' : 'Call';
 
   const modal = document.createElement('div');
   modal.id = 'edit-call-modal';
-  modal.style.cssText = `
-    position:fixed;inset:0;z-index:9999;
-    background:rgba(0,0,0,0.7);backdrop-filter:blur(4px);
-    display:flex;align-items:center;justify-content:center;padding:16px;`;
+  modal.style.cssText = `position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.7);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;padding:16px;`;
 
   modal.innerHTML = `
-    <div style="background:var(--surface);border:1px solid var(--border);border-radius:20px;
-      width:100%;max-width:520px;max-height:90vh;overflow-y:auto;padding:24px;position:relative;">
-
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:20px;width:100%;max-width:520px;max-height:90vh;overflow-y:auto;padding:24px;position:relative;">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
-        <div style="font-size:16px;font-weight:800;color:var(--text);">✏️ Edit Call Log</div>
+        <div style="display:flex;align-items:center;gap:10px;">
+          <div style="font-size:16px;font-weight:800;color:var(--text);">✏️ Edit ${sourceLabel} Log</div>
+          ${getChannelBadge(sourceTable === 'whatsapp_logs' ? 'whatsapp' : 'call')}
+        </div>
         <button onclick="document.getElementById('edit-call-modal').remove()"
-          style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;
-          width:34px;height:34px;font-size:16px;cursor:pointer;color:var(--muted);">✕</button>
+          style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;width:34px;height:34px;font-size:16px;cursor:pointer;color:var(--muted);">✕</button>
       </div>
 
-      <input type="hidden" id="edit-call-id" value="${callData.id}">
+      <input type="hidden" id="edit-call-id"    value="${callData.id}">
+      <input type="hidden" id="edit-call-table"  value="${sourceTable}">
 
       <div style="display:flex;flex-direction:column;gap:14px;">
-
         <div>
           <label style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;display:block;margin-bottom:6px;">Customer Name</label>
           <input id="edit-cname" class="form-input" type="text" value="${callData.customer_name || ''}" placeholder="Customer Name">
         </div>
-
         <div>
           <label style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;display:block;margin-bottom:6px;">Customer Mobile</label>
           <input id="edit-mobile" class="form-input" type="text" value="${callData.customer_mobile || ''}" placeholder="Customer Mobile">
         </div>
-
         <div>
           <label style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;display:block;margin-bottom:6px;">Call Reason</label>
-          <select id="edit-reason" class="form-input" onchange="toggleEditSections()">
-            ${opts(reasonOptions, callData.call_reason)}
-          </select>
+          <select id="edit-reason" class="form-input" onchange="toggleEditSections()">${opts(reasonOptions, callData.call_reason)}</select>
         </div>
-
         <div id="edit-extra-fields" style="${isQ ? 'display:none' : ''}">
           <div style="display:flex;flex-direction:column;gap:12px;">
-
             <div>
               <label style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;display:block;margin-bottom:6px;">Business Relativity</label>
               <select id="edit-bizrel" class="form-input">${opts(bizrelOptions, callData.business_relativity)}</select>
             </div>
-
             <div>
               <label style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;display:block;margin-bottom:6px;">Sales Call Requested</label>
               <select id="edit-salescall" class="form-input">${opts(salesOptions, callData.sales_call_requested)}</select>
             </div>
-
             <div>
               <label style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;display:block;margin-bottom:6px;">Communication Channel</label>
               <select id="edit-channel" class="form-input">${opts(channelOptions, callData.communication_channel)}</select>
             </div>
-
             <div>
               <label style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;display:block;margin-bottom:6px;">Media Source</label>
               <select id="edit-media" class="form-input">${opts(mediaOptions, callData.media_source)}</select>
             </div>
-
             <div>
               <label style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;display:block;margin-bottom:6px;">Budget</label>
               <select id="edit-budget" class="form-input">${opts(budgetOptions, callData.budget)}</select>
             </div>
-
             <div>
               <label style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;display:block;margin-bottom:6px;">Unit Type</label>
               <select id="edit-unit" class="form-input">${opts(unitOptions, callData.unit_type)}</select>
             </div>
-
           </div>
         </div>
-
         <div>
           <label style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;display:block;margin-bottom:6px;">Extra Notes</label>
           <textarea id="edit-extra" class="form-input" rows="3" placeholder="Extra Notes..." style="resize:vertical;">${callData.extra_notes || ''}</textarea>
         </div>
-
         <div id="edit-error-msg" style="display:none;background:#fee2e2;border-radius:10px;padding:10px;font-size:13px;font-weight:600;color:#dc2626;"></div>
-
         <button id="edit-save-btn" onclick="saveEditCallLog()"
-          style="background:var(--primary-gradient);border:none;border-radius:12px;padding:14px;
-          font-size:14px;font-weight:800;color:white;cursor:pointer;width:100%;">
+          style="background:var(--primary-gradient);border:none;border-radius:12px;padding:14px;font-size:14px;font-weight:800;color:white;cursor:pointer;width:100%;">
           💾 Save Changes
         </button>
-
       </div>
     </div>`;
 
@@ -614,11 +626,12 @@ function toggleEditSections() {
 }
 
 async function saveEditCallLog() {
-  const id       = document.getElementById('edit-call-id').value;
-  const reason   = document.getElementById('edit-reason').value;
-  const isQ      = reason === 'Wrong Number' || reason === 'Call Dropped';
-  const errEl    = document.getElementById('edit-error-msg');
-  const saveBtn  = document.getElementById('edit-save-btn');
+  const id          = document.getElementById('edit-call-id').value;
+  const sourceTable = document.getElementById('edit-call-table').value || 'call_logs';
+  const reason      = document.getElementById('edit-reason').value;
+  const isQ         = reason === 'Wrong Number' || reason === 'Call Dropped';
+  const errEl       = document.getElementById('edit-error-msg');
+  const saveBtn     = document.getElementById('edit-save-btn');
 
   const cname     = document.getElementById('edit-cname').value.trim();
   const mobile    = document.getElementById('edit-mobile').value.trim();
@@ -638,7 +651,7 @@ async function saveEditCallLog() {
 
   try {
     const res = await fetch(
-      `${SB_URL_SCH}/rest/v1/call_logs?id=eq.${id}`,
+      `${SB_URL_SCH}/rest/v1/${sourceTable}?id=eq.${id}`,
       {
         method: 'PATCH',
         headers: {
@@ -653,7 +666,7 @@ async function saveEditCallLog() {
           call_reason:           reason,
           communication_channel: channel,
           media_source:          media,
-          budget:                budget,
+          budget,
           unit_type:             unit,
           business_relativity:   bizrel,
           sales_call_requested:  salescall,
@@ -664,7 +677,7 @@ async function saveEditCallLog() {
 
     if (res.ok) {
       document.getElementById('edit-call-modal').remove();
-      if (window.showToast) showToast('✅', 'Updated!', 'Call log updated successfully.', 'success', 3000);
+      if (window.showToast) showToast('✅', 'Updated!', 'Log updated successfully.', 'success', 3000);
       const agent = document.getElementById('user-name')?.innerText.trim();
       if (agent && typeof fetchMyCallLog === 'function') fetchMyCallLog(agent);
     } else {
