@@ -110,6 +110,7 @@
       <button class="tab-btn" onclick="switchTab('tab-requests',this,4)"><i class="fas fa-file-alt"></i> Requests</button>
       <button class="tab-btn" onclick="switchTab('tab-sch-table',this,5)"><i class="fas fa-table"></i> SCH Table</button>
       <button class="tab-btn" onclick="switchTab('tab-mylog',this,6)"><i class="fas fa-phone-alt"></i> My Call Log</button>
+      <button class="tab-btn" onclick="switchTab('tab-wascripts',this,7)"><i class="fab fa-whatsapp"></i> WA Scripts</button>
     </div>
 
     <div class="notif-bar notif-break hidden" id="break-notif">
@@ -712,6 +713,12 @@
   </div>
 </div>
     <div class="tab-content" id="tab-mylog"></div>
+
+    <!-- WhatsApp Scripts Tab -->
+    <div class="tab-content" id="tab-wascripts" style="padding:0;overflow:hidden;">
+      <iframe src="whatsapp-scripts.html" style="width:100%;height:100%;border:none;display:block;" title="WhatsApp Script Library"></iframe>
+    </div>
+
     <!-- Bottom Nav (Mobile) -->
     <div class="bottom-nav" id="bottom-nav">
       <button class="bottom-nav-btn active" onclick="switchTab('tab-dashboard',null,0)"><i class="fas fa-tachometer-alt"></i>Dashboard</button>
@@ -721,6 +728,7 @@
       <button class="bottom-nav-btn" onclick="switchTab('tab-requests',null,4)"><i class="fas fa-file-alt"></i>Requests</button>
       <button class="bottom-nav-btn" onclick="switchTab('tab-sch-table',null,5)"><i class="fas fa-table"></i>SCH</button>
       <button class="bottom-nav-btn" onclick="switchTab('tab-mylog',null,6)"><i class="fas fa-phone-alt"></i>My Log</button>
+      <button class="bottom-nav-btn" onclick="switchTab('tab-wascripts',null,7)"><i class="fab fa-whatsapp"></i>WA Scripts</button>
     </div>
 
   </div>
