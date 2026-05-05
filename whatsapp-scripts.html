@@ -1,0 +1,1057 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NOS — WhatsApp Script Library</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #f3f4f6;
+  --surface: #ffffff;
+  --surface2: #f9fafb;
+  --border: #e5e7eb;
+  --gold: #d4af37;
+  --gold-dim: rgba(212,175,55,0.1);
+  --gold-border: rgba(212,175,55,0.4);
+  --text: #111827;
+  --muted: #6b7280;
+  --green: #16a34a;
+  --green-dim: rgba(22,163,74,0.1);
+  --blue: #2563eb;
+  --blue-dim: rgba(37,99,235,0.1);
+  --red: #dc2626;
+  --amber: #d97706;
+  --purple: #9333ea;
+  --radius: 10px;
+  --radius-lg: 14px;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+/* ── HEADER ── */
+.header {
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  padding: 16px 28px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--gold);
+}
+.logo-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--green); animation: pulse 2s infinite; }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+.header-right { display: flex; align-items: center; gap: 10px; }
+.lang-toggle {
+  display: flex;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+.lang-btn {
+  padding: 6px 14px;
+  font-size: 12px;
+  font-weight: 700;
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  transition: all .15s;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+}
+.lang-btn.active { background: var(--gold); color: #000; }
+
+/* ── LAYOUT ── */
+.layout {
+  display: grid;
+  grid-template-columns: 260px 1fr;
+  height: calc(100vh - 57px);
+}
+
+/* ── SIDEBAR ── */
+.sidebar {
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  overflow-y: auto;
+  padding: 16px 12px;
+}
+.sidebar-title {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1.2px;
+  color: var(--muted);
+  padding: 0 8px;
+  margin-bottom: 10px;
+}
+.search-box {
+  width: 100%;
+  padding: 8px 12px;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text);
+  font-size: 12px;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  outline: none;
+  margin-bottom: 14px;
+  transition: border .2s;
+}
+.search-box:focus { border-color: var(--gold); box-shadow: 0 0 0 2px var(--gold-dim); }
+.search-box::placeholder { color: #9ca3af; }
+
+.cat-group { margin-bottom: 6px; }
+.cat-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 10px;
+  border-radius: var(--radius);
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .8px;
+  color: var(--muted);
+  transition: all .15s;
+  user-select: none;
+}
+.cat-header:hover { background: var(--surface2); color: var(--text); }
+.cat-header.active { color: var(--gold); }
+.cat-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+.cat-chevron { margin-left: auto; font-size: 9px; transition: transform .2s; }
+.cat-header.open .cat-chevron { transform: rotate(90deg); }
+
+.script-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 10px 7px 24px;
+  border-radius: var(--radius);
+  cursor: pointer;
+  font-size: 12px;
+  color: var(--text);
+  transition: all .15s;
+  line-height: 1.3;
+}
+.script-item:hover { background: var(--surface2); color: var(--gold); }
+.script-item.active { background: var(--gold-dim); color: var(--gold); border: 1px solid var(--gold-border); font-weight: 600; }
+
+/* ── MAIN CONTENT ── */
+.main {
+  overflow-y: auto;
+  padding: 24px 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.script-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  display: none;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+}
+.script-card.visible { display: block; }
+
+.card-header {
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  background: #fafbfc;
+}
+.card-meta { display: flex; align-items: center; gap: 10px; }
+.cat-badge {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 20px;
+  text-transform: uppercase;
+  letter-spacing: .5px;
+}
+.card-title { font-size: 15px; font-weight: 700; color: var(--text); }
+.card-hint { font-size: 11px; color: var(--muted); font-style: italic; }
+
+.script-body { display: grid; grid-template-columns: 1fr 1fr; }
+.script-col {
+  padding: 18px 20px;
+}
+.script-col:first-child { border-right: 1px solid var(--border); }
+.col-lang {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--muted);
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.col-lang span { width: 6px; height: 6px; border-radius: 50%; display: inline-block; }
+.script-text {
+  font-size: 13px;
+  line-height: 1.75;
+  color: var(--text);
+  white-space: pre-wrap;
+  background: #ffffff;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px 16px;
+  min-height: 80px;
+}
+.script-text[dir="rtl"] { text-align: right; font-size: 13.5px; }
+
+.copy-row {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+}
+.copy-btn {
+  flex: 1;
+  padding: 8px 14px;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background: #fff;
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  transition: all .15s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+}
+.copy-btn:hover { border-color: var(--gold-border); color: var(--gold); background: var(--gold-dim); }
+.copy-btn.copied { background: var(--green-dim); border-color: rgba(22,163,74,0.3); color: var(--green); }
+.copy-btn.copy-both {
+  background: var(--gold);
+  border-color: var(--gold);
+  color: #000;
+}
+.copy-btn.copy-both:hover { background: #bfa032; border-color: #bfa032; }
+
+/* Footer area inside card for both copy */
+.card-footer {
+  padding: 12px 20px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  justify-content: flex-end;
+  background: #fafbfc;
+}
+
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 200px;
+  color: var(--muted);
+  font-size: 13px;
+  gap: 10px;
+  text-align: center;
+}
+.empty-icon { font-size: 32px; opacity: .4; }
+
+/* Category colors */
+.c-opening  { background:rgba(22,163,74,0.1); color:#16a34a; }
+.c-contracts{ background:rgba(37,99,235,0.1); color:#2563eb; }
+.c-payments { background:rgba(217,119,6,0.1); color:#d97706; }
+.c-visits   { background:rgba(147,51,234,0.1); color:#9333ea; }
+.c-unitinfo { background:rgba(212,175,55,0.1); color:#d4af37; }
+.c-escalation{background:rgba(220,38,38,0.1);  color:#dc2626; }
+.c-closing  { background:rgba(107,114,128,0.1);color:#4b5563; }
+.c-projects { background:rgba(14,165,233,0.1); color:#0ea5e9; }
+
+.dot-opening   { background:#16a34a; }
+.dot-contracts { background:#2563eb; }
+.dot-payments  { background:#d97706; }
+.dot-visits    { background:#9333ea; }
+.dot-unitinfo  { background:#d4af37; }
+.dot-escalation{ background:#dc2626; }
+.dot-closing   { background:#6b7280; }
+.dot-projects  { background:#0ea5e9; }
+
+/* No results */
+.no-results {
+  text-align: center;
+  color: var(--muted);
+  padding: 40px;
+  font-size: 13px;
+}
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="header">
+  <div class="logo">
+    <div class="logo-dot"></div>
+    Nations of Sky — WhatsApp Script Library
+  </div>
+  <div class="header-right">
+    <div class="lang-toggle">
+      <button class="lang-btn active" id="btn-en" onclick="setLang('en')">EN</button>
+      <button class="lang-btn" id="btn-ar" onclick="setLang('ar')">AR</button>
+      <button class="lang-btn" id="btn-both" onclick="setLang('both')">Both</button>
+    </div>
+  </div>
+</div>
+
+<div class="layout">
+
+  <!-- SIDEBAR -->
+  <div class="sidebar">
+    <div class="sidebar-title">Script Library</div>
+    <input class="search-box" type="text" placeholder="🔍  Search scripts..." id="search-input" oninput="filterSearch()">
+    <div id="sidebar-nav"></div>
+  </div>
+
+  <!-- MAIN -->
+  <div class="main" id="main-content">
+    <div class="empty-state" id="empty-home">
+      <div class="empty-icon">💬</div>
+      <div>Select a script from the sidebar<br>or search for what you need</div>
+    </div>
+    <div id="cards-wrap"></div>
+    <div class="no-results" id="no-results" style="display:none;">No scripts found</div>
+  </div>
+
+</div>
+
+<script>
+const SCRIPTS = [
+  {
+    id: 'opening-standard',
+    cat: 'opening',
+    catLabel: 'Opening',
+    title: 'Standard Post-Call Greeting',
+    hint: 'Use as first message after call',
+    en: `👋 Hello! Thank you for contacting Nations of Sky.
+
+Following up on our call, we're here to assist you with anything you need. Please choose from the options below or simply type your enquiry.
+
+1️⃣ Contracts & Documents
+2️⃣ Unit & Project Information
+3️⃣ Payments & Financial Services
+4️⃣ Visits & Appointments
+5️⃣ Update My Data
+6️⃣ Branch & Contact Info`,
+    ar: `👋 أهلاً وسهلاً! شكراً لتواصلك مع نيشنز أوف سكاي.
+
+متابعةً لمكالمتك، نحن هنا لمساعدتك في أي شيء تحتاجه. يرجى الاختيار أدناه أو كتابة استفسارك مباشرة.
+
+1️⃣ العقود والمستندات
+2️⃣ معلومات الوحدة والمشروع
+3️⃣ المدفوعات والخدمات المالية
+4️⃣ الزيارات والمواعيد
+5️⃣ تحديث بياناتي
+6️⃣ معلومات الفروع والتواصل`
+  },
+  {
+    id: 'opening-missed',
+    cat: 'opening',
+    catLabel: 'Opening',
+    title: 'Missed Call Follow-Up',
+    hint: 'For missed calls',
+    en: `📞 Hello from Nations of Sky!
+
+We noticed we missed your call. We're sorry we couldn't connect — we're here now and ready to help.
+
+Please let us know how we can assist you today, and we'll make sure your enquiry is handled promptly. 📋`,
+    ar: `📞 أهلاً من نيشنز أوف سكاي!
+
+لاحظنا أننا فاتتنا مكالمتك، نعتذر عن ذلك — نحن هنا الآن ومستعدون للمساعدة.
+
+يرجى إخبارنا كيف يمكننا مساعدتك اليوم، وسنحرص على التعامل مع استفسارك فوراً. 📋`
+  },
+  {
+    id: 'contracts-copy',
+    cat: 'contracts',
+    catLabel: 'Contracts',
+    title: 'Contract Copy Request',
+    hint: 'After customer requests contract copy',
+    en: `📄 To process your Contract Copy request, please provide the following:
+
+1. Project Name
+2. Unit Number
+3. Full Name (as registered in the contract)
+
+Once received, your request will be processed and we'll get back to you within 48 working hours. ✅`,
+    ar: `📄 لمعالجة طلب نسخة العقد، يرجى تزويدنا بالمعلومات التالية:
+
+1. اسم المشروع
+2. رقم الوحدة
+3. الاسم الكامل (كما هو مسجل في العقد)
+
+بمجرد استلامها، سيتم معالجة طلبك وسنعود إليك خلال 48 ساعة عمل. ✅`
+  },
+  {
+    id: 'contracts-floorplan',
+    cat: 'contracts',
+    catLabel: 'Contracts',
+    title: 'Floor Plan Request',
+    hint: 'After customer requests floor plan',
+    en: `📐 To send you the Floor Plan for your unit, please share:
+
+1. Project Name
+2. Unit Number
+3. Full Name (as registered in the contract)
+
+We'll get back to you within 48 working hours. 📩`,
+    ar: `📐 لإرسال مخطط الطابق الخاص بوحدتك، يرجى مشاركة:
+
+1. اسم المشروع
+2. رقم الوحدة
+3. الاسم الكامل (كما هو مسجل في العقد)
+
+سنعود إليك خلال 48 ساعة عمل. 📩`
+  },
+  {
+    id: 'contracts-confirmed',
+    cat: 'contracts',
+    catLabel: 'Contracts',
+    title: 'Request Confirmed',
+    hint: 'After details are received',
+    en: `✅ Thank you for providing your details.
+
+Your request is now being processed. Our team will get back to you within 48 working hours.
+
+Is there anything else we can help you with?
+1. Return to Main Menu
+2. End Chat`,
+    ar: `✅ شكراً لتزويدنا ببياناتك.
+
+طلبك قيد المعالجة الآن. سيتواصل معك فريقنا خلال 48 ساعة عمل.
+
+هل هناك أي شيء آخر يمكننا مساعدتك به؟
+1. العودة إلى القائمة الرئيسية
+2. إنهاء الدردشة`
+  },
+  {
+    id: 'payments-details',
+    cat: 'payments',
+    catLabel: 'Payments',
+    title: 'Payment Details Request',
+    hint: 'Customer asking about payment plan',
+    en: `💳 To retrieve your Payment Details, please provide:
+
+1. Unit Number
+2. Project Name
+
+We'll pull up your current payment schedule right away. 📊`,
+    ar: `💳 لاسترداد تفاصيل دفعاتك، يرجى تزويدنا بـ:
+
+1. رقم الوحدة
+2. اسم المشروع
+
+سنعرض لك جدول مدفوفاتك الحالي فوراً. 📊`
+  },
+  {
+    id: 'payments-next',
+    cat: 'payments',
+    catLabel: 'Payments',
+    title: 'Next Payment Reminder',
+    hint: 'Fill in DATE and AMOUNT before sending',
+    en: `📅 Here is your Next Payment Information:
+
+📌 Next Check Date: [DATE]
+💰 Check Amount: [AMOUNT] EGP
+
+Please ensure the funds are available before the due date.
+
+Would you like to view your full payment schedule?
+1. Yes — show full schedule
+2. No — that's all I need`,
+    ar: `📅 إليك معلومات دفعتك القادمة:
+
+📌 تاريخ الشيك القادم: [التاريخ]
+💰 مبلغ الشيك: [المبلغ] جنيه
+
+يرجى التأكد من توافر المبلغ قبل تاريخ الاستحقاق.
+
+هل تريب في عرض جدول السداد الكامل؟
+1. نعم — عرض الجدول كاملاً
+2. لا — هذا ما أحتاجه`
+  },
+  {
+    id: 'payments-bank',
+    cat: 'payments',
+    catLabel: 'Payments',
+    title: 'Bank Account Details',
+    hint: 'Fill in project and bank info before sending',
+    en: `🏦 Here are the Bank Account Details for your project:
+
+Project: [PROJECT NAME]
+
+◆ Bank Name: [BANK]
+◆ Account Name: [ACCOUNT NAME]
+◆ Account Number: [ACCOUNT NO]
+◆ IBAN: [IBAN]
+◆ SWIFT Code: [SWIFT]
+
+Please ensure all transfers reference your unit number.
+
+Is there anything else you need?`,
+    ar: `🏦 إليك تفاصيل الحساب البنكي لمشروعك:
+
+المشروع: [اسم المشروع]
+
+◆ اسم البنك: [البنك]
+◆ اسم الحساب: [اسم الحساب]
+◆ رقم الحساب: [رقم الحساب]
+◆ IBAN: [الآيبان]
+◆ SWIFT Code: [السويفت]
+
+يرجى التأكد من ذكر رقم وحدتك في جميع التحويلات.
+
+هل هناك أي شيء آخر تحتاجه؟`
+  },
+  {
+    id: 'payments-issue',
+    cat: 'payments',
+    catLabel: 'Payments',
+    title: 'Payment Issue — Escalation',
+    hint: 'When payment issue is detected',
+    en: `⚠️ We noticed there may be a payment discrepancy on your account.
+
+To resolve this as quickly as possible, you will now be connected to one of our customer service specialists who can assist you directly.
+
+Thank you for your patience. 🙏`,
+    ar: `⚠️ لاحظنا أنه قد يكون هناك تعارض في المدفوعات على حسابك.
+
+لحل هذا الأمر في أقرب وقت ممكن، سيتم تحويلك الآن إلى أحد متخصصي خدمة العملاء لمساعدتك مباشرة.
+
+شكراً لصبرك. 🙏`
+  },
+  {
+    id: 'payments-ownership',
+    cat: 'payments',
+    catLabel: 'Payments',
+    title: 'Transfer of Ownership Request',
+    hint: 'Customer requesting ownership transfer',
+    en: `📋 To initiate your Transfer of Ownership request, please provide:
+
+1. Project Name
+2. Unit Number
+
+Our team will review your request and get back to you within 48 working hours. 📩`,
+    ar: `📋 لبدء طلب نقل الملكية، يرجى تزويدنا بـ:
+
+1. اسم المشروع
+2. رقم الوحدة
+
+سيراجع فريقنا طلبك وسيعود إليك خلال 48 ساعة عمل. 📩`
+  },
+  {
+    id: 'visits-site',
+    cat: 'visits',
+    catLabel: 'Visits',
+    title: 'Site Visit Request',
+    hint: 'Customer requesting site visit',
+    en: `🏛️ We'd love to arrange a Site Visit for you!
+
+Please provide the following so we can confirm your booking:
+
+1. Project Name
+2. Unit Number
+3. Preferred visit date (if any)
+
+We'll confirm your visit within 48 working hours. 🗓️`,
+    ar: `🏛️ يسعدنا ترتيب زيارة موقع لك!
+
+يرجى تزويدنا بالتالي لتأكيد حجزك:
+
+1. اسم المشروع
+2. رقم الوحدة
+3. التاريخ المفضل للزيارة (إن وجد)
+
+سنؤكد زيارتك خلال 48 ساعة عمل. 🗓️`
+  },
+  {
+    id: 'visits-office',
+    cat: 'visits',
+    catLabel: 'Visits',
+    title: 'Office Appointment',
+    hint: 'Customer requesting office appointment',
+    en: `📁 To book an Office Appointment, you will now be connected to one of our customer service representatives who will confirm your preferred time and date.
+
+🕙 Office Hours: 10 AM – 5 PM
+
+We look forward to seeing you! 😊`,
+    ar: `📁 لحجز موعد مكتبي، سيتم تحويلك الآن إلى أحد ممثلي خدمة العملاء لتأكيد وقتك وتاريخك المفضل.
+
+🕙 ساعات العمل: 10 صباحاً – 5 مساءً
+
+نتطلع لرؤيتك! 😊`
+  },
+  {
+    id: 'unit-info',
+    cat: 'unitinfo',
+    catLabel: 'Unit Info',
+    title: 'Unit Information Lookup',
+    hint: 'Customer asking about their unit',
+    en: `📋 What would you like to check about your unit?
+
+1️⃣ Unit Number
+2️⃣ Unit Type (Apartment / Villa / Townhouse)
+3️⃣ Project Phase
+
+Please reply with the number of your choice.`,
+    ar: `📋 ما الذي تريب في الاستلام عنه بخصوص وحدتك؟
+
+1️⃣ رقم الوحدة
+2️⃣ نوع الوحدة (شقة / فيلا / تاون هاوس)
+3️⃣ مرحلة المشروع
+
+يرجى الرد برقم اختيارك.`
+  },
+  {
+    id: 'unit-delivery',
+    cat: 'unitinfo',
+    catLabel: 'Unit Info',
+    title: 'Delivery Date Enquiry',
+    hint: 'Customer asking about delivery date',
+    en: `🚀 To check your Expected Delivery Date, please share:
+
+1. Unit Number
+2. Project Name
+
+We'll confirm the delivery date as per your contract. 📄`,
+    ar: `🚀 للاستلام عن تاريخ التسليم المتوقع، يرجى مشاركة:
+
+1. رقم الوحدة
+2. اسم المشروع
+
+سنؤكد تاريخ التسليم وفقاً لعقدك. 📄`
+  },
+  {
+    id: 'unit-data-update',
+    cat: 'unitinfo',
+    catLabel: 'Unit Info',
+    title: 'Data Update Request',
+    hint: 'Customer wants to update personal data',
+    en: `✏️ What would you like to update?
+
+1️⃣ Email Address
+2️⃣ Contact Number
+3️⃣ Mailing Address
+
+Please reply with a number, then provide your Unit Number and Project Name to proceed.`,
+    ar: `✏️ ما الذي تريد تحديثه؟
+
+1️⃣ عنوان البريد الإلكتروني
+2️⃣ رقم الاتصال
+3️⃣ العنوان البريدي
+
+يرجى الرد برقم، ثم تزويدنا برقم وحدتك واسم مشروعك للمتابعة.`
+  },
+  {
+    id: 'escalation-unknown',
+    cat: 'escalation',
+    catLabel: 'Escalation',
+    title: 'Unit Number Unknown',
+    hint: 'When customer doesn\'t know unit number',
+    en: `🔍 No problem! To look up your details, please provide:
+
+1. Full Name (as registered)
+2. Registered Contact Number
+3. Project Name
+
+We'll locate your account and assist you right away. 😊`,
+    ar: `🔍 لا مشكلة! للبحث عن بياناتك، يرجى تزويدنا بـ:
+
+1. الاسم الكامل (كما هو مسجل)
+2. رقم الاتصال المسجل
+3. اسم المشروع
+
+سنجد حسابك ونساعدك فوراً. 😊`
+  },
+  {
+    id: 'escalation-mismatch',
+    cat: 'escalation',
+    catLabel: 'Escalation',
+    title: 'Incorrect Data Entered',
+    hint: 'When data validation fails',
+    en: `❌ The information entered does not match our records.
+
+Would you like to:
+1️⃣ Try again — re-enter your details
+2️⃣ Speak with a customer service representative
+
+We're here to help either way. 😊`,
+    ar: `❌ المعلومات المُدخلة لا تتطابق مع سجلاتنا.
+
+هل تود:
+1️⃣ المحاولة مرة أخرى — إعادة إدخال بياناتك
+2️⃣ التحدث مع أحد ممثلي خدمة العملاء
+
+نحن هنا للمساعدة في كلتا الحالتين. 😊`
+  },
+  {
+    id: 'escalation-transfer',
+    cat: 'escalation',
+    catLabel: 'Escalation',
+    title: 'Transfer to Agent',
+    hint: 'Before transferring to live agent',
+    en: `👤 You will now be connected to a Customer Service Representative who will be happy to assist you.
+
+Please hold — they'll be with you shortly. 🙏`,
+    ar: `👤 سيتم تحويلك الآن إلى أحد ممثلي خدمة العملاء الذي سيكون سعيداً بمساعدتك.
+
+يرجى الانتظار — سيتواصل معك قريباً. 🙏`
+  },
+  {
+    id: 'closing-standard',
+    cat: 'closing',
+    catLabel: 'Closing',
+    title: 'Standard Chat Closing',
+    hint: 'End of conversation',
+    en: `🌟 Thank you for contacting Nations of Sky.
+
+We hope we were able to assist you today. Should you need anything further, don't hesitate to reach us at:
+
+📞 Hotline: 16555
+📧 Email: customer.excellence@nationsofsky.com
+🌐 Website: nationsofsky.com
+
+Have a wonderful day! 🌟`,
+    ar: `🌟 شكراً لتواصلك مع نيشنز أوف سكاي.
+
+نأمل أننا تمكنا من مساعدتك اليوم. إذا احتجت أي شيء آخر، لا تتردد في التواصل معنا عبر:
+
+📞 الخط الساخن: 16555
+📧 البريد الإلكتروني: customer.excellence@nationsofsky.com
+🌐 الموقع الإلكتروني: nationsofsky.com
+
+تمنى لك يوماً رائعاً! 🌟`
+  },
+  {
+    id: 'closing-submitted',
+    cat: 'closing',
+    catLabel: 'Closing',
+    title: 'Request Submitted — 48hr Close',
+    hint: 'After any request is submitted',
+    en: `✅ Your request has been successfully submitted.
+
+Our team will get back to you within 48 working hours.
+
+Thank you for contacting Nations of Sky. Have a great day! 🌟`,
+    ar: `✅ تم تقديم طلبك بنجاح.
+
+سيتواصل معك فريقنا خلال 48 ساعة عمل.
+
+شكراً لتواصلك مع نيشنز أوف سكاي. تمنى لك يوماً رائعاً! 🌟`
+  },
+  {
+    id: 'projects-greetings',
+    cat: 'projects',
+    catLabel: 'Projects',
+    title: 'Greetings & Identity',
+    hint: 'Opening identity message',
+    en: `Good morning/Good evening, Sir/Ma'am. This is [Agent's name] from Nations of Sky. How may I assist you today?`,
+    ar: `صباح / مساء الخير بقدّم لحضرتك [Agent's name] من نيشنز أوف سكاي. أقدر أساعد حضرتك إزاي؟`
+  },
+  {
+    id: 'projects-general',
+    cat: 'projects',
+    catLabel: 'Projects',
+    title: 'General Inquiries',
+    hint: 'After helping with inquiry',
+    en: `Thank you for communicating with Nations of Sky. Can I assist you with another thing?`,
+    ar: `شكراً لتواصلك مع نيشنز أوف سكاي. أقدر اساعد حضرتك بشئ آخر؟`
+  },
+  {
+    id: 'projects-sales-esc',
+    cat: 'projects',
+    catLabel: 'Projects',
+    title: 'Sales Escalation',
+    hint: 'Escalate to sales team',
+    en: `I'll inform the concerned team immediately about your request and they will help you within 48 hours.`,
+    ar: `حالاً يتم إبلاغ القسم المختص من خلالي و سيتابعوا مع حضرتك خلال 48 ساعة.`
+  },
+  {
+    id: 'projects-jirian',
+    cat: 'projects',
+    catLabel: 'Projects',
+    title: 'JIRIAN Project',
+    hint: 'Project info for JIRIAN',
+    en: `Welcome to JIRIAN! A massive 1600-acre development in New Zayed. Location: On Sheikh Zayed Axis, south of Sphinx Airport. Features: Nile-front hotel, water taxi, and schools. Jirian Island: Exclusive villas with direct Nile views. Prices start from 22,500,000 EGP. Would you like the available areas?`,
+    ar: `مشروع جيريان بالشيخ زايد الجديدة على مساحة 1600 فدان. الموقع: على محور الشيخ زايد والدائري الأوسطي جنوب مطار سفنكس. المميزات: فندق على النيل، تاكسي مائي، ومدارس. جزيرة جيريان: مخصصة للفيلات فقط بفيو مباشر على النيل. الأسعار تبدأ من 22,500,000 جنيه. هل تحب نرسل لحضرتك تفاصيل المساحات؟`
+  },
+  {
+    id: 'projects-skyridge-elite',
+    cat: 'projects',
+    catLabel: 'Projects',
+    title: 'Sky Ridge Elite',
+    hint: 'Project info for Sky Ridge Elite',
+    en: `Sky Ridge Elite located in Sheraton (Heliopolis) on El-Moshir Ahmed Ismail St. Residential, commercial, and administrative units available. Expected launch: 2026. Would you like a sales rep to contact you with details?`,
+    ar: `Sky Ridge Elite يقع في مساكن شيراتون (مصر الجديدة) بشارع المشير أحمد إسماعيل. متوفر وحدات سكنية، تجارية، وإدارية. الموعد المتوقع للطرح: 2026. هل تحب يتواصل معاك مسؤول مبيعات بالتفاصيل؟`
+  },
+  {
+    id: 'projects-skyridge-exec',
+    cat: 'projects',
+    catLabel: 'Projects',
+    title: 'Sky Ridge Executive',
+    hint: 'Project info for Sky Ridge Executive',
+    en: `Sky Ridge Executive – Sheraton. An integrated administrative project on El Nasr Road. Status: Selling full buildings; floor sales coming soon. Payment: 10% down payment, 6 years installments. Delivery: Sept 2026. A rep will call you within 2 hours.`,
+    ar: `مشروع Sky Ridge Executive بشيراتون. مشروع إداري متكامل على طريق النصر. الحالة: متاح بيع مباني كاملة وقريباً فتح بيع الأدوار. نظام السداد: 10% مقدم وتقسيط على 6 سنوات. الاستلام: سبتمبر 2026. سيتواصل معاك مسؤول المبيعات خلال ساعتين.`
+  },
+  {
+    id: 'projects-isla',
+    cat: 'projects',
+    catLabel: 'Projects',
+    title: 'ISLA – New Mansoura',
+    hint: 'Project info for ISLA',
+    en: `ISLA Project – New Mansoura. An integrated coastal city on a 1050m beachfront. Area: 334 acres. Developed by Nations of Sky & DCUD. For inquiries, contact the hotline: 16549.`,
+    ar: `مشروع ISLA بالمنصورة الجديدة. مدينة ساحلية متكاملة بواجهة بحرية 1050 متر. المساحة: 334 فدان. تطوير شركة Nations of Sky بالتعاون مع DCUD. للاستفسارات، اتصل بالخط الساخن: 16549.`
+  },
+  {
+    id: 'projects-shakira',
+    cat: 'projects',
+    catLabel: 'Projects',
+    title: 'Shakira Concert',
+    hint: 'Venture Lifestyle event inquiries',
+    en: `Regarding the Shakira concert (April 7th), inquiries are handled by the organizer: Venture Lifestyle. Contacts: 01555552590 / 01555552596. Booking link: https://ticketegypt.venflare.com/events`,
+    ar: `بخصوص حفل شاكيرا (7 أبريل)، التواصل يكون من خلال المنظم Venture Lifestyle. أرقام التواصل: 01555552590 / 01555552596. رابط الحجز: https://ticketegypt.venflare.com/events`
+  },
+  {
+    id: 'projects-closing',
+    cat: 'projects',
+    catLabel: 'Projects',
+    title: 'Closing (Dashboard)',
+    hint: 'End conversation - dashboard version',
+    en: `It was a pleasure communicating with you. Thank you for contacting Nations of Sky. Have a wonderful day!`,
+    ar: `تشرفت بمساعدة حضرتك، شكراً لتواصلك مع نيشنز أوف سكاي، يومك سعيد!`
+  },
+];
+
+const CATEGORIES = [
+  { id: 'opening',   label: 'Opening',    color: 'dot-opening' },
+  { id: 'contracts', label: 'Contracts',  color: 'dot-contracts' },
+  { id: 'payments',  label: 'Payments',   color: 'dot-payments' },
+  { id: 'visits',    label: 'Visits',     color: 'dot-visits' },
+  { id: 'unitinfo',  label: 'Unit Info',  color: 'dot-unitinfo' },
+  { id: 'escalation',label: 'Escalation', color: 'dot-escalation' },
+  { id: 'closing',   label: 'Closing',    color: 'dot-closing' },
+  { id: 'projects',  label: 'Projects',   color: 'dot-projects' },
+];
+
+let activeLang = 'en';
+let activeScript = null;
+let openCats = new Set(CATEGORIES.map(c => c.id));
+
+function buildSidebar() {
+  const nav = document.getElementById('sidebar-nav');
+  nav.innerHTML = '';
+  CATEGORIES.forEach(cat => {
+    const scripts = SCRIPTS.filter(s => s.cat === cat.id);
+    const group = document.createElement('div');
+    group.className = 'cat-group';
+    group.innerHTML = `
+      <div class="cat-header open" id="cat-hdr-${cat.id}" onclick="toggleCat('${cat.id}')">
+        <span class="cat-dot ${cat.color}"></span>
+        ${cat.label}
+        <span style="margin-left:6px;font-size:10px;color:var(--muted);">${scripts.length}</span>
+        <span class="cat-chevron">▶</span>
+      </div>
+      <div id="cat-items-${cat.id}">
+        ${scripts.map(s => `
+          <div class="script-item" id="item-${s.id}" onclick="selectScript('${s.id}')">
+            ${s.title}
+          </div>
+        `).join('')}
+      </div>`;
+    nav.appendChild(group);
+  });
+}
+
+function toggleCat(catId) {
+  const items = document.getElementById('cat-items-' + catId);
+  const hdr   = document.getElementById('cat-hdr-' + catId);
+  if (openCats.has(catId)) {
+    openCats.delete(catId);
+    items.style.display = 'none';
+    hdr.classList.remove('open');
+  } else {
+    openCats.add(catId);
+    items.style.display = 'block';
+    hdr.classList.add('open');
+  }
+}
+
+function buildCards() {
+  const wrap = document.getElementById('cards-wrap');
+  wrap.innerHTML = '';
+  SCRIPTS.forEach(s => {
+    const cat = CATEGORIES.find(c => c.id === s.cat);
+    const card = document.createElement('div');
+    card.className = 'script-card';
+    card.id = 'card-' + s.id;
+    card.innerHTML = `
+      <div class="card-header">
+        <div class="card-meta">
+          <span class="cat-badge c-${s.cat}">${cat.label}</span>
+          <span class="card-title">${s.title}</span>
+        </div>
+        <span class="card-hint">${s.hint}</span>
+      </div>
+      <div class="script-body" id="body-${s.id}">
+        <div class="script-col" id="col-en-${s.id}">
+          <div class="col-lang"><span style="background:#2563eb;"></span> English</div>
+          <div class="script-text" id="text-en-${s.id}">${s.en}</div>
+          <div class="copy-row">
+            <button class="copy-btn" id="copybtn-en-${s.id}" onclick="copyScript('${s.id}','en')">📋 Copy EN</button>
+          </div>
+        </div>
+        <div class="script-col" id="col-ar-${s.id}">
+          <div class="col-lang"><span style="background:#d4af37;"></span> العربية</div>
+          <div class="script-text" id="text-ar-${s.id}" dir="rtl">${s.ar}</div>
+          <div class="copy-row">
+            <button class="copy-btn" id="copybtn-ar-${s.id}" onclick="copyScript('${s.id}','ar')">📋 نسخ عربي</button>
+          </div>
+        </div>
+      </div>
+      <div class="card-footer">
+        <button class="copy-btn copy-both" onclick="copyScript('${s.id}','both')">📋 Copy Both (AR + EN)</button>
+      </div>`;
+    wrap.appendChild(card);
+  });
+}
+
+function selectScript(id) {
+  // Clear active
+  document.querySelectorAll('.script-item').forEach(el => el.classList.remove('active'));
+  document.querySelectorAll('.script-card').forEach(el => el.classList.remove('visible'));
+  document.getElementById('empty-home').style.display = 'none';
+
+  document.getElementById('item-' + id).classList.add('active');
+  document.getElementById('card-' + id).classList.add('visible');
+  activeScript = id;
+  applyLangFilter();
+}
+
+function setLang(lang) {
+  activeLang = lang;
+  document.getElementById('btn-en').classList.toggle('active', lang === 'en');
+  document.getElementById('btn-ar').classList.toggle('active', lang === 'ar');
+  document.getElementById('btn-both').classList.toggle('active', lang === 'both');
+  applyLangFilter();
+}
+
+function applyLangFilter() {
+  SCRIPTS.forEach(s => {
+    const enCol   = document.getElementById('col-en-' + s.id);
+    const arCol   = document.getElementById('col-ar-' + s.id);
+    const body    = document.getElementById('body-' + s.id);
+    if (!enCol) return;
+    if (activeLang === 'en') {
+      enCol.style.display = 'block';
+      arCol.style.display = 'none';
+      body.style.gridTemplateColumns = '1fr';
+    } else if (activeLang === 'ar') {
+      enCol.style.display = 'none';
+      arCol.style.display = 'block';
+      body.style.gridTemplateColumns = '1fr';
+    } else {
+      enCol.style.display = 'block';
+      arCol.style.display = 'block';
+      body.style.gridTemplateColumns = '1fr 1fr';
+    }
+  });
+}
+
+function copyScript(id, lang) {
+  const s = SCRIPTS.find(x => x.id === id);
+  if (!s) return;
+  let text = '';
+  if (lang === 'en')   text = s.en;
+  if (lang === 'ar')   text = s.ar;
+  if (lang === 'both') text = s.ar + '\n\n──────────\n\n' + s.en;
+
+  navigator.clipboard.writeText(text).then(() => {
+    const btnId = lang === 'both' ? null : 'copybtn-' + lang + '-' + id;
+    if (btnId) {
+      const btn = document.getElementById(btnId);
+      const orig = btn.innerHTML;
+      btn.innerHTML = '✅ Copied!';
+      btn.classList.add('copied');
+      setTimeout(() => { btn.innerHTML = orig; btn.classList.remove('copied'); }, 2000);
+    }
+  });
+}
+
+function filterSearch() {
+  const q = document.getElementById('search-input').value.toLowerCase().trim();
+  document.getElementById('empty-home').style.display = 'none';
+
+  if (!q) {
+    document.querySelectorAll('.script-card').forEach(c => c.classList.remove('visible'));
+    document.querySelectorAll('.script-item').forEach(i => i.style.display = 'flex');
+    CATEGORIES.forEach(cat => {
+      document.getElementById('cat-items-' + cat.id).style.display = 'block';
+    });
+    document.getElementById('no-results').style.display = 'none';
+    if (activeScript) {
+      document.getElementById('card-' + activeScript).classList.add('visible');
+    } else {
+      document.getElementById('empty-home').style.display = 'flex';
+    }
+    return;
+  }
+
+  const matches = SCRIPTS.filter(s =>
+    s.title.toLowerCase().includes(q) ||
+    s.en.toLowerCase().includes(q) ||
+    s.ar.includes(q) ||
+    s.catLabel.toLowerCase().includes(q)
+  );
+
+  document.querySelectorAll('.script-item').forEach(el => el.style.display = 'none');
+  document.querySelectorAll('.script-card').forEach(el => el.classList.remove('visible'));
+
+  matches.forEach(s => {
+    const item = document.getElementById('item-' + s.id);
+    if (item) item.style.display = 'flex';
+    document.getElementById('card-' + s.id).classList.add('visible');
+  });
+
+  document.getElementById('no-results').style.display = matches.length === 0 ? 'block' : 'none';
+}
+
+// Init
+buildSidebar();
+buildCards();
+applyLangFilter();
+</script>
+</body>
+</html>
