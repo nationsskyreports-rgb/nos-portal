@@ -609,10 +609,11 @@ async function loadKPIData(agentName) {
     if (adherenceEl) {
       if (!adherenceArr.length) {
         adherenceEl.innerText = 'Clean';
-        adherenceEl.style.color = 'var(--green, #10b981)';
+        adherenceEl.style.color = '#10b981';
       } else {
-        adherenceEl.innerText = activeDevs + (waivedDevs ? ` (${waivedDevs} waived)` : '');
-        adherenceEl.style.color = activeDevs > 0 ? '#ef4444' : '#10b981';
+        const waivedPct = Math.round((waivedDevs / adherenceArr.length) * 100);
+        adherenceEl.innerText = waivedPct + '%';
+        adherenceEl.style.color = waivedPct === 100 ? '#10b981' : waivedPct >= 50 ? '#F59E0B' : '#ef4444';
       }
     }
 
@@ -748,10 +749,11 @@ async function changeMonthData() {
     if (adherenceEl2) {
       if (!adherenceArr2.length) {
         adherenceEl2.innerText = 'Clean';
-        adherenceEl2.style.color = 'var(--green, #10b981)';
+        adherenceEl2.style.color = '#10b981';
       } else {
-        adherenceEl2.innerText = activeDevs2 + (waivedDevs2 ? ` (${waivedDevs2} waived)` : '');
-        adherenceEl2.style.color = activeDevs2 > 0 ? '#ef4444' : '#10b981';
+        const waivedPct2 = Math.round((waivedDevs2 / adherenceArr2.length) * 100);
+        adherenceEl2.innerText = waivedPct2 + '%';
+        adherenceEl2.style.color = waivedPct2 === 100 ? '#10b981' : waivedPct2 >= 50 ? '#F59E0B' : '#ef4444';
       }
     }
 
