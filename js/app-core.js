@@ -363,6 +363,50 @@ function logout() {
 }
 
 
+/* ─── REFRESH DATA ─── */
+async function refreshData() {
+  if (!sessionAgent) return;
+  const avatar = document.getElementById('nav-avatar');
+  if (avatar) avatar.style.animation = 'spin 0.8s linear infinite';
+
+  try {
+    const name = sessionAgent;
+
+    // جيب الـ session الحالية
+    const { data: { session } } = await sbClient.auth.getSession();
+    if (!session) {
+      if (avatar) avatar.style.animation = '';
+      showToast('⚠️', 'Session expired', 'Please login again', 'warn', 4000);
+      return;
+    }
+
+    // أعد تحميل الـ KPI
+    loadKPIData(name);
+
+    // أعد تحميل الـ schedule
+    loadAgentSchedule();
+
+    // أعد تحميل الـ requests
+    if (typeof loadMyRequests === 'function') loadMyRequests();
+
+    // أعد تحميل الـ team breaks
+    if (typeof loadTeamBreaksFromSB === 'function') loadTeamBreaksFromSB();
+
+    // أعد تحميل الـ breaks للـ agent
+    if (schMyAgentId) {
+      const breaks = await loadTodayBreaksFromSB(schMyAgentId);
+      if (breaks) applyBreaksToUI(breaks);
+    }
+
+    showToast('🔄', 'Data refreshed!', 'All info is up to date', 'success', 3000);
+  } catch(e) {
+    console.warn('refreshData error:', e);
+    showToast('⚠️', 'Refresh failed', 'Please try again', 'warn', 3000);
+  } finally {
+    if (avatar) avatar.style.animation = '';
+  }
+}
+
 /* ─── 08. DASHBOARD ─── */
 async function showDashboard(res) {
   const logo = document.getElementById('nsdAnimatedLogo');
