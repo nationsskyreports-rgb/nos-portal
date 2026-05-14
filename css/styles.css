@@ -1050,10 +1050,10 @@ html.light .skeleton {
   .bottom-nav-btn i { font-size:20px; }
   .bottom-nav-btn.active { color:var(--primary); }
   .bottom-nav-btn.active::before { content:''; position:absolute; top:0; left:25%; right:25%; height:3px; background:var(--primary-gradient); border-radius:0 0 4px 4px; }
-  #nos-toast-container { bottom:75px; right:12px; left:12px; max-width:100%; width:auto; }
-  .nos-toast { padding:12px 15px; border-radius:14px; }
-  .nos-toast-title { font-size:13px; }
-  .nos-toast-sub   { font-size:11px; }
+  #nos-toast-container { bottom:80px; left:50%; right:auto; transform:translateX(-50%); width:calc(100vw - 24px); max-width:420px; }
+  .nos-toast { padding:12px 15px; border-radius:14px; width:100%; box-sizing:border-box; }
+  .nos-toast-title { font-size:13px; color:var(--text) !important; }
+  .nos-toast-sub   { font-size:11px; color:var(--muted) !important; }
   .notif-bar { margin:8px 12px 0; padding:10px 14px; border-radius:12px; }
   .notif-title { font-size:13px; }
   .notif-sub   { font-size:11px; }
