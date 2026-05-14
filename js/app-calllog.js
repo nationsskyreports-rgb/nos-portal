@@ -492,10 +492,17 @@ async function fetchMyCallLog(agent) {
                 <div style="font-size:13px;font-weight:700;color:var(--primary);">${time}</div>
                 <div style="font-size:11px;color:var(--muted);">${date}</div>
               </div>
-              <button onclick="openEditCallModal(${JSON.stringify({...c, _sourceTable: c._source === 'whatsapp' ? 'whatsapp_logs' : 'call_logs'}).replace(/"/g,'&quot;')})"
-                style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:7px 13px;font-size:12px;font-weight:700;color:var(--primary);cursor:pointer;display:flex;align-items:center;gap:5px;white-space:nowrap;">
-                ✏️ Edit
-              </button>
+              <div style="display:flex;gap:6px;align-items:center;">
+                <button onclick="openEditCallModal(${JSON.stringify({...c, _sourceTable: c._source === 'whatsapp' ? 'whatsapp_logs' : 'call_logs'}).replace(/"/g,'&quot;')})"
+                  style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:7px 13px;font-size:12px;font-weight:700;color:var(--primary);cursor:pointer;display:flex;align-items:center;gap:5px;white-space:nowrap;">
+                  ✏️ Edit
+                </button>
+                <button onclick="confirmDeleteCallLog('${c.id}','${c._source === 'whatsapp' ? 'whatsapp_logs' : 'call_logs'}','${(c.customer_name||'—').replace(/'/g,"\\'")}','${c.call_reason||'—'}')"
+                  style="background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.25);border-radius:10px;padding:7px 13px;font-size:12px;font-weight:700;color:var(--danger);cursor:pointer;display:flex;align-items:center;gap:5px;white-space:nowrap;transition:all 0.2s;"
+                  onmouseover="this.style.background='rgba(239,68,68,0.15)'" onmouseout="this.style.background='rgba(239,68,68,0.08)'">
+                  🗑️ Delete
+                </button>
+              </div>
             </div>
           </div>
           <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;font-size:12px;">
@@ -519,6 +526,41 @@ async function fetchMyCallLog(agent) {
   } catch(e) {
     container.innerHTML = '<div class="empty-state">Connection error. Try again.</div>';
     console.error('fetchMyCallLog error:', e);
+  }
+}
+
+/* ─── DELETE CALL LOG ─── */
+async function confirmDeleteCallLog(id, table, customerName, reason) {
+  const confirmed = await customConfirm(
+    '🗑️ Delete Call Log',
+    `Are you sure you want to delete this log?\n\n👤 Customer: ${customerName}\n📋 Reason: ${reason}\n\nThis action cannot be undone.`
+  );
+  if (!confirmed) return;
+  await deleteCallLog(id, table);
+}
+
+async function deleteCallLog(id, table) {
+  try {
+    const res = await fetch(`${SB_URL_SCH}/rest/v1/${table}?id=eq.${id}`, {
+      method: 'DELETE',
+      headers: {
+        'apikey': SB_KEY_SCH,
+        'Authorization': `Bearer ${window._authToken || SB_KEY_SCH}`,
+        'Prefer': 'return=minimal'
+      }
+    });
+
+    if (!res.ok) throw new Error('Delete failed: ' + res.status);
+
+    showToast('🗑️', 'Log Deleted', 'Call log removed successfully.', 'success', 3000);
+
+    // أعد تحميل الـ list
+    const agent = document.getElementById('user-name').innerText.trim();
+    if (agent && typeof fetchMyCallLog === 'function') fetchMyCallLog(agent);
+
+  } catch(e) {
+    console.error('deleteCallLog error:', e);
+    showToast('⚠️', 'Delete Failed', 'Could not delete this log. Try again.', 'danger', 4000);
   }
 }
 
