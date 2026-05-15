@@ -579,12 +579,12 @@ async function loadKPIData(agentName) {
 
     // كل الـ requests بالتوازي
     const [perfRes, excusesRes, annRes, qualRes, callsRes, adherenceRes] = await Promise.all([
-      fetch(`${SB_URL_SCH}/rest/v1/daily_performance?agent_id=eq.${agentId}&perf_date=gte.${dateFrom}&perf_date=lte.${dateTo}&select=conformance,missing_sec,avg_aht`, { headers }),
+      fetch(`${SB_URL_SCH}/rest/v1/daily_performance?agent_id=eq.${agentId}&perf_date=gte.${dateFrom}&perf_date=lte.${dateTo}&select=conformance,missing_sec,avg_aht,active_sec,target_sec`, { headers }),
       fetch(`${SB_URL_SCH}/rest/v1/excuses?agent_id=eq.${agentId}&status=eq.Approved&excuse_date=gte.${dateFrom}&excuse_date=lte.${dateTo}&select=id`, { headers }),
       fetch(`${SB_URL_SCH}/rest/v1/annual_leave?agent_id=eq.${agentId}&year=eq.${year}&limit=1`, { headers }),
       fetch(`${SB_URL_SCH}/rest/v1/quality_scores?agent_id=eq.${agentId}&month=eq.${monthFull}&year=eq.${year}&limit=1&select=score`, { headers }),
       fetch(`${SB_URL_SCH}/rest/v1/call_logs?agent_name=eq.${encodeURIComponent(agentName)}&logged_at=gte.${dateFrom}&logged_at=lte.${dateTo}T23:59:59&select=id`, { headers }),
-      fetch(`${SB_URL_SCH}/rest/v1/adherence_deviations?agent_id=eq.${agentId}&deviation_date=gte.${dateFrom}&deviation_date=lte.${dateTo}&select=id,is_waived`, { headers }),
+      fetch(`${SB_URL_SCH}/rest/v1/adherence_deviations?agent_id=eq.${agentId}&deviation_date=gte.${dateFrom}&deviation_date=lte.${dateTo}&select=id,is_waived,deviation_minutes`, { headers }),
     ]);
 
     const [perfData, excusesData, annData, qualData, callsData, adherenceData] = await Promise.all([
@@ -594,18 +594,34 @@ async function loadKPIData(agentName) {
     // ── حساب الـ KPIs ──
     const perf = perfData || [];
 
+    // Waived seconds
+    const waivedSeconds = (adherenceData || [])
+      .filter(d => d.is_waived)
+      .reduce((s, d) => s + (d.deviation_minutes || 0) * 60, 0);
+
     // Conformance
-    const conformance = perf.length
-      ? (perf.reduce((s, p) => s + parseFloat(p.conformance || 0), 0) / perf.length).toFixed(1) + '%'
-      : '-';
+    const totalTargetSec = perf.reduce((s, p) => s + (p.target_sec || 0), 0);
+    let conformance;
+    if (perf.length && totalTargetSec > 0) {
+      const totalMissRaw     = perf.reduce((s, p) => s + (p.missing_sec || 0), 0);
+      const effectiveMissing = Math.max(0, totalMissRaw - waivedSeconds);
+      const adj = ((totalTargetSec - effectiveMissing) / totalTargetSec) * 100;
+      conformance = Math.min(100, adj).toFixed(1) + '%';
+    } else if (perf.length) {
+      conformance = (perf.reduce((s, p) => s + parseFloat(p.conformance || 0), 0) / perf.length).toFixed(1) + '%';
+    } else {
+      conformance = '-';
+    }
 
     // Missing Time
     const totalMissingSec = perf.reduce((s, p) => s + (p.missing_sec || 0), 0);
+    const totalExtraSec   = perf.reduce((s, p) => s + Math.max(0, (p.active_sec || 0) - (p.target_sec || 0)), 0);
+    const netMissingSec   = Math.max(0, (totalMissingSec - totalExtraSec) - waivedSeconds);
     const missingTime = perf.length
-      ? (totalMissingSec <= 300 ? 'Full Time'
-        : String(Math.floor(totalMissingSec / 3600)).padStart(2, '0') + ':' +
-          String(Math.floor((totalMissingSec % 3600) / 60)).padStart(2, '0') + ':' +
-          String(totalMissingSec % 60).padStart(2, '0'))
+      ? (netMissingSec <= 300 ? 'Full Time'
+        : String(Math.floor(netMissingSec / 3600)).padStart(2, '0') + ':' +
+          String(Math.floor((netMissingSec % 3600) / 60)).padStart(2, '0') + ':' +
+          String(netMissingSec % 60).padStart(2, '0'))
       : '-';
 
     // AHT
@@ -718,12 +734,12 @@ async function changeMonthData() {
 
     // كل الـ requests بالتوازي — نفس منطق loadKPIData
     const [perfRes, excusesRes, annRes, qualRes, callsRes, adherenceRes] = await Promise.all([
-      fetch(`${SB_URL_SCH}/rest/v1/daily_performance?agent_id=eq.${agentId}&perf_date=gte.${dateFrom}&perf_date=lte.${dateTo}&select=conformance,missing_sec,avg_aht`, { headers }),
+      fetch(`${SB_URL_SCH}/rest/v1/daily_performance?agent_id=eq.${agentId}&perf_date=gte.${dateFrom}&perf_date=lte.${dateTo}&select=conformance,missing_sec,avg_aht,active_sec,target_sec`, { headers }),
       fetch(`${SB_URL_SCH}/rest/v1/excuses?agent_id=eq.${agentId}&status=eq.Approved&excuse_date=gte.${dateFrom}&excuse_date=lte.${dateTo}&select=id`, { headers }),
       fetch(`${SB_URL_SCH}/rest/v1/annual_leave?agent_id=eq.${agentId}&year=eq.${year}&limit=1`, { headers }),
       fetch(`${SB_URL_SCH}/rest/v1/quality_scores?agent_id=eq.${agentId}&month=eq.${monthFull}&year=eq.${year}&limit=1&select=score`, { headers }),
       fetch(`${SB_URL_SCH}/rest/v1/call_logs?agent_name=eq.${encodeURIComponent(agentName)}&logged_at=gte.${dateFrom}&logged_at=lte.${dateTo}T23:59:59&select=id`, { headers }),
-      fetch(`${SB_URL_SCH}/rest/v1/adherence_deviations?agent_id=eq.${agentId}&deviation_date=gte.${dateFrom}&deviation_date=lte.${dateTo}&select=id,is_waived`, { headers }),
+      fetch(`${SB_URL_SCH}/rest/v1/adherence_deviations?agent_id=eq.${agentId}&deviation_date=gte.${dateFrom}&deviation_date=lte.${dateTo}&select=id,is_waived,deviation_minutes`, { headers }),
     ]);
 
     const [perfData, excusesData, annData, qualData, callsData, adherenceData] = await Promise.all([
@@ -734,18 +750,34 @@ async function changeMonthData() {
 
     const perf = perfData || [];
 
+    // ── Waived seconds ──
+    const waivedSeconds = (adherenceData || [])
+      .filter(d => d.is_waived)
+      .reduce((s, d) => s + (d.deviation_minutes || 0) * 60, 0);
+
     // ── Conformance ──
-    const conformance = perf.length
-      ? (perf.reduce((s, p) => s + parseFloat(p.conformance || 0), 0) / perf.length).toFixed(1) + '%'
-      : '-';
+    const totalTargetSec = perf.reduce((s, p) => s + (p.target_sec || 0), 0);
+    let conformance;
+    if (perf.length && totalTargetSec > 0) {
+      const totalMissRaw     = perf.reduce((s, p) => s + (p.missing_sec || 0), 0);
+      const effectiveMissing = Math.max(0, totalMissRaw - waivedSeconds);
+      const adj = ((totalTargetSec - effectiveMissing) / totalTargetSec) * 100;
+      conformance = Math.min(100, adj).toFixed(1) + '%';
+    } else if (perf.length) {
+      conformance = (perf.reduce((s, p) => s + parseFloat(p.conformance || 0), 0) / perf.length).toFixed(1) + '%';
+    } else {
+      conformance = '-';
+    }
 
     // ── Missing Time ──
     const totalMissingSec = perf.reduce((s, p) => s + (p.missing_sec || 0), 0);
+    const totalExtraSec   = perf.reduce((s, p) => s + Math.max(0, (p.active_sec || 0) - (p.target_sec || 0)), 0);
+    const netMissingSec   = Math.max(0, (totalMissingSec - totalExtraSec) - waivedSeconds);
     const missingTime = perf.length
-      ? (totalMissingSec <= 300 ? 'Full Time'
-        : String(Math.floor(totalMissingSec / 3600)).padStart(2, '0') + ':' +
-          String(Math.floor((totalMissingSec % 3600) / 60)).padStart(2, '0') + ':' +
-          String(totalMissingSec % 60).padStart(2, '0'))
+      ? (netMissingSec <= 300 ? 'Full Time'
+        : String(Math.floor(netMissingSec / 3600)).padStart(2, '0') + ':' +
+          String(Math.floor((netMissingSec % 3600) / 60)).padStart(2, '0') + ':' +
+          String(netMissingSec % 60).padStart(2, '0'))
       : '-';
 
     // ── AHT ──
