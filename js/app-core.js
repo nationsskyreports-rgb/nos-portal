@@ -585,44 +585,45 @@ async function loadKPIData(agentName) {
       fetch(`${SB_URL_SCH}/rest/v1/quality_scores?agent_id=eq.${agentId}&month=eq.${monthFull}&year=eq.${year}&limit=1&select=score`, { headers }),
       fetch(`${SB_URL_SCH}/rest/v1/call_logs?agent_name=eq.${encodeURIComponent(agentName)}&logged_at=gte.${dateFrom}&logged_at=lte.${dateTo}T23:59:59&select=id`, { headers }),
       fetch(`${SB_URL_SCH}/rest/v1/adherence_deviations?agent_id=eq.${agentId}&deviation_date=gte.${dateFrom}&deviation_date=lte.${dateTo}&select=id,is_waived,deviation_minutes`, { headers }),
+      fetch(`${SB_URL_SCH}/rest/v1/kpi_cache?agent_id=eq.${agentId}&month=eq.${monthFull}&year=eq.${year}&limit=1&select=conformance,missing_time`, { headers }),
     ]);
 
-    const [perfData, excusesData, annData, qualData, callsData, adherenceData] = await Promise.all([
-      perfRes.json(), excusesRes.json(), annRes.json(), qualRes.json(), callsRes.json(), adherenceRes.json()
+    const [perfData, excusesData, annData, qualData, callsData, adherenceData, cacheData] = await Promise.all([
+      perfRes.json(), excusesRes.json(), annRes.json(), qualRes.json(), callsRes.json(), adherenceRes.json(), cacheRes.json()
     ]);
 
     // ── حساب الـ KPIs ──
-    const perf = perfData || [];
+    const perf  = perfData || [];
+    const cache = cacheData?.[0];
 
-    // Waived seconds
-    const waivedSeconds = (adherenceData || [])
-      .filter(d => d.is_waived)
-      .reduce((s, d) => s + (d.deviation_minutes || 0) * 60, 0);
-
-    // Conformance
-    const totalTargetSec = perf.reduce((s, p) => s + (p.target_sec || 0), 0);
-    let conformance;
-    if (perf.length && totalTargetSec > 0) {
-      const totalMissRaw     = perf.reduce((s, p) => s + (p.missing_sec || 0), 0);
-      const effectiveMissing = Math.max(0, totalMissRaw - waivedSeconds);
-      const adj = ((totalTargetSec - effectiveMissing) / totalTargetSec) * 100;
-      conformance = Math.min(100, adj).toFixed(1) + '%';
-    } else if (perf.length) {
-      conformance = (perf.reduce((s, p) => s + parseFloat(p.conformance || 0), 0) / perf.length).toFixed(1) + '%';
+    // Conformance + Missing Time — من الـ kpi_cache لو موجود، وإلا يحسب
+    let conformance, missingTime;
+    if (cache) {
+      conformance = cache.conformance  || '-';
+      missingTime = cache.missing_time || '-';
     } else {
-      conformance = '-';
+      // Fallback: حساب محلي بنفس منطق الـ Admin
+      const waivedSeconds  = (adherenceData || []).filter(d => d.is_waived).reduce((s, d) => s + (d.deviation_minutes || 0) * 60, 0);
+      const totalTargetSec = perf.reduce((s, p) => s + (p.target_sec || 0), 0);
+      if (perf.length && totalTargetSec > 0) {
+        const totalMissRaw     = perf.reduce((s, p) => s + (p.missing_sec || 0), 0);
+        const effectiveMissing = Math.max(0, totalMissRaw - waivedSeconds);
+        const adj = ((totalTargetSec - effectiveMissing) / totalTargetSec) * 100;
+        conformance = Math.min(100, adj).toFixed(1) + '%';
+        const totalExtraSec = perf.reduce((s, p) => s + Math.max(0, (p.active_sec || 0) - (p.target_sec || 0)), 0);
+        const netMissingSec = Math.max(0, (totalMissRaw - totalExtraSec) - waivedSeconds);
+        missingTime = netMissingSec <= 300 ? 'Full Time'
+          : String(Math.floor(netMissingSec / 3600)).padStart(2, '0') + ':' +
+            String(Math.floor((netMissingSec % 3600) / 60)).padStart(2, '0') + ':' +
+            String(netMissingSec % 60).padStart(2, '0');
+      } else if (perf.length) {
+        conformance = (perf.reduce((s, p) => s + parseFloat(p.conformance || 0), 0) / perf.length).toFixed(1) + '%';
+        missingTime = '-';
+      } else {
+        conformance = '-';
+        missingTime = '-';
+      }
     }
-
-    // Missing Time
-    const totalMissingSec = perf.reduce((s, p) => s + (p.missing_sec || 0), 0);
-    const totalExtraSec   = perf.reduce((s, p) => s + Math.max(0, (p.active_sec || 0) - (p.target_sec || 0)), 0);
-    const netMissingSec   = Math.max(0, (totalMissingSec - totalExtraSec) - waivedSeconds);
-    const missingTime = perf.length
-      ? (netMissingSec <= 300 ? 'Full Time'
-        : String(Math.floor(netMissingSec / 3600)).padStart(2, '0') + ':' +
-          String(Math.floor((netMissingSec % 3600) / 60)).padStart(2, '0') + ':' +
-          String(netMissingSec % 60).padStart(2, '0'))
-      : '-';
 
     // AHT
     const ahtArr = perf.filter(p => p.avg_aht > 0);
@@ -740,45 +741,46 @@ async function changeMonthData() {
       fetch(`${SB_URL_SCH}/rest/v1/quality_scores?agent_id=eq.${agentId}&month=eq.${monthFull}&year=eq.${year}&limit=1&select=score`, { headers }),
       fetch(`${SB_URL_SCH}/rest/v1/call_logs?agent_name=eq.${encodeURIComponent(agentName)}&logged_at=gte.${dateFrom}&logged_at=lte.${dateTo}T23:59:59&select=id`, { headers }),
       fetch(`${SB_URL_SCH}/rest/v1/adherence_deviations?agent_id=eq.${agentId}&deviation_date=gte.${dateFrom}&deviation_date=lte.${dateTo}&select=id,is_waived,deviation_minutes`, { headers }),
+      fetch(`${SB_URL_SCH}/rest/v1/kpi_cache?agent_id=eq.${agentId}&month=eq.${monthFull}&year=eq.${year}&limit=1&select=conformance,missing_time`, { headers }),
     ]);
 
-    const [perfData, excusesData, annData, qualData, callsData, adherenceData] = await Promise.all([
-      perfRes.json(), excusesRes.json(), annRes.json(), qualRes.json(), callsRes.json(), adherenceRes.json()
+    const [perfData, excusesData, annData, qualData, callsData, adherenceData, cacheData] = await Promise.all([
+      perfRes.json(), excusesRes.json(), annRes.json(), qualRes.json(), callsRes.json(), adherenceRes.json(), cacheRes.json()
     ]);
 
     loader.classList.add('hidden');
 
-    const perf = perfData || [];
+    const perf  = perfData || [];
+    const cache = cacheData?.[0];
 
-    // ── Waived seconds ──
-    const waivedSeconds = (adherenceData || [])
-      .filter(d => d.is_waived)
-      .reduce((s, d) => s + (d.deviation_minutes || 0) * 60, 0);
-
-    // ── Conformance ──
-    const totalTargetSec = perf.reduce((s, p) => s + (p.target_sec || 0), 0);
-    let conformance;
-    if (perf.length && totalTargetSec > 0) {
-      const totalMissRaw     = perf.reduce((s, p) => s + (p.missing_sec || 0), 0);
-      const effectiveMissing = Math.max(0, totalMissRaw - waivedSeconds);
-      const adj = ((totalTargetSec - effectiveMissing) / totalTargetSec) * 100;
-      conformance = Math.min(100, adj).toFixed(1) + '%';
-    } else if (perf.length) {
-      conformance = (perf.reduce((s, p) => s + parseFloat(p.conformance || 0), 0) / perf.length).toFixed(1) + '%';
+    // ── Conformance + Missing Time — من الـ kpi_cache لو موجود، وإلا يحسب ──
+    let conformance, missingTime;
+    if (cache) {
+      conformance = cache.conformance  || '-';
+      missingTime = cache.missing_time || '-';
     } else {
-      conformance = '-';
+      // Fallback: حساب محلي بنفس منطق الـ Admin
+      const waivedSeconds  = (adherenceData || []).filter(d => d.is_waived).reduce((s, d) => s + (d.deviation_minutes || 0) * 60, 0);
+      const totalTargetSec = perf.reduce((s, p) => s + (p.target_sec || 0), 0);
+      if (perf.length && totalTargetSec > 0) {
+        const totalMissRaw     = perf.reduce((s, p) => s + (p.missing_sec || 0), 0);
+        const effectiveMissing = Math.max(0, totalMissRaw - waivedSeconds);
+        const adj = ((totalTargetSec - effectiveMissing) / totalTargetSec) * 100;
+        conformance = Math.min(100, adj).toFixed(1) + '%';
+        const totalExtraSec = perf.reduce((s, p) => s + Math.max(0, (p.active_sec || 0) - (p.target_sec || 0)), 0);
+        const netMissingSec = Math.max(0, (totalMissRaw - totalExtraSec) - waivedSeconds);
+        missingTime = netMissingSec <= 300 ? 'Full Time'
+          : String(Math.floor(netMissingSec / 3600)).padStart(2, '0') + ':' +
+            String(Math.floor((netMissingSec % 3600) / 60)).padStart(2, '0') + ':' +
+            String(netMissingSec % 60).padStart(2, '0');
+      } else if (perf.length) {
+        conformance = (perf.reduce((s, p) => s + parseFloat(p.conformance || 0), 0) / perf.length).toFixed(1) + '%';
+        missingTime = '-';
+      } else {
+        conformance = '-';
+        missingTime = '-';
+      }
     }
-
-    // ── Missing Time ──
-    const totalMissingSec = perf.reduce((s, p) => s + (p.missing_sec || 0), 0);
-    const totalExtraSec   = perf.reduce((s, p) => s + Math.max(0, (p.active_sec || 0) - (p.target_sec || 0)), 0);
-    const netMissingSec   = Math.max(0, (totalMissingSec - totalExtraSec) - waivedSeconds);
-    const missingTime = perf.length
-      ? (netMissingSec <= 300 ? 'Full Time'
-        : String(Math.floor(netMissingSec / 3600)).padStart(2, '0') + ':' +
-          String(Math.floor((netMissingSec % 3600) / 60)).padStart(2, '0') + ':' +
-          String(netMissingSec % 60).padStart(2, '0'))
-      : '-';
 
     // ── AHT ──
     const ahtArr = perf.filter(p => p.avg_aht > 0);
