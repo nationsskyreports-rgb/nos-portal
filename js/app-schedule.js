@@ -117,7 +117,8 @@ async function loadAgentSchedule() {
       const dayType = entry ? entry.day_type : null;
       const stId    = entry ? entry.shift_type_id : null;
       const st      = schShiftTypes.find(s => s.id === stId);
-      result.push({ iso, dayName: days[cur.getDay()], dayNum: String(cur.getDate()).padStart(2,'0'), dayType, st, isToday: iso === todayIso });
+      const channel = entry ? (entry.channel || 'Calls') : null;
+      result.push({ iso, dayName: days[cur.getDay()], dayNum: String(cur.getDate()).padStart(2,'0'), dayType, st, channel, isToday: iso === todayIso });
       cur.setDate(cur.getDate() + 1);
     }
     return result;
@@ -136,6 +137,10 @@ async function loadAgentSchedule() {
       } else if (d.dayType === 'Work') {
         displayShift = d.st ? d.st.start_time.substring(0,5) + ' - ' + d.st.end_time.substring(0,5) : 'Working';
         badge = '<span class="nos-status-badge nos-badge-work">Working</span>';
+        const chIcon  = d.channel === 'WhatsApp' ? '💬' : '📞';
+        const chLabel = d.channel === 'WhatsApp' ? 'WhatsApp' : 'Calls';
+        const chColor = d.channel === 'WhatsApp' ? '#25D366' : '#3B82F6';
+        badge += `<span style="display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:20px;font-size:11px;font-weight:700;color:${chColor};background:${chColor}1a;border:1px solid ${chColor}55;margin-left:4px;">${chIcon} ${chLabel}</span>`;
       } else if (d.dayType === 'Annual') { badge = '<span class="nos-status-badge nos-badge-annual">Annual</span>';
       } else if (d.dayType === 'Sick')   { badge = '<span class="nos-status-badge nos-badge-sick">Sick</span>';
       } else if (d.dayType === 'Casual') { badge = '<span class="nos-status-badge nos-badge-casual">Casual</span>';
