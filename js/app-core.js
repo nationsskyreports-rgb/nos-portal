@@ -578,7 +578,7 @@ async function loadKPIData(agentName) {
     if (!schMyAgentId) schMyAgentId = agentId; // cache for showAnnualDetails
 
     // كل الـ requests بالتوازي
-    const [perfRes, excusesRes, annRes, qualRes, callsRes, adherenceRes] = await Promise.all([
+    const [perfRes, excusesRes, annRes, qualRes, callsRes, adherenceRes, cacheRes] = await Promise.all([
       fetch(`${SB_URL_SCH}/rest/v1/daily_performance?agent_id=eq.${agentId}&perf_date=gte.${dateFrom}&perf_date=lte.${dateTo}&select=conformance,missing_sec,avg_aht,active_sec,target_sec`, { headers }),
       fetch(`${SB_URL_SCH}/rest/v1/excuses?agent_id=eq.${agentId}&status=eq.Approved&excuse_date=gte.${dateFrom}&excuse_date=lte.${dateTo}&select=id`, { headers }),
       fetch(`${SB_URL_SCH}/rest/v1/annual_leave?agent_id=eq.${agentId}&year=eq.${year}&limit=1`, { headers }),
@@ -734,7 +734,7 @@ async function changeMonthData() {
     if (!agentId) { loader.classList.add('hidden'); if (typeof checkDataAvailability === "function") checkDataAvailability(null); return; }
 
     // كل الـ requests بالتوازي — نفس منطق loadKPIData
-    const [perfRes, excusesRes, annRes, qualRes, callsRes, adherenceRes] = await Promise.all([
+    const [perfRes, excusesRes, annRes, qualRes, callsRes, adherenceRes, cacheRes] = await Promise.all([
       fetch(`${SB_URL_SCH}/rest/v1/daily_performance?agent_id=eq.${agentId}&perf_date=gte.${dateFrom}&perf_date=lte.${dateTo}&select=conformance,missing_sec,avg_aht,active_sec,target_sec`, { headers }),
       fetch(`${SB_URL_SCH}/rest/v1/excuses?agent_id=eq.${agentId}&status=eq.Approved&excuse_date=gte.${dateFrom}&excuse_date=lte.${dateTo}&select=id`, { headers }),
       fetch(`${SB_URL_SCH}/rest/v1/annual_leave?agent_id=eq.${agentId}&year=eq.${year}&limit=1`, { headers }),
