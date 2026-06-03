@@ -569,7 +569,7 @@ function openEditCallModal(callData) {
   const existing = document.getElementById('edit-call-modal');
   if (existing) existing.remove();
 
-  const reasonOptions  = ['Wrong Number','Call Dropped','Asking about the projects','Jirian campaign','Jirian Island campaign','Sky Ridge Elite','Sky Ridge Executives','Zomra','ISLA','Upviews','Broker','Delayed sales call','EOI Refund','Collaboration request','Non-Business General Inquiry','Business General Inquiry','Complaint',"Shakira's Event"];
+  const reasonOptions  = ['Wrong Number','Call Dropped','Asking about the projects','Jirian campaign','Jirian Island campaign','Sky Ridge Elite','Sky Ridge Executives','Zomra','ISLA','Upviews','Broker','Delayed sales call','EOI Refund','Collaboration request','Non-Business General Inquiry','Business General Inquiry','Complaint',"Shakira's Event",'Sadaf'];
   const channelOptions = ['Whatsapp','Mobile','Email','Alternative Mobile','SMS','N/A'];
   const mediaOptions   = ['Billboards','Saw site','Facebook','Instagram','Linkedin','Word of mouth','TV ad.','Youtube','N/A'];
   const budgetOptions  = ['0 - 10','10 - 20','20 +','N/A'];
