@@ -414,6 +414,7 @@
           <option>Collaboration request</option><option>Non-Business General Inquiry</option>
           <option>Business General Inquiry</option><option>Complaint</option>
           <option>Shakira's Event</option>
+          <option>Sadaf</option>
         </select>
       </div>
       <!-- Quick Log -->
@@ -881,14 +882,12 @@
 
       }).catch(err => console.warn('SW registration failed:', err));
 
-      // لما الـ SW الجديد يتفعّل — reload تلقائي
       navigator.serviceWorker.addEventListener('message', e => {
         if (e.data && e.data.type === 'SW_UPDATED') {
           window.location.reload();
         }
       });
 
-      // لما يتغير الـ controller (SW جديد أخد السيطرة) — reload
       let refreshing = false;
       navigator.serviceWorker.addEventListener('controllerchange', () => {
         if (!refreshing) { refreshing = true; window.location.reload(); }
