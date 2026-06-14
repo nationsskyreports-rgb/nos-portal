@@ -178,6 +178,7 @@ function sbInsertCallLog(data, savedAt) {
     },
     body: JSON.stringify({
       agent_name:            data.agent,
+      call_direction:        data.direction || 'inbound',
       customer_name:         isQ ? null : (data.cname  || null),
       customer_mobile:       isQ ? null : (data.mobile || null),
       call_reason:           data.reason,
