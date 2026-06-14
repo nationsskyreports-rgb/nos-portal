@@ -402,6 +402,17 @@
         </select>
       </div>
       <div class="form-group">
+        <label class="form-label">Call Direction <span class="req">*</span></label>
+        <div class="radio-group" id="f-direction" style="display:flex;gap:10px;">
+          <label class="radio-opt selected" onclick="selectRadio('f-direction',this,'inbound')" style="flex:1;justify-content:center;">
+            <input type="radio" checked> 📥 Inbound
+          </label>
+          <label class="radio-opt" onclick="selectRadio('f-direction',this,'outbound')" style="flex:1;justify-content:center;">
+            <input type="radio"> 📤 Outbound
+          </label>
+        </div>
+      </div>
+      <div class="form-group">
         <label class="form-label">Call Reason <span class="req">*</span></label>
         <select id="f-reason" class="form-input" onchange="toggleFormSections()">
           <option value="">Select reason...</option>
