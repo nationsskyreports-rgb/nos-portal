@@ -52,7 +52,8 @@ function quickLogCall(reason) {
       'Prefer': 'return=minimal'
     },
     body: JSON.stringify({
-      agent_name: agent, customer_name: '', customer_mobile: '',
+      agent_name: agent, call_direction: 'inbound',
+      customer_name: '', customer_mobile: '',
       call_reason: reason, communication_channel: '', media_source: '',
       business_relativity: '', sales_call_requested: '',
       budget: '', unit_type: '', extra_notes: '',
@@ -117,6 +118,7 @@ function submitCallLogForm() {
 
   const data = {
     agent, reason,
+    direction: radioValues['f-direction'] || 'inbound',
     cname:     isQ ? '' : cname,
     mobile:    isQ ? '' : mobile,
     bizrel:    isQ ? '' : (radioValues['f-bizrel']    || ''),
@@ -138,6 +140,7 @@ function submitCallLogForm() {
     },
     body: JSON.stringify({
       agent_name:            data.agent,
+      call_direction:        data.direction,
       customer_name:         data.cname,
       customer_mobile:       data.mobile,
       call_reason:           data.reason,
@@ -193,8 +196,11 @@ function submitCallLogForm() {
 function resetCallForm() {
   ['f-reason','f-mobile','f-extra'].forEach(id => document.getElementById(id).value = '');
   document.getElementById('f-cname').value = '';
-  radioValues = {};
+  radioValues = { 'f-direction': 'inbound' };
   document.querySelectorAll('.radio-opt').forEach(o => o.classList.remove('selected'));
+  // Re-select Inbound as default
+  const inboundOpt = document.querySelector('#f-direction .radio-opt');
+  if (inboundOpt) inboundOpt.classList.add('selected');
   document.getElementById('mobile-section').style.display = 'block';
   document.getElementById('form-success').style.display   = 'none';
   document.getElementById('form-error').style.display     = 'none';
