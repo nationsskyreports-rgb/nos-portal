@@ -222,10 +222,19 @@ function startBreakChecker(breaks) {
   if (breakCheckTimer) clearInterval(breakCheckTimer);
   checkBreaks();
   breakCheckTimer = setInterval(checkBreaks, 30000);
-  // Silent team refresh every 5 minutes
+  // Silent team + personal breaks refresh every 5 minutes
   if (window._teamRefreshTimer) clearInterval(window._teamRefreshTimer);
-  window._teamRefreshTimer = setInterval(() => {
+  window._teamRefreshTimer = setInterval(async () => {
+    // 1. Refresh team grid
     loadTeamBreaksFromSB();
+    // 2. Reload agent's own breaks from DB and update banner + currentBreaks
+    if (window.schMyAgentId) {
+      const fresh = await loadTodayBreaksFromSB(window.schMyAgentId);
+      if (fresh) {
+        applyBreaksToUI(fresh);
+        currentBreaks = fresh;
+      }
+    }
   }, 5 * 60 * 1000);
 }
 
