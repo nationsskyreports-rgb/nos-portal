@@ -345,7 +345,7 @@ async function findAvailableBreakSlot(requestedTime, breakType, agentShiftStart,
       const bStart = timeStrToMins(b[col].substring(0,5));
       const bEnd   = bStart + dur;
       const overlap = !(slotEnd <= bStart || slotMins >= bEnd);
-      if (overlap) { const overlapMins = Math.min(slotEnd, bEnd) - Math.max(slotMins, bStart); if (overlapMins > 15) count++; }
+      if (overlap) { const overlapMins = Math.min(slotEnd, bEnd) - Math.max(slotMins, bStart); if (overlapMins > 0) count++; }
     });
     return count >= 2;
   }
