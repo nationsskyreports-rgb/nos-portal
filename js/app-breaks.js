@@ -358,7 +358,7 @@ async function findAvailableBreakSlot(requestedTime, breakType, agentShiftStart,
     if (next > noBreakEnd - dur) break;
     if (!hasConflict(next)) return minsToTimeStr(next);
   }
-  return null;
+  return 'BLOCKED'; // conflict but no alternative available
 }
 
 async function confirmBreakTime(time) {
@@ -379,6 +379,13 @@ async function confirmBreakTime(time) {
     const shiftStart = shiftParts[0]?.trim() || '00:00';
     const shiftEnd   = shiftParts[1]?.trim() || '23:00';
     const suggestion = await findAvailableBreakSlot(time, selectedBreakType, shiftStart, shiftEnd);
+
+    if (suggestion === 'BLOCKED') {
+      setButtonLoading(btn, false, '🔄 Swap Break');
+      msg.style.color = 'var(--danger)';
+      msg.innerText   = `❌ ${time} محجوز ومفيش وقت بديل متاح في شيفتك`;
+      return;
+    }
 
     if (suggestion) {
       setButtonLoading(btn, false, '🔄 Swap Break');
