@@ -322,43 +322,100 @@ function minsToTimeStr(m) {
   return Math.floor(m/60).toString().padStart(2,'0') + ':' + (m%60).toString().padStart(2,'0');
 }
 
-async function findAvailableBreakSlot(requestedTime, breakType, agentShiftStart, agentShiftEnd) {
+async function findAvailableBreakSlot(requestedTime, breakType, requestingAgentId) {
   const today  = getLocalDateStr();
   const colMap = { 'Break 1': 'break1', 'Lunch': 'lunch', 'Break 2': 'break2' };
   const col    = colMap[breakType];
   const durMap = { 'Break 1': 15, 'Lunch': 30, 'Break 2': 15 };
   const dur    = durMap[breakType];
+  const hdrs   = { 'apikey': SB_KEY_SCH, 'Authorization': `Bearer ${window._authToken || SB_KEY_SCH}` };
 
-  const res       = await fetch(`${SB_URL_SCH}/rest/v1/breaks?break_date=eq.${today}&select=*`, { headers: { 'apikey': SB_KEY_SCH, 'Authorization': `Bearer ${window._authToken || SB_KEY_SCH}` } });
-  const allBreaks = await res.json();
+  // ── Fetch all today breaks + schedule in parallel ──
+  const [breaksRes, schedRes] = await Promise.all([
+    fetch(`${SB_URL_SCH}/rest/v1/breaks?break_date=eq.${today}&select=*`, { headers: hdrs }),
+    fetch(`${SB_URL_SCH}/rest/v1/schedule?shift_date=eq.${today}&select=agent_id,day_type`, { headers: hdrs }),
+  ]);
+  const allBreaks = await breaksRes.json();
+  const schedData = await schedRes.json();
 
-  const shiftStart   = timeStrToMins(agentShiftStart);
-  const shiftEnd     = timeStrToMins(agentShiftEnd);
-  const noBreakStart = shiftStart + 60;
-  const noBreakEnd   = shiftEnd   - 60;
+  // مين شغال النهارده؟
+  const workingSet = new Set((schedData || []).filter(s => s.day_type === 'Work').map(s => s.agent_id));
 
-  function hasConflict(slotMins) {
-    const slotEnd = slotMins + dur;
-    let count = 0;
-    allBreaks.forEach(b => {
-      if (!b[col]) return;
-      const bStart = timeStrToMins(b[col].substring(0,5));
-      const bEnd   = bStart + dur;
-      const overlap = !(slotEnd <= bStart || slotMins >= bEnd);
-      if (overlap) { const overlapMins = Math.min(slotEnd, bEnd) - Math.max(slotMins, bStart); if (overlapMins > 0) count++; }
+  // ── Helpers ──
+  function shiftMinutes(shiftTime) {
+    if (!shiftTime) return null;
+    const parts = shiftTime.trim().split(' - ');
+    if (parts.length < 2) return null;
+    let s = timeStrToMins(parts[0].trim());
+    let e = timeStrToMins(parts[1].trim());
+    if (e <= s) e += 1440; // midnight crossover
+    return { s, e };
+  }
+
+  function normalizeMins(mins, shiftStart) {
+    // لو الوقت أقل من بداية الشيفت بأكثر من 12 ساعة → يوم تاني (midnight shift)
+    if (mins < shiftStart - 720) return mins + 1440;
+    return mins;
+  }
+
+  function isOnShiftDuring(agentRow, slotStart, slotEnd) {
+    const sh = shiftMinutes(agentRow.shift_time);
+    if (!sh) return false;
+    const ns = normalizeMins(slotStart, sh.s);
+    const ne = normalizeMins(slotEnd,   sh.s);
+    return sh.s <= ns && sh.e >= ne;
+  }
+
+  function isOnBreakDuring(agentRow, slotStart, slotEnd) {
+    const bDurs = [['break1', 15], ['lunch', 30], ['break2', 15]];
+    return bDurs.some(([c, d]) => {
+      if (!agentRow[c]) return false;
+      const sh    = shiftMinutes(agentRow.shift_time);
+      const bSt   = normalizeMins(timeStrToMins(agentRow[c].substring(0, 5)), sh ? sh.s : 0);
+      const bEnd  = bSt + d;
+      const nSlotStart = normalizeMins(slotStart, sh ? sh.s : 0);
+      const nSlotEnd   = normalizeMins(slotEnd,   sh ? sh.s : 0);
+      return !(nSlotEnd <= bSt || nSlotStart >= bEnd);
     });
-    return count >= 1;
   }
 
-  let candidate = timeStrToMins(requestedTime);
-  if (!hasConflict(candidate) && candidate >= noBreakStart && candidate <= noBreakEnd - dur) return null;
+  // ── عدد الموظفين اللي هيفضلوا على الكيو لو الـ requestingAgent اخد البريك ──
+  function countOnQueue(slotStart, slotEnd) {
+    return allBreaks.filter(b => {
+      if (b.agent_id === requestingAgentId) return false; // شيل نفسك
+      if (!workingSet.has(b.agent_id))      return false; // مش شغال النهارده
+      if (!isOnShiftDuring(b, slotStart, slotEnd)) return false; // خارج الشيفت
+      if (isOnBreakDuring(b, slotStart, slotEnd))  return false; // على بريك
+      return true; // على الكيو ✅
+    }).length;
+  }
 
+  // ── حدود البريك للـ requesting agent ──
+  const myRow        = allBreaks.find(b => b.agent_id === requestingAgentId);
+  const myShift      = shiftMinutes(myRow?.shift_time);
+  const noBreakStart = myShift ? myShift.s + 60         : 60;
+  const noBreakEnd   = myShift ? myShift.e - 60         : 1380;
+
+  function isValidSlot(slotMins) {
+    if (slotMins < noBreakStart || slotMins > noBreakEnd - dur) return false;
+    const slotEnd = slotMins + dur;
+    return countOnQueue(slotMins, slotEnd) >= 1; // لازم يفضل واحد على الأقل
+  }
+
+  const candidate = timeStrToMins(requestedTime);
+
+  // لو الوقت المطلوب متاح → اعمله
+  if (isValidSlot(candidate)) return null;
+
+  // دور على بديل (قدام وورا بالتساوي)
   for (let i = 1; i <= 8; i++) {
-    const next = candidate + (i * 15);
-    if (next > noBreakEnd - dur) break;
-    if (!hasConflict(next)) return minsToTimeStr(next);
+    const later   = candidate + (i * 15);
+    const earlier = candidate - (i * 15);
+    if (later  <= noBreakEnd - dur  && isValidSlot(later))   return minsToTimeStr(later);
+    if (earlier >= noBreakStart      && isValidSlot(earlier)) return minsToTimeStr(earlier);
   }
-  return 'BLOCKED'; // conflict but no alternative available
+
+  return 'BLOCKED'; // في conflict ومفيش بديل
 }
 
 async function confirmBreakTime(time) {
@@ -374,16 +431,12 @@ async function confirmBreakTime(time) {
   msg.style.color = 'var(--muted)'; msg.innerText = 'Checking availability...';
 
   try {
-    const shiftText  = document.getElementById('br-shift').innerText.replace('SHIFT: ','');
-    const shiftParts = shiftText.split(' - ');
-    const shiftStart = shiftParts[0]?.trim() || '00:00';
-    const shiftEnd   = shiftParts[1]?.trim() || '23:00';
-    const suggestion = await findAvailableBreakSlot(time, selectedBreakType, shiftStart, shiftEnd);
+    const suggestion = await findAvailableBreakSlot(time, selectedBreakType, schMyAgentId);
 
     if (suggestion === 'BLOCKED') {
       setButtonLoading(btn, false, '🔄 Swap Break');
       msg.style.color = 'var(--danger)';
-      msg.innerText   = `❌ ${time} محجوز ومفيش وقت بديل متاح في شيفتك`;
+      msg.innerText   = '❌ مش ممكن — لو اخدت البريك دا الكيو هيبقى فاضي';
       return;
     }
 
