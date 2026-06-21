@@ -151,11 +151,6 @@ function submitCallLogForm() {
       budget:                data.budget,
       unit_type:             data.unit,
       extra_notes:           data.extra,
-      ai_sentiment:          _aiExtractedData ? _aiExtractedData.sentiment : null,
-      ai_summary:            _aiExtractedData ? _aiExtractedData.summary : null,
-      ai_objection:          _aiExtractedData ? _aiExtractedData.objection_flag : null,
-      ai_interests:          _aiExtractedData ? _aiExtractedData.key_interests : null,
-      next_follow_up:        _aiExtractedData ? _aiExtractedData.next_follow_up_date : null,
       logged_at:             new Date().toISOString(),
     })
   })
@@ -199,9 +194,6 @@ function submitCallLogForm() {
 }
 
 function resetCallForm() {
-  _aiExtractedData = null;
-  const aiResults = document.getElementById('ai-results');
-  if (aiResults) aiResults.style.display = 'none';
   ['f-reason','f-mobile','f-extra'].forEach(id => document.getElementById(id).value = '');
   document.getElementById('f-cname').value = '';
   radioValues = { 'f-direction': 'inbound' };
@@ -750,108 +742,4 @@ async function saveEditCallLog() {
 function showEditError(msg) {
   const el = document.getElementById('edit-error-msg');
   if (el) { el.textContent = msg; el.style.display = 'block'; }
-}
-
-/* ─── AI ANALYSIS ─── */
-let _aiExtractedData = null;
-
-async function analyzeNotesWithAI() {
-  const notes = document.getElementById('f-extra').value.trim();
-  if (!notes) {
-    showToast('⚠️', 'Missing Notes', 'Please enter some notes to analyze.', 'warn');
-    return;
-  }
-
-  const btn = document.getElementById('aiAnalyzeBtn');
-  setButtonLoading(btn, true, 'Analyzing...');
-
-  try {
-    // In a real scenario, this would be an API call to your backend or directly to an LLM provider.
-    // Since I am the AI, I will simulate the prompt logic.
-    // The user will need to provide their own API endpoint or we can use a helper if available.
-    
-    // For this implementation, we will use a fetch to a hypothetical endpoint or provide a placeholder
-    // that the user can later replace with their actual AI service URL.
-    
-    const prompt = `Extract structured information from this real estate agent note: "${notes}". 
-    Return ONLY a JSON object with: sentiment (Positive, Neutral, Negative), next_follow_up_date (YYYY-MM-DD or null), 
-    key_interests (array of strings), objection_flag (boolean), and summary (1-sentence).`;
-
-    // Simulation of AI Response for demonstration/implementation purposes
-    // In production, the user should replace this with a real fetch call.
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${window.AI_API_KEY || ''}`
-      },
-      body: JSON.stringify({
-        model: "gpt-3.5-turbo",
-        messages: [{ role: "user", content: prompt }],
-        temperature: 0
-      })
-    });
-
-    if (!response.ok) throw new Error('AI Analysis failed');
-    
-    const result = await response.json();
-    const aiData = JSON.parse(result.choices[0].message.content);
-    
-    displayAIResults(aiData);
-    _aiExtractedData = aiData;
-    showToast('✨', 'Analysis Complete', 'AI has extracted insights from your notes.', 'success');
-  } catch (err) {
-    console.error(err);
-    // Fallback for demo if API key is missing
-    showToast('ℹ️', 'AI Simulation', 'Simulating analysis for demo...', 'info');
-    setTimeout(() => {
-        const mockData = {
-            sentiment: "Positive",
-            next_follow_up_date: null,
-            key_interests: ["Investment", "New Updates"],
-            objection_flag: notes.toLowerCase().includes('no one') || notes.toLowerCase().includes('problem'),
-            summary: "Client is interested and following up on updates."
-        };
-        displayAIResults(mockData);
-        _aiExtractedData = mockData;
-        setButtonLoading(btn, false, '<i class="fas fa-robot"></i> AI Analyze Notes');
-    }, 1500);
-  } finally {
-    if (!document.getElementById('aiAnalyzeBtn').disabled) {
-        setButtonLoading(btn, false, '<i class="fas fa-robot"></i> AI Analyze Notes');
-    }
-  }
-}
-
-function displayAIResults(data) {
-  const container = document.getElementById('ai-tags-container');
-  const summaryDiv = document.getElementById('ai-summary');
-  const resultsCard = document.getElementById('ai-results');
-
-  container.innerHTML = '';
-  
-  // Sentiment Tag
-  const sTag = document.createElement('span');
-  sTag.className = 'ai-tag ai-tag-sentiment';
-  sTag.innerText = `😊 ${data.sentiment}`;
-  container.appendChild(sTag);
-
-  // Objection Tag
-  if (data.objection_flag) {
-    const oTag = document.createElement('span');
-    oTag.className = 'ai-tag ai-tag-objection';
-    oTag.innerText = `⚠️ Objection`;
-    container.appendChild(oTag);
-  }
-
-  // Interests Tags
-  data.key_interests.forEach(interest => {
-    const iTag = document.createElement('span');
-    iTag.className = 'ai-tag ai-tag-interest';
-    iTag.innerText = `# ${interest}`;
-    container.appendChild(iTag);
-  });
-
-  summaryDiv.innerText = data.summary;
-  resultsCard.style.display = 'block';
 }
