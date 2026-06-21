@@ -783,8 +783,7 @@ async function analyzeNotesWithAI() {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${window.AI_API_KEY || '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
-'}`
+        'Authorization': `Bearer ${window.AI_API_KEY || ''}`
       },
       body: JSON.stringify({
         model: "gpt-3.5-turbo",
