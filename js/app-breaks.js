@@ -1,6 +1,6 @@
 /* ═══════════════════════════════════════════════════
-   app-breaks-final-v2.js — Team, Break Notifications, Break Swap
-   (Final Version with Closeable Suggestions)
+   app-breaks-final-v4.js — Team, Break Notifications, Break Swap
+   (Final Version with Integrated Close Button)
    ═══════════════════════════════════════════════════ */
 
 // Configuration for Queue Coverage
@@ -436,16 +436,18 @@ async function confirmBreakTime(time) {
       
       const container = document.createElement('div');
       container.id = 'suggest-container';
-      container.style.cssText = 'position:relative;margin-top:8px;width:100%;';
+      container.style.cssText = 'position:relative;margin-top:8px;width:100%;display:flex;align-items:center;';
       
       const suggestBtn = document.createElement('button');
       suggestBtn.innerText = `✅ استخدم ${suggestion}`;
-      suggestBtn.style.cssText = 'padding:12px;background:var(--primary-gradient);color:white;border:none;border-radius:11px;cursor:pointer;font-weight:700;font-family:Plus Jakarta Sans,sans-serif;width:100%;box-shadow:0 4px 15px rgba(0,0,0,.2);';
+      suggestBtn.style.cssText = 'padding:12px;padding-right:40px;background:var(--primary-gradient);color:white;border:none;border-radius:11px;cursor:pointer;font-weight:700;font-family:Plus Jakarta Sans,sans-serif;width:100%;box-shadow:0 4px 15px rgba(0,0,0,.2);text-align:center;';
       suggestBtn.onclick = () => { container.remove(); msg.innerText = ''; confirmBreakTime(suggestion); };
       
       const closeBtn = document.createElement('div');
       closeBtn.innerHTML = '×';
-      closeBtn.style.cssText = 'position:absolute;top:-8px;right:-8px;width:22px;height:22px;background:var(--surface);border:1px solid var(--border);border-radius:50%;color:var(--text);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:16px;font-weight:bold;z-index:10;box-shadow:0 2px 5px rgba(0,0,0,0.2);';
+      closeBtn.style.cssText = 'position:absolute;right:12px;width:24px;height:24px;background:rgba(255,255,255,0.2);border-radius:50%;color:white;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:18px;font-weight:bold;transition:background 0.2s;';
+      closeBtn.onmouseover = () => closeBtn.style.background = 'rgba(255,255,255,0.3)';
+      closeBtn.onmouseout = () => closeBtn.style.background = 'rgba(255,255,255,0.2)';
       closeBtn.onclick = (e) => { e.stopPropagation(); container.remove(); msg.innerText = ''; };
       
       container.appendChild(suggestBtn);
