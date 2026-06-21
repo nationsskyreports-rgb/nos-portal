@@ -1,11 +1,9 @@
 /* ═══════════════════════════════════════════════════
-   app-breaks-final.js — Team, Break Notifications, Break Swap
-   (Final Version with Full Queue Coverage Logic)
+   app-breaks-fixed.js — Team, Break Notifications, Break Swap
+   (Fixed Version with Restored Design & Validated Coverage)
    ═══════════════════════════════════════════════════ */
 
 // Configuration for Queue Coverage
-const SHIFT_START_TIME = "10:00";
-const SHIFT_END_TIME = "22:00";
 const MIN_REQUIRED_COVERAGE = 1;
 
 /* ─── 10. TEAM RENDER ─── */
@@ -297,153 +295,203 @@ function showBreakTimeModal() {
       <div><label class="form-label">Minute</label><input type="number" id="bm" min="0" max="59" placeholder="00" class="form-input" style="text-align:center;font-size:20px;font-weight:800;"></div>
     </div>
     <div id="swap-msg" style="font-size:13px;margin-bottom:12px;text-align:center;min-height:18px;"></div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
-      <button class="btn-secondary" onclick="closeBreakTimeModal()">Cancel</button>
-      <button id="save-swap-btn" class="btn-primary" onclick="saveBreakSwap()">🔄 Swap Break</button>
+    <div style="display:flex;gap:10px;">
+      <button id="bm-cancel" style="flex:1;padding:12px;background:var(--surface2);border:1px solid var(--border);border-radius:11px;color:var(--muted);cursor:pointer;font-weight:600;font-family:Plus Jakarta Sans,sans-serif;">Cancel</button>
+      <button id="bm-confirm" style="flex:1;padding:12px;background:var(--primary-gradient);color:#fff;border:none;border-radius:11px;cursor:pointer;font-weight:700;font-family:Plus Jakarta Sans,sans-serif;opacity:.4;" disabled>Confirm</button>
     </div>`;
-  document.body.appendChild(ov);
-  document.body.appendChild(box);
-  window._breakModalOv = ov;
-  window._breakModalBox = box;
+  document.body.appendChild(ov); document.body.appendChild(box);
+
+  function validate() {
+    const h = box.querySelector('#bh').value, m = box.querySelector('#bm').value;
+    const ok = h !== '' && m !== '' && +h >= 0 && +h <= 23 && +m >= 0 && +m <= 59;
+    box.querySelector('#bm-confirm').disabled = !ok;
+    box.querySelector('#bm-confirm').style.opacity = ok ? 1 : 0.4;
+  }
+  box.querySelector('#bh').addEventListener('input', validate);
+  box.querySelector('#bm').addEventListener('input', validate);
+  
+  const close = () => { if(ov.parentElement) document.body.removeChild(ov); if(box.parentElement) document.body.removeChild(box); };
+  box.querySelector('#bm-cancel').onclick = close; ov.onclick = close;
+  
+  box.querySelector('#bm-confirm').onclick = () => {
+    const h = box.querySelector('#bh').value, m = box.querySelector('#bm').value;
+    const time = (h.length < 2 ? '0'+h : h) + ':' + (m.length < 2 ? '0'+m : m);
+    close(); confirmBreakTime(time);
+  };
 }
 
-function closeBreakTimeModal() {
-  if (window._breakModalOv) window._breakModalOv.remove();
-  if (window._breakModalBox) window._breakModalBox.remove();
+// Helper functions for time calculation
+function timeStrToMins(t) {
+  if (!t) return 0;
+  const p = t.substring(0,5).split(':');
+  return (+p[0]) * 60 + (+p[1]);
+}
+
+function minsToTimeStr(m) {
+  return Math.floor(m/60).toString().padStart(2,'0') + ':' + (m%60).toString().padStart(2,'0');
 }
 
 /**
- * Validation Logic to ensure Queue Coverage
+ * CORE LOGIC: Finds if a slot is available and ensures coverage
  */
-function validateBreakChange(allAgentsBreaks, targetAgentId, proposedBreaks) {
-    const startMin = parseBreakTime(SHIFT_START_TIME);
-    const endMin = parseBreakTime(SHIFT_END_TIME);
-    const totalMinutes = endMin - startMin;
-    
-    // Create coverage map
-    const coverageMap = new Array(totalMinutes).fill(0);
+async function findAvailableBreakSlot(requestedTime, breakType, requestingAgentId) {
+  const today  = getLocalDateStr();
+  const durMap = { 'Break 1': 15, 'Lunch': 30, 'Break 2': 15 };
+  const dur    = durMap[breakType];
+  const hdrs   = { 'apikey': SB_KEY_SCH, 'Authorization': `Bearer ${window._authToken || SB_KEY_SCH}` };
 
-    allAgentsBreaks.forEach(agent => {
-        const isTarget = (agent.agents?.id === targetAgentId || agent.agent_id === targetAgentId);
-        const breaks = isTarget ? proposedBreaks : {
-            break1: agent.break1 ? agent.break1.substring(0,5) : null,
-            lunch:  agent.lunch  ? agent.lunch.substring(0,5)  : null,
-            break2: agent.break2 ? agent.break2.substring(0,5) : null
-        };
-        
-        const intervals = [
-            { start: parseBreakTime(breaks.break1), duration: 15 },
-            { start: parseBreakTime(breaks.lunch), duration: 30 },
-            { start: parseBreakTime(breaks.break2), duration: 15 }
-        ].filter(i => i.start !== null);
+  const [breaksRes, schedRes] = await Promise.all([
+    fetch(`${SB_URL_SCH}/rest/v1/breaks?break_date=eq.${today}&select=*`, { headers: hdrs }),
+    fetch(`${SB_URL_SCH}/rest/v1/schedule?shift_date=eq.${today}&select=agent_id,day_type`, { headers: hdrs }),
+  ]);
+  const allBreaks = await breaksRes.json();
+  const schedData = await schedRes.json();
 
-        for (let i = 0; i < totalMinutes; i++) {
-            const currentMinute = startMin + i;
-            const isOnBreak = intervals.some(interval => 
-                currentMinute >= interval.start && currentMinute < (interval.start + interval.duration)
-            );
-            if (!isOnBreak) coverageMap[i]++;
-        }
+  const workingSet = new Set((schedData || []).filter(s => s.day_type === 'Work').map(s => s.agent_id));
+
+  function shiftMinutes(shiftTime) {
+    if (!shiftTime) return { s: 600, e: 1320 }; // Default 10 AM - 10 PM
+    const parts = shiftTime.trim().split(' - ');
+    if (parts.length < 2) return { s: 600, e: 1320 };
+    let s = timeStrToMins(parts[0].trim());
+    let e = timeStrToMins(parts[1].trim());
+    if (e <= s) e += 1440;
+    return { s, e };
+  }
+
+  function isOnShiftDuring(agentRow, slotStart, slotEnd) {
+    const sh = shiftMinutes(agentRow.shift_time);
+    return sh.s <= slotStart && sh.e >= slotEnd;
+  }
+
+  function isOnBreakDuring(agentRow, slotStart, slotEnd, isTarget = false, proposedSlot = null) {
+    const bDurs = [['break1', 15], ['lunch', 30], ['break2', 15]];
+    return bDurs.some(([c, d]) => {
+      let bTimeStr = isTarget ? (proposedSlot && c === proposedSlot.col ? proposedSlot.time : agentRow[c]) : agentRow[c];
+      if (!bTimeStr) return false;
+      const bSt = timeStrToMins(bTimeStr.substring(0, 5));
+      const bEnd = bSt + d;
+      return !(slotEnd <= bSt || slotStart >= bEnd);
     });
+  }
 
-    for (let i = 0; i < totalMinutes; i++) {
-        if (coverageMap[i] < MIN_REQUIRED_COVERAGE) {
-            const h = Math.floor((startMin + i) / 60), m = (startMin + i) % 60;
-            const timeStr = `${h.toString().padStart(2,'0')}:${m.toString().padStart(2,'0')}`;
-            return { isValid: false, message: `No coverage at ${timeStr}` };
-        }
+  function countOnQueue(slotStart, slotEnd, isTargetRequested = false, targetTime = null) {
+    const colMap = { 'Break 1': 'break1', 'Lunch': 'lunch', 'Break 2': 'break2' };
+    return allBreaks.filter(b => {
+      if (!workingSet.has(b.agent_id)) return false;
+      if (!isOnShiftDuring(b, slotStart, slotEnd)) return false;
+      
+      // If we are checking the queue during the target's requested break
+      if (b.agent_id === requestingAgentId) {
+          if (isTargetRequested) return false; // Target is on break
+          return !isOnBreakDuring(b, slotStart, slotEnd); // Target's normal state
+      }
+      
+      return !isOnBreakDuring(b, slotStart, slotEnd);
+    }).length;
+  }
+
+  const candidate = timeStrToMins(requestedTime);
+  const myRow = allBreaks.find(b => b.agent_id === requestingAgentId);
+  const myShift = shiftMinutes(myRow?.shift_time);
+  
+  function isValidSlot(slotMins) {
+    // Basic shift boundaries
+    if (slotMins < myShift.s || slotMins > myShift.e - dur) return false;
+    
+    // The CRITICAL check: If I take this break, is there at least 1 person left?
+    // We check every minute of the proposed break duration
+    for (let m = slotMins; m < slotMins + dur; m++) {
+        if (countOnQueue(m, m + 1, true) < MIN_REQUIRED_COVERAGE) return false;
     }
-    return { isValid: true };
+    return true;
+  }
+
+  if (isValidSlot(candidate)) return null;
+
+  // Search for alternative
+  for (let i = 1; i <= 12; i++) {
+    const later = candidate + (i * 15);
+    const earlier = candidate - (i * 15);
+    if (later <= myShift.e - dur && isValidSlot(later)) return minsToTimeStr(later);
+    if (earlier >= myShift.s && isValidSlot(earlier)) return minsToTimeStr(earlier);
+  }
+
+  return 'BLOCKED';
 }
 
-async function saveBreakSwap() {
-  const btn = document.getElementById('save-swap-btn');
-  const msg = document.getElementById('swap-msg');
-  const h = document.getElementById('bh').value;
-  const m = document.getElementById('bm').value;
-  if (!h || !m) { msg.innerText = 'Enter time!'; return; }
+async function confirmBreakTime(time) {
+  if (!schMyAgentId) { showToast('❌','Error','Agent not found!','danger',4000); return; }
+  const today  = getLocalDateStr();
+  const colMap = { 'Break 1': 'break1', 'Lunch': 'lunch', 'Break 2': 'break2' };
+  const col    = colMap[selectedBreakType];
+  const msg    = document.getElementById('swap-msg');
+  if (!col) { showToast('❌','Error','Select break type first!','danger',4000); return; }
 
-  const newTime = `${h.padStart(2,'0')}:${m.padStart(2,'0')}`;
-  const today = getLocalDateStr();
-  const col = selectedBreakType.toLowerCase().includes('lunch') ? 'lunch' : (selectedBreakType.toLowerCase().includes('1') ? 'break1' : 'break2');
-  const proposedBreaks = { ...currentBreaks, [col]: newTime };
+  msg.style.color = 'var(--muted)'; msg.innerText = 'Checking availability...';
 
   try {
-    setButtonLoading(btn, true, 'Checking...');
-    
-    // 1. Fetch all today's active breaks for validation
-    const resAll = await fetch(
-      `${SB_URL_SCH}/rest/v1/breaks?break_date=eq.${today}&select=*,agents(id,formal_name)`,
-      { headers: { 'apikey': SB_KEY_SCH, 'Authorization': `Bearer ${window._authToken || SB_KEY_SCH}` } }
-    );
-    const allBreaks = await resAll.json();
+    const suggestion = await findAvailableBreakSlot(time, selectedBreakType, schMyAgentId);
 
-    // 2. Run Validation
-    const validation = validateBreakChange(allBreaks, window.schMyAgentId, proposedBreaks);
-    if (!validation.isValid) {
-        msg.innerText = '❌ ' + validation.message;
-        msg.style.color = 'var(--danger)';
-        setButtonLoading(btn, false, '🔄 Swap Break');
-        return;
+    if (suggestion === 'BLOCKED') {
+      msg.style.color = 'var(--danger)';
+      msg.innerText   = '❌ مش ممكن — لو اخدت البريك دا الكيو هيبقى فاضي ومفيش بديل قريب';
+      return;
+    }
+
+    if (suggestion && suggestion !== time) {
+      msg.style.color = 'var(--warn)';
+      msg.innerText   = `⚠️ ${time} محجوز! أقرب وقت متاح: ${suggestion}`;
+      const existingBtn = document.getElementById('suggest-btn');
+      if (existingBtn) existingBtn.remove();
+      const suggestBtn = document.createElement('button');
+      suggestBtn.id        = 'suggest-btn';
+      suggestBtn.innerText = `✅ استخدم ${suggestion}`;
+      suggestBtn.style.cssText = 'margin-top:8px;padding:12px;background:var(--primary-gradient);color:white;border:none;border-radius:11px;cursor:pointer;font-weight:700;font-family:Plus Jakarta Sans,sans-serif;width:100%;box-shadow:0 4px 15px rgba(0,0,0,.2);';
+      suggestBtn.onclick = () => { suggestBtn.remove(); msg.innerText = ''; confirmBreakTime(suggestion); };
+      msg.parentElement.appendChild(suggestBtn);
+      return;
     }
 
     msg.innerText = 'Updating...';
-    // 3. Update DB
     const res = await fetch(`${SB_URL_SCH}/rest/v1/breaks?agent_id=eq.${schMyAgentId}&break_date=eq.${today}`, {
       method: 'PATCH',
       headers: { 'apikey': SB_KEY_SCH, 'Authorization': `Bearer ${window._authToken || SB_KEY_SCH}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
-      body: JSON.stringify({ [col]: newTime + ':00', updated_at: new Date().toISOString() })
+      body: JSON.stringify({ [col]: time + ':00', updated_at: new Date().toISOString() })
     });
-
     if (!res.ok) throw new Error('Update failed');
 
-    // 4. Log request in Supabase
+    // Log the request
     await fetch(`${SB_URL_SCH}/rest/v1/requests`, {
       method: 'POST',
-      headers: {
-        'apikey': SB_KEY_SCH,
-        'Authorization': `Bearer ${window._authToken || SB_KEY_SCH}`,
-        'Content-Type': 'application/json',
-        'Prefer': 'return=minimal'
-      },
+      headers: { 'apikey': SB_KEY_SCH, 'Authorization': `Bearer ${window._authToken || SB_KEY_SCH}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
       body: JSON.stringify({
         agent_id:   schMyAgentId,
-        agent_name: document.getElementById('user-name').innerText.trim(),
+        agent_name: document.getElementById('user-name')?.innerText.trim() || 'Agent',
         type:       'Break Change',
         status:     'Approved',
-        details: JSON.stringify({
-          break_type: selectedBreakType,
-          new_time:   newTime,
-          date:       today
-        }),
+        details: JSON.stringify({ break_type: selectedBreakType, new_time: time, date: today }),
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       })
     });
 
-    // Update Local UI
-    if (currentBreaks) currentBreaks[col] = newTime;
+    if (currentBreaks) currentBreaks[col] = time;
     const elMap = { break1: 'br-break1', lunch: 'br-lunch', break2: 'br-break2' };
     const el = document.getElementById(elMap[col]);
-    if (el) el.innerText = newTime;
+    if (el) el.innerText = time;
 
     msg.style.color = 'var(--accent)'; msg.innerText = '✅ Updated!';
-    showToast('✅', selectedBreakType + ' Updated!', 'New time: ' + newTime, 'success', 4000);
-    
-    setTimeout(() => {
-        closeBreakTimeModal();
-        loadTeamBreaksFromSB(); 
-    }, 1000);
-
+    showToast('✅', selectedBreakType + ' Updated!', 'New time: ' + time, 'success', 4000);
+    loadTeamBreaksFromSB(); 
     selectedBreakType = '';
     document.querySelectorAll('.break-type-btn').forEach(b => b.classList.remove('selected'));
 
-  } catch (e) {
+  } catch(e) {
     console.error(e);
     msg.style.color = 'var(--danger)'; msg.innerText = '❌ Failed. Try again.';
     showToast('❌', 'Update Failed!', 'Please try again.', 'danger', 4000);
   } finally {
-    setButtonLoading(btn, false, '🔄 Swap Break');
     setTimeout(() => { if(msg) msg.innerText = ''; }, 4000);
   }
 }
