@@ -1,6 +1,6 @@
 /* ═══════════════════════════════════════════════════
-   app-breaks-fixed.js — Team, Break Notifications, Break Swap
-   (Fixed Version with Restored Design & Validated Coverage)
+   app-breaks-final-v2.js — Team, Break Notifications, Break Swap
+   (Final Version with Closeable Suggestions)
    ═══════════════════════════════════════════════════ */
 
 // Configuration for Queue Coverage
@@ -320,7 +320,6 @@ function showBreakTimeModal() {
   };
 }
 
-// Helper functions for time calculation
 function timeStrToMins(t) {
   if (!t) return 0;
   const p = t.substring(0,5).split(':');
@@ -332,7 +331,7 @@ function minsToTimeStr(m) {
 }
 
 /**
- * CORE LOGIC: Finds if a slot is available and ensures coverage
+ * Finds if a slot is available and ensures coverage
  */
 async function findAvailableBreakSlot(requestedTime, breakType, requestingAgentId) {
   const today  = getLocalDateStr();
@@ -350,7 +349,7 @@ async function findAvailableBreakSlot(requestedTime, breakType, requestingAgentI
   const workingSet = new Set((schedData || []).filter(s => s.day_type === 'Work').map(s => s.agent_id));
 
   function shiftMinutes(shiftTime) {
-    if (!shiftTime) return { s: 600, e: 1320 }; // Default 10 AM - 10 PM
+    if (!shiftTime) return { s: 600, e: 1320 }; 
     const parts = shiftTime.trim().split(' - ');
     if (parts.length < 2) return { s: 600, e: 1320 };
     let s = timeStrToMins(parts[0].trim());
@@ -364,29 +363,24 @@ async function findAvailableBreakSlot(requestedTime, breakType, requestingAgentI
     return sh.s <= slotStart && sh.e >= slotEnd;
   }
 
-  function isOnBreakDuring(agentRow, slotStart, slotEnd, isTarget = false, proposedSlot = null) {
+  function isOnBreakDuring(agentRow, slotStart, slotEnd) {
     const bDurs = [['break1', 15], ['lunch', 30], ['break2', 15]];
     return bDurs.some(([c, d]) => {
-      let bTimeStr = isTarget ? (proposedSlot && c === proposedSlot.col ? proposedSlot.time : agentRow[c]) : agentRow[c];
-      if (!bTimeStr) return false;
-      const bSt = timeStrToMins(bTimeStr.substring(0, 5));
+      if (!agentRow[c]) return false;
+      const bSt = timeStrToMins(agentRow[c].substring(0, 5));
       const bEnd = bSt + d;
       return !(slotEnd <= bSt || slotStart >= bEnd);
     });
   }
 
-  function countOnQueue(slotStart, slotEnd, isTargetRequested = false, targetTime = null) {
-    const colMap = { 'Break 1': 'break1', 'Lunch': 'lunch', 'Break 2': 'break2' };
+  function countOnQueue(slotStart, slotEnd, isTargetRequested = false) {
     return allBreaks.filter(b => {
       if (!workingSet.has(b.agent_id)) return false;
       if (!isOnShiftDuring(b, slotStart, slotEnd)) return false;
-      
-      // If we are checking the queue during the target's requested break
       if (b.agent_id === requestingAgentId) {
-          if (isTargetRequested) return false; // Target is on break
-          return !isOnBreakDuring(b, slotStart, slotEnd); // Target's normal state
+          if (isTargetRequested) return false;
+          return !isOnBreakDuring(b, slotStart, slotEnd);
       }
-      
       return !isOnBreakDuring(b, slotStart, slotEnd);
     }).length;
   }
@@ -396,11 +390,7 @@ async function findAvailableBreakSlot(requestedTime, breakType, requestingAgentI
   const myShift = shiftMinutes(myRow?.shift_time);
   
   function isValidSlot(slotMins) {
-    // Basic shift boundaries
     if (slotMins < myShift.s || slotMins > myShift.e - dur) return false;
-    
-    // The CRITICAL check: If I take this break, is there at least 1 person left?
-    // We check every minute of the proposed break duration
     for (let m = slotMins; m < slotMins + dur; m++) {
         if (countOnQueue(m, m + 1, true) < MIN_REQUIRED_COVERAGE) return false;
     }
@@ -409,7 +399,6 @@ async function findAvailableBreakSlot(requestedTime, breakType, requestingAgentI
 
   if (isValidSlot(candidate)) return null;
 
-  // Search for alternative
   for (let i = 1; i <= 12; i++) {
     const later = candidate + (i * 15);
     const earlier = candidate - (i * 15);
@@ -442,14 +431,26 @@ async function confirmBreakTime(time) {
     if (suggestion && suggestion !== time) {
       msg.style.color = 'var(--warn)';
       msg.innerText   = `⚠️ ${time} محجوز! أقرب وقت متاح: ${suggestion}`;
-      const existingBtn = document.getElementById('suggest-btn');
-      if (existingBtn) existingBtn.remove();
+      const existingCont = document.getElementById('suggest-container');
+      if (existingCont) existingCont.remove();
+      
+      const container = document.createElement('div');
+      container.id = 'suggest-container';
+      container.style.cssText = 'position:relative;margin-top:8px;width:100%;';
+      
       const suggestBtn = document.createElement('button');
-      suggestBtn.id        = 'suggest-btn';
       suggestBtn.innerText = `✅ استخدم ${suggestion}`;
-      suggestBtn.style.cssText = 'margin-top:8px;padding:12px;background:var(--primary-gradient);color:white;border:none;border-radius:11px;cursor:pointer;font-weight:700;font-family:Plus Jakarta Sans,sans-serif;width:100%;box-shadow:0 4px 15px rgba(0,0,0,.2);';
-      suggestBtn.onclick = () => { suggestBtn.remove(); msg.innerText = ''; confirmBreakTime(suggestion); };
-      msg.parentElement.appendChild(suggestBtn);
+      suggestBtn.style.cssText = 'padding:12px;background:var(--primary-gradient);color:white;border:none;border-radius:11px;cursor:pointer;font-weight:700;font-family:Plus Jakarta Sans,sans-serif;width:100%;box-shadow:0 4px 15px rgba(0,0,0,.2);';
+      suggestBtn.onclick = () => { container.remove(); msg.innerText = ''; confirmBreakTime(suggestion); };
+      
+      const closeBtn = document.createElement('div');
+      closeBtn.innerHTML = '×';
+      closeBtn.style.cssText = 'position:absolute;top:-8px;right:-8px;width:22px;height:22px;background:var(--surface);border:1px solid var(--border);border-radius:50%;color:var(--text);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:16px;font-weight:bold;z-index:10;box-shadow:0 2px 5px rgba(0,0,0,0.2);';
+      closeBtn.onclick = (e) => { e.stopPropagation(); container.remove(); msg.innerText = ''; };
+      
+      container.appendChild(suggestBtn);
+      container.appendChild(closeBtn);
+      msg.parentElement.appendChild(container);
       return;
     }
 
@@ -461,7 +462,6 @@ async function confirmBreakTime(time) {
     });
     if (!res.ok) throw new Error('Update failed');
 
-    // Log the request
     await fetch(`${SB_URL_SCH}/rest/v1/requests`, {
       method: 'POST',
       headers: { 'apikey': SB_KEY_SCH, 'Authorization': `Bearer ${window._authToken || SB_KEY_SCH}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
