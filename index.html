@@ -18,6 +18,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@600;700;800&family=Syne:wght@400;600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/styles.css">
 <link rel="stylesheet" href="css/nos_fixes.css">
+<link rel="stylesheet" href="css/solotec-login.css">
 </head>
 <body>
 
@@ -34,6 +35,19 @@
 
   <!-- LOGIN SCREEN -->
   <div id="screen-login">
+
+    <!-- decorative background (SoloTec style) -->
+    <div class="st-aurora st-aurora-gold"></div>
+    <div class="st-aurora st-aurora-teal"></div>
+    <div class="st-stars">
+      <span></span><span></span><span></span><span></span><span></span>
+      <span></span><span></span><span></span><span></span><span></span>
+      <span></span><span></span><span></span><span></span><span></span>
+      <span></span><span></span><span></span><span></span><span></span>
+    </div>
+    <div class="st-grid-floor"></div>
+
+    <div class="login-left-col">
     <div class="nsd-logo-animated" id="nsdAnimatedLogo">
       <img src="assets/logo.png" alt="NOS Logo" style="width:100%;height:100%;object-fit:contain;filter:none;">
     </div>
@@ -83,6 +97,42 @@
       <button type="button" class="btn-primary" onclick="submitReset()"><i class="fas fa-key"></i> Update Password</button>
       <button type="button" class="btn-ghost" onclick="toggleReset(false)">Cancel</button>
     </div>
+    </div><!-- /login-left-col -->
+
+    <!-- ═══ SoloTec side (decorative, desktop only) ═══ -->
+    <div class="solotec-side" aria-hidden="true">
+      <div class="st-hex-core">
+        <svg class="st-hex st-hex-outer" viewBox="0 0 200 200">
+          <path d="M100 10 L178 55 V145 L100 190 L22 145 V55 Z" fill="none" stroke="url(#stGradA)" stroke-width="1.2" stroke-linejoin="round" opacity="0.5"/>
+          <defs><linearGradient id="stGradA" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#34E8A5"/><stop offset="100%" stop-color="#D4AF37"/></linearGradient></defs>
+        </svg>
+        <svg class="st-hex st-hex-mid" viewBox="0 0 200 200">
+          <path d="M100 26 L164 63 V137 L100 174 L36 137 V63 Z" fill="none" stroke="url(#stGradB)" stroke-width="2" stroke-linejoin="round" opacity="0.75"/>
+          <defs><linearGradient id="stGradB" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#22D3EE"/><stop offset="100%" stop-color="#34E8A5"/></linearGradient></defs>
+        </svg>
+        <svg class="st-hex st-hex-inner" viewBox="0 0 200 200">
+          <defs><linearGradient id="stGradC" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#34E8A5"/><stop offset="100%" stop-color="#3B82F6"/></linearGradient></defs>
+          <path d="M100 44 L148 72 V128 L100 156 L52 128 V72 Z" fill="none" stroke="url(#stGradC)" stroke-width="4" stroke-linejoin="round"/>
+          <text x="100" y="122" text-anchor="middle" font-size="58" font-weight="800" fill="url(#stGradC)" font-family="Arial, sans-serif">S</text>
+        </svg>
+        <div class="st-orbit"><span class="st-orbit-dot"></span></div>
+        <div class="st-hex-glow"></div>
+      </div>
+
+      <div class="st-hero-text">
+        <h2>Your entire shift, <span class="st-grad-text">one portal</span></h2>
+        <p>Schedule, breaks, call logs and KPIs — everything NOS agents need, in one place.</p>
+        <div class="st-powered">
+          <svg viewBox="0 0 48 48" width="18" height="18">
+            <defs><linearGradient id="stLogoG" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#34E8A5"/><stop offset="100%" stop-color="#3B82F6"/></linearGradient></defs>
+            <path d="M24 3 L42 13.5 V34.5 L24 45 L6 34.5 V13.5 Z" fill="none" stroke="url(#stLogoG)" stroke-width="3.5" stroke-linejoin="round"/>
+            <text x="24" y="31" text-anchor="middle" font-size="19" font-weight="800" fill="url(#stLogoG)" font-family="Arial, sans-serif">S</text>
+          </svg>
+          <span>Powered by <b>SoloTe<i>c</i></b></span>
+        </div>
+      </div>
+    </div>
+
   </div>
 
   <!-- DASHBOARD SCREEN -->
