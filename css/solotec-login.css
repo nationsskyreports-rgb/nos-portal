@@ -1,0 +1,221 @@
+/* ═══════════════════════════════════════════════
+   SoloTec Login Enhancement — additive only
+   Desktop: split layout (NOS form left / SoloTec right)
+   Mobile:  falls back to original layout untouched
+═══════════════════════════════════════════════ */
+
+/* ── Background decorations (all screens) ── */
+.st-aurora {
+  position: absolute;
+  border-radius: 9999px;
+  filter: blur(110px);
+  opacity: 0.3;
+  pointer-events: none;
+  z-index: 0;
+}
+.st-aurora-gold {
+  width: 560px; height: 560px;
+  background: radial-gradient(circle, rgba(212,175,55,0.22) 0%, transparent 65%);
+  top: -160px; left: -120px;
+  animation: stDrift1 24s ease-in-out infinite;
+}
+.st-aurora-teal {
+  width: 620px; height: 620px;
+  background: radial-gradient(circle, rgba(20,120,110,0.35) 0%, transparent 65%);
+  bottom: -180px; right: -100px;
+  animation: stDrift2 28s ease-in-out infinite;
+}
+@keyframes stDrift1 { 0%,100% { transform: translate(0,0) } 50% { transform: translate(60px, 45px) } }
+@keyframes stDrift2 { 0%,100% { transform: translate(0,0) } 50% { transform: translate(-55px, -40px) } }
+
+/* ── Stars ── */
+.st-stars { position: absolute; inset: 0; pointer-events: none; z-index: 0; }
+.st-stars span {
+  position: absolute;
+  width: 2px; height: 2px;
+  background: #7DD3FC;
+  border-radius: 9999px;
+  opacity: 0.2;
+  animation: stTwinkle 6s ease-in-out infinite;
+}
+.st-stars span:nth-child(1)  { left: 6%;  top: 12%; }
+.st-stars span:nth-child(2)  { left: 14%; top: 68%; animation-delay: 0.5s; }
+.st-stars span:nth-child(3)  { left: 22%; top: 34%; animation-delay: 1s; width: 2.5px; height: 2.5px; }
+.st-stars span:nth-child(4)  { left: 31%; top: 82%; animation-delay: 1.5s; }
+.st-stars span:nth-child(5)  { left: 38%; top: 18%; animation-delay: 2s; }
+.st-stars span:nth-child(6)  { left: 46%; top: 55%; animation-delay: 2.5s; }
+.st-stars span:nth-child(7)  { left: 53%; top: 8%;  animation-delay: 3s; width: 2.5px; height: 2.5px; }
+.st-stars span:nth-child(8)  { left: 61%; top: 72%; animation-delay: 3.5s; }
+.st-stars span:nth-child(9)  { left: 68%; top: 28%; animation-delay: 4s; }
+.st-stars span:nth-child(10) { left: 74%; top: 88%; animation-delay: 4.5s; }
+.st-stars span:nth-child(11) { left: 81%; top: 42%; animation-delay: 5s; width: 2.5px; height: 2.5px; }
+.st-stars span:nth-child(12) { left: 88%; top: 14%; animation-delay: 0.8s; }
+.st-stars span:nth-child(13) { left: 94%; top: 62%; animation-delay: 1.3s; }
+.st-stars span:nth-child(14) { left: 10%; top: 46%; animation-delay: 1.8s; }
+.st-stars span:nth-child(15) { left: 27%; top: 6%;  animation-delay: 2.3s; }
+.st-stars span:nth-child(16) { left: 42%; top: 92%; animation-delay: 2.8s; width: 2.5px; height: 2.5px; }
+.st-stars span:nth-child(17) { left: 58%; top: 38%; animation-delay: 3.3s; }
+.st-stars span:nth-child(18) { left: 71%; top: 58%; animation-delay: 3.8s; }
+.st-stars span:nth-child(19) { left: 85%; top: 78%; animation-delay: 4.3s; }
+.st-stars span:nth-child(20) { left: 97%; top: 30%; animation-delay: 4.8s; }
+@keyframes stTwinkle {
+  0%, 100% { opacity: 0.12; transform: scale(1); }
+  50%      { opacity: 0.65; transform: scale(1.4); }
+}
+
+/* ── Grid floor ── */
+.st-grid-floor {
+  position: absolute;
+  left: 0; right: 0; bottom: 0;
+  height: 42vh;
+  background-image:
+    linear-gradient(rgba(212, 175, 55, 0.045) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(52, 232, 165, 0.04) 1px, transparent 1px);
+  background-size: 54px 54px;
+  transform: perspective(600px) rotateX(58deg);
+  transform-origin: bottom;
+  mask-image: linear-gradient(to top, rgba(0,0,0,0.65), transparent);
+  -webkit-mask-image: linear-gradient(to top, rgba(0,0,0,0.65), transparent);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* ── Left column keeps original stacking ── */
+.login-left-col {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+}
+
+/* ── SoloTec side hidden by default (mobile-first) ── */
+.solotec-side { display: none; }
+
+/* ═══════════ DESKTOP SPLIT ═══════════ */
+@media (min-width: 1100px) {
+
+  #screen-login {
+    flex-direction: row !important;
+    justify-content: center !important;
+    align-items: center !important;
+    gap: 4vw;
+    padding: 40px 5vw !important;
+  }
+
+  .login-left-col {
+    width: auto;
+    flex: 0 0 460px;
+  }
+
+  .solotec-side {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 34px;
+    position: relative;
+    z-index: 1;
+    flex: 0 1 560px;
+  }
+
+  /* ── Hex core ── */
+  .st-hex-core {
+    position: relative;
+    width: 380px;
+    height: 380px;
+  }
+  .st-hex {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+  }
+  .st-hex-outer { animation: stSpin 40s linear infinite; }
+  .st-hex-mid   { animation: stSpinRev 28s linear infinite; }
+  .st-hex-inner {
+    animation: stBreathe 7s ease-in-out infinite;
+    filter: drop-shadow(0 0 26px rgba(52, 232, 165, 0.35));
+  }
+  @keyframes stSpin    { from { transform: rotate(0deg) }   to { transform: rotate(360deg) } }
+  @keyframes stSpinRev { from { transform: rotate(360deg) } to { transform: rotate(0deg) } }
+  @keyframes stBreathe { 0%,100% { transform: scale(1) } 50% { transform: scale(1.05) } }
+
+  .st-orbit {
+    position: absolute;
+    inset: -14px;
+    animation: stSpin 12s linear infinite;
+  }
+  .st-orbit-dot {
+    position: absolute;
+    top: 6px; left: 50%;
+    width: 10px; height: 10px;
+    margin-left: -5px;
+    border-radius: 9999px;
+    background: #34E8A5;
+    box-shadow: 0 0 16px rgba(52,232,165,0.9), 0 0 36px rgba(52,232,165,0.4);
+  }
+  .st-hex-glow {
+    position: absolute;
+    inset: 20%;
+    border-radius: 9999px;
+    background: radial-gradient(circle, rgba(52,232,165,0.1) 0%, transparent 70%);
+    animation: stBreathe 7s ease-in-out infinite;
+  }
+
+  /* ── Hero text ── */
+  .st-hero-text {
+    text-align: center;
+    max-width: 480px;
+  }
+  .st-hero-text h2 {
+    color: #F1F5F9;
+    font-family: 'Syne', sans-serif;
+    font-size: 27px;
+    font-weight: 800;
+    line-height: 1.35;
+    margin: 0 0 10px;
+    letter-spacing: -0.3px;
+  }
+  .st-grad-text {
+    background: linear-gradient(90deg, #34E8A5, #D4AF37);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
+  }
+  .st-hero-text p {
+    color: #64748B;
+    font-size: 13.5px;
+    margin: 0 0 22px;
+    line-height: 1.6;
+  }
+
+  /* ── Powered by SoloTec ── */
+  .st-powered {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    border-radius: 999px;
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(52, 232, 165, 0.18);
+    color: #64748B;
+    font-size: 12.5px;
+  }
+  .st-powered b {
+    color: #E2E8F0;
+    font-weight: 800;
+    letter-spacing: -0.01em;
+  }
+  .st-powered b i {
+    color: #34E8A5;
+    font-style: normal;
+  }
+}
+
+/* ═══════════ REDUCED MOTION ═══════════ */
+@media (prefers-reduced-motion: reduce) {
+  .st-aurora, .st-stars span, .st-hex, .st-orbit, .st-hex-glow { animation: none !important; }
+}
