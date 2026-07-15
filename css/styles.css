@@ -46,6 +46,13 @@
   --primary-gradient:  linear-gradient(135deg, #D4AF37 0%, #F4D03F 50%, #D4AF37 100%);
   --primary-rgb:       212, 175, 55;
   --accent:            #D4AF37;
+
+  /* SoloTec companion palette (matches login page) */
+  --solotec-teal:      #34E8A5;
+  --solotec-blue:      #3B82F6;
+  --solotec-cyan:      #22D3EE;
+  --glass-bg:          rgba(10, 15, 30, 0.75);
+  --glass-border:      rgba(212, 175, 55, 0.12);
   --warn:              #f59e0b;
   --danger:            #ef4444;
   --success:           #059669;
@@ -1076,4 +1083,113 @@ html.light .skeleton {
   .nos-days-list { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
   .nos-week-label { margin-top:15px; }
   #nos-toast-container { bottom:24px; }
+}
+
+
+/* ═══════════════════════════════════════════════════════════
+   SOLOTEC HARMONIZATION LAYER
+   يوحّد جو الصفحات الداخلية مع صفحة اللوجين
+   (dark mode only — light mode untouched)
+═══════════════════════════════════════════════════════════ */
+
+/* ── 1. Dashboard background: same space as login ── */
+html:not(.light) #screen-dashboard {
+  background:
+    radial-gradient(ellipse 55% 45% at 15% 10%, rgba(212, 175, 55, 0.05) 0%, transparent 55%),
+    radial-gradient(ellipse 45% 40% at 90% 90%, rgba(20, 120, 110, 0.07) 0%, transparent 55%),
+    linear-gradient(135deg, #030712 0%, #0c1524 50%, #030712 100%);
+}
+html:not(.light) #screen-dashboard::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image: radial-gradient(circle, rgba(255, 255, 255, 0.015) 1px, transparent 1px);
+  background-size: 36px 36px;
+  pointer-events: none;
+  z-index: 0;
+}
+#screen-dashboard > * { position: relative; z-index: 1; }
+
+/* ── 2. Cards: glass treatment like the login card ── */
+html:not(.light) .kpi-card,
+html:not(.light) .breaks-card,
+html:not(.light) .form-card,
+html:not(.light) .swap-form-card,
+html:not(.light) .status-banner {
+  background: var(--glass-bg);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  border-color: var(--glass-border);
+}
+
+/* hover: gold border lights up + lift — same feel as login card */
+html:not(.light) .breaks-card:hover,
+html:not(.light) .form-card:hover,
+html:not(.light) .swap-form-card:hover {
+  border-color: rgba(212, 175, 55, 0.28);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35), 0 0 24px rgba(212, 175, 55, 0.06);
+  transition: border-color 0.25s, box-shadow 0.25s;
+}
+
+/* ── 3. Teal as the "alive" color (matches SoloTec side) ── */
+/* success states get the SoloTec teal instead of generic green */
+html:not(.light) .status-approved {
+  background: rgba(52, 232, 165, 0.08);
+  color: var(--solotec-teal);
+  border-color: rgba(52, 232, 165, 0.22);
+}
+
+/* second KPI card stripe: teal→blue like the hexagon gradient */
+html:not(.light) .kpi-card:nth-child(2)::before {
+  background: linear-gradient(90deg, var(--solotec-teal), var(--solotec-blue));
+}
+
+/* ── 4. Typography: match login letter-spacing rhythm ── */
+.status-value,
+.login-title {
+  letter-spacing: -0.5px;
+}
+
+/* ── 5. Primary buttons: same gold glow as Sign In ── */
+html:not(.light) .btn-primary {
+  box-shadow: 0 6px 20px rgba(212, 175, 55, 0.3);
+}
+html:not(.light) .btn-primary:hover {
+  box-shadow: 0 10px 28px rgba(212, 175, 55, 0.45);
+  transform: translateY(-1.5px);
+}
+
+/* ── 6. Active tabs: subtle gradient shimmer transition ── */
+.tab-btn {
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.25s;
+}
+.tab-btn.active {
+  box-shadow: 0 4px 16px rgba(212, 175, 55, 0.25);
+}
+
+/* ── 7. Nav bar: glass like everything else ── */
+html:not(.light) .nav-bar {
+  background: rgba(8, 12, 22, 0.82);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  border-bottom-color: var(--glass-border);
+}
+
+/* ── 8. Scrollbar: slightly refined (keeps gold identity) ── */
+::-webkit-scrollbar       { width: 5px; height: 5px; }
+::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, rgba(212, 175, 55, 0.35), rgba(212, 175, 55, 0.18));
+  border-radius: 10px;
+}
+::-webkit-scrollbar-thumb:hover { background: rgba(212, 175, 55, 0.5); }
+
+/* ── 9. Focus rings: same as login inputs ── */
+html:not(.light) .form-input:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 4px rgba(212, 175, 55, 0.1), 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+/* ── Reduced motion ── */
+@media (prefers-reduced-motion: reduce) {
+  .kpi-card, .btn-primary, .tab-btn { transition: none !important; }
 }
