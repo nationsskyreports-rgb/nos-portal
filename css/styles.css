@@ -1108,7 +1108,7 @@ html:not(.light) #screen-dashboard::before {
   pointer-events: none;
   z-index: 0;
 }
-#screen-dashboard > * { position: relative; z-index: 1; }
+/* لا نلمس position بتاع أطفال الداشبورد — nav-bar و tab-bar عندهم sticky */
 
 /* ── 2. Cards: glass treatment like the login card ── */
 html:not(.light) .kpi-card,
