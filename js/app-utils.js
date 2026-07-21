@@ -39,7 +39,9 @@ let _notifFired = {
 
 /* ─── SUPABASE ─── */
 const SB_URL_SCH = 'https://xzxdaupwwwdcwfnqweub.supabase.co';
-const SB_KEY_SCH = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh6eGRhdXB3d3dkY3dmbnF3ZXViIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUzMTM5NTAsImV4cCI6MjA5MDg4OTk1MH0.KjNZpFvLxh8XfDDoWdpVsIQZAh1PjzGXOrfDmApZ4K8';
+// المفتاح الجديد (publishable) — آمن يظهر في المتصفح، بيتجاب من:
+// Supabase → Project Settings → API Keys → Publishable key
+const SB_KEY_SCH = 'sb_publishable_o6WgAntCWj8sD9jBhQQ0Tw_FA3GngrR';
 const sbClient = window.supabase.createClient(SB_URL_SCH, SB_KEY_SCH, {
   auth: {
     persistSession: true,
