@@ -392,8 +392,9 @@ async function refreshData() {
     // أعد تحميل الـ team breaks
     if (typeof loadTeamBreaksFromSB === 'function') loadTeamBreaksFromSB();
 
-    // أعد تحميل الـ breaks للـ agent
-    if (schMyAgentId) {
+    // أعد تحميل الـ breaks للـ agent — بس لو فعلاً شغال النهاردة
+    // (لو اليوم Off، أي صف بريكات قديم في الجدول مايتطبقش على الواجهة)
+    if (schMyAgentId && window.isWorkingToday) {
       const breaks = await loadTodayBreaksFromSB(schMyAgentId);
       if (breaks) applyBreaksToUI(breaks);
     }
@@ -447,8 +448,10 @@ async function showDashboard(res) {
   } catch(e) { console.warn('Could not load today shift:', e); }
 
   const shift     = todayShift;
-  const isWorking = shift && shift !== 'OFF' && shift !== 'N/A' && shift !== '-'
-    && shift.trim() !== '' && !/^(annual|sick|casual|ph|task)$/i.test(shift.trim());
+  // فحص case-insensitive — "Off" و "OFF" و "off" كلهم يوم أجازة
+  const isWorking = shift && shift.trim() !== ''
+    && !/^(off|n\/a|-|annual|sick|casual|ph|task)$/i.test(shift.trim());
+  window.isWorkingToday = isWorking;   // بيستخدمها refreshData عشان ميطبقش بريكات قديمة
 
   const statusBanner = document.getElementById('status-banner');
   const breaksArea   = document.getElementById('today-breaks-area');
