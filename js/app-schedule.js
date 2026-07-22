@@ -80,7 +80,7 @@ async function loadAgentSchedule() {
 
   const [agents, shifts] = await Promise.all([
     sbFetchSch('agents?select=id,formal_name&status=eq.Active'),
-    sbFetchSch('shift_types?select=id,name,start_time,end_time&is_active=eq.true')
+    sbFetchSch('shift_types?select=id,name,start_time,end_time,is_active')
   ]);
   schShiftTypes = shifts || [];
 
