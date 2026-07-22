@@ -30,7 +30,7 @@ async function initSchTab() {
     const [pubWeeks, agents, shifts] = await Promise.all([
       sbFetchSch('schedule_weeks?select=id,week_start,week_end,status&status=eq.Published&order=week_start.desc'),
       sbFetchSch('agents?select=id,formal_name&status=eq.Active&order=formal_name'),
-      sbFetchSch('shift_types?select=id,name,start_time,end_time&is_active=eq.true&order=start_time')
+      sbFetchSch('shift_types?select=id,name,start_time,end_time,is_active&order=start_time')
     ]);
     schWeeks      = pubWeeks || [];
     schAgents     = agents   || [];
@@ -207,15 +207,129 @@ function buildShiftSelect(agentId, date, dayType, shiftTypeId, isEditable) {
   if (!isEditable) {
     return `<div style="padding:6px 4px;border:1.5px solid;border-radius:8px;font-size:10px;font-weight:700;text-align:center;${style};white-space:nowrap;">${schShiftLabel(dayType, shiftTypeId)}</div>`;
   }
-  const opts = [
-    `<option value="Off" ${dayType==='Off'?'selected':''}>— Off —</option>`,
-    ...schShiftTypes.map(st => `<option value="Work__${st.id}" ${dayType==='Work'&&shiftTypeId===st.id?'selected':''}>${st.start_time.substring(0,5)} - ${st.end_time.substring(0,5)} (${st.name})</option>`),
-    `<option value="Annual" ${dayType==='Annual'?'selected':''}>Annual</option>`,
-    `<option value="Sick"   ${dayType==='Sick'?'selected':''}>Sick</option>`,
-    `<option value="Casual" ${dayType==='Casual'?'selected':''}>Casual</option>`,
-    `<option value="PH"     ${dayType==='PH'?'selected':''}>PH</option>`,
-  ].join('');
-  return `<select data-date="${date}" onchange="onSchDraftChange(this)" style="width:100%;padding:6px 4px;border:1.5px solid;border-radius:8px;font-size:10px;font-weight:700;text-align:center;outline:none;cursor:pointer;font-family:inherit;${style}">${opts}</select>`;
+  // الخانة القابلة للتعديل بقت زرار — ضغطة تفتح لوحة اختيار زي الأدمن بورتال
+  return `<button type="button" data-schpick data-date="${date}"
+            onclick="openSchPop(this)"
+            style="width:100%;padding:6px 4px;border:1.5px solid;border-radius:8px;font-size:10px;font-weight:800;text-align:center;outline:none;cursor:pointer;font-family:inherit;white-space:nowrap;${style}">${schShiftLabel(dayType, shiftTypeId)}</button>`;
+}
+
+/* ═══════════════════════════════════════════
+   لوحة اختيار الشيفت (بوب-أب) — نفس تجربة الأدمن بورتال
+   ═══════════════════════════════════════════ */
+const SCH_LEAVES = { Annual:'#8b5cf6', Sick:'#f43f5e', Casual:'#f59e0b', PH:'#3b82f6', Unpaid:'#64748b' };
+let schPopCtx = null;
+
+function schShiftEmoji(startTime) {
+  const hr = parseInt((startTime || '08').substring(0,2));
+  if (hr < 12) return '🌅';
+  if (hr < 14) return '☀️';
+  if (hr < 17) return '🌆';
+  return '🌙';
+}
+
+function ensureSchPop() {
+  if (document.getElementById('sch-pop')) return;
+  const style = document.createElement('style');
+  style.innerHTML = `
+    #sch-pop-backdrop { position:fixed; inset:0; z-index:998; display:none; }
+    #sch-pop {
+      position:fixed; z-index:999; display:none;
+      width:300px; max-width:calc(100vw - 20px);
+      background:var(--surface, #0E1420); border:1px solid var(--border, rgba(212,175,55,.2));
+      border-radius:14px; box-shadow:0 18px 50px rgba(0,0,0,.5);
+      padding:12px; animation:schPopIn .12s ease-out;
+    }
+    @keyframes schPopIn { from { opacity:0; transform:scale(.96) translateY(4px); } to { opacity:1; transform:none; } }
+    #sch-pop .sp-head { display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; }
+    #sch-pop .sp-title { font-size:12.5px; font-weight:800; color:var(--text, #F0F4FF); }
+    #sch-pop .sp-close { background:none; border:none; color:var(--muted, #6B7A99); cursor:pointer; font-size:15px; padding:4px; }
+    #sch-pop .sp-section { font-size:9.5px; font-weight:800; letter-spacing:1.2px; color:var(--muted, #6B7A99); text-transform:uppercase; margin:10px 2px 6px; }
+    #sch-pop .sp-grid   { display:grid; grid-template-columns:1fr 1fr; gap:6px; }
+    #sch-pop .sp-leaves { display:grid; grid-template-columns:1fr 1fr 1fr; gap:6px; }
+    #sch-pop .sp-opt {
+      border:1.5px solid transparent; border-radius:9px; padding:8px 6px;
+      font-size:11px; font-weight:800; color:#fff; cursor:pointer; text-align:center;
+      font-family:inherit; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+      transition:transform .1s, filter .1s;
+    }
+    #sch-pop .sp-opt:active { transform:scale(.97); }
+    #sch-pop .sp-opt.sp-current { outline:2.5px solid #D4AF37; outline-offset:1.5px; }
+    #sch-pop .sp-off { grid-column:1 / -1; background:#334155; }
+    @media (max-width:640px) {
+      #sch-pop { left:10px !important; right:10px; width:auto; top:auto !important; bottom:12px; }
+      #sch-pop-backdrop { background:rgba(0,0,0,.4); }
+    }`;
+  document.head.appendChild(style);
+  const bd = document.createElement('div'); bd.id = 'sch-pop-backdrop'; bd.onclick = closeSchPop;
+  const pp = document.createElement('div'); pp.id = 'sch-pop';
+  document.body.appendChild(bd); document.body.appendChild(pp);
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') closeSchPop(); });
+}
+
+function openSchPop(chipEl) {
+  ensureSchPop();
+  const date  = chipEl.dataset.date;
+  schPopCtx = { date, chipEl };
+
+  const draft      = schMyDraft[date] || { day_type: 'Off', shift_type_id: null };
+  const currentVal = draft.day_type === 'Work' && draft.shift_type_id ? `Work__${draft.shift_type_id}` : draft.day_type;
+  const visible    = schShiftTypes.filter(st => st.is_active !== false);
+
+  let html = `
+    <div class="sp-head"><div class="sp-title">📝 ${date.split('-').reverse().slice(0,2).join('/')}</div>
+    <button class="sp-close" onclick="closeSchPop()">✕</button></div>
+    <button class="sp-opt sp-off ${currentVal==='Off'?'sp-current':''}" onclick="pickSchShift('Off')">— Off —</button>
+    <div class="sp-section">⏰ Shifts</div><div class="sp-grid">`;
+
+  visible.forEach(st => {
+    const val = `Work__${st.id}`;
+    const hr  = parseInt(st.start_time.substring(0,2));
+    const bg  = hr < 12 ? '#10b981' : hr < 14 ? '#0ea5e9' : '#f59e0b';
+    const fg  = hr >= 14 ? '#000' : '#fff';
+    html += `<button class="sp-opt ${currentVal===val?'sp-current':''}" style="background:${bg};color:${fg};" title="${st.name}"
+              onclick="pickSchShift('${val}')">${schShiftEmoji(st.start_time)} ${st.start_time.substring(0,5)}-${st.end_time.substring(0,5)}</button>`;
+  });
+
+  html += `</div><div class="sp-section">🏖️ Leaves</div><div class="sp-leaves">`;
+  Object.entries(SCH_LEAVES).forEach(([t, color]) => {
+    html += `<button class="sp-opt ${currentVal===t?'sp-current':''}" style="background:${color};" onclick="pickSchShift('${t}')">${t}</button>`;
+  });
+  html += `</div>`;
+
+  const pop = document.getElementById('sch-pop');
+  pop.innerHTML = html;
+  document.getElementById('sch-pop-backdrop').style.display = 'block';
+  pop.style.display = 'block';
+  if (window.innerWidth > 640) {
+    const r = chipEl.getBoundingClientRect();
+    const pw = 300, ph = pop.offsetHeight || 280;
+    let left = Math.min(Math.max(8, r.left + r.width/2 - pw/2), window.innerWidth - pw - 8);
+    let top  = r.bottom + 6;
+    if (top + ph > window.innerHeight - 8) top = Math.max(8, r.top - ph - 6);
+    pop.style.left = left + 'px';
+    pop.style.top  = top + 'px';
+  }
+}
+
+function closeSchPop() {
+  const pop = document.getElementById('sch-pop');
+  if (pop) pop.style.display = 'none';
+  const bd = document.getElementById('sch-pop-backdrop');
+  if (bd) bd.style.display = 'none';
+  schPopCtx = null;
+}
+
+function pickSchShift(val) {
+  if (!schPopCtx) return;
+  const { date, chipEl } = schPopCtx;
+  let dayType = val, shiftTypeId = null;
+  if (val.startsWith('Work__')) { dayType = 'Work'; shiftTypeId = val.split('__')[1]; }
+  schMyDraft[date] = { day_type: dayType, shift_type_id: shiftTypeId };
+  chipEl.style.cssText = chipEl.style.cssText.split('color:')[0]
+    + 'width:100%;padding:6px 4px;border:1.5px solid;border-radius:8px;font-size:10px;font-weight:800;text-align:center;outline:none;cursor:pointer;font-family:inherit;white-space:nowrap;'
+    + schCellStyle(dayType, shiftTypeId);
+  chipEl.innerText = schShiftLabel(dayType, shiftTypeId);
+  closeSchPop();
 }
 
 async function loadDraftGrid() {
@@ -283,17 +397,8 @@ async function loadDraftGrid() {
     banner.style.cssText = 'margin-top:16px;padding:16px;background:rgba(239,68,68,0.06);border:1.5px solid rgba(239,68,68,0.3);border-radius:12px;text-align:center;font-size:13px;font-weight:700;color:#ef4444;white-space:pre-line;';
     banner.innerText = schRequestClosedMsg();
     draftEl.appendChild(banner);
-    draftEl.querySelectorAll('select').forEach(s => s.disabled = true);
+    draftEl.querySelectorAll('select, button[data-schpick]').forEach(s => { s.disabled = true; s.style.opacity = '.5'; s.style.cursor = 'not-allowed'; });
   }
-}
-
-function onSchDraftChange(sel) {
-  const date = sel.dataset.date;
-  const val  = sel.value;
-  let dayType = val, shiftTypeId = null;
-  if (val.startsWith('Work__')) { dayType = 'Work'; shiftTypeId = val.split('__')[1]; }
-  schMyDraft[date] = { day_type: dayType, shift_type_id: shiftTypeId };
-  sel.style.cssText += ';' + schCellStyle(dayType, shiftTypeId);
 }
 
 function isSchRequestOpen() {
