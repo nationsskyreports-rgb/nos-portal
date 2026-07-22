@@ -450,7 +450,7 @@ async function showDashboard(res) {
   const shift     = todayShift;
   // فحص case-insensitive — "Off" و "OFF" و "off" كلهم يوم أجازة
   const isWorking = shift && shift.trim() !== ''
-    && !/^(off|n\/a|-|annual|sick|casual|ph|task)$/i.test(shift.trim());
+    && !/^(off|n\/a|-|annual|sick|casual|ph|task|unpaid)$/i.test(shift.trim());
   window.isWorkingToday = isWorking;   // بيستخدمها refreshData عشان ميطبقش بريكات قديمة
 
   const statusBanner = document.getElementById('status-banner');
