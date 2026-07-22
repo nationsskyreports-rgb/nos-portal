@@ -1,4 +1,4 @@
-const CACHE_NAME = 'ns-portal-v15';
+const CACHE_NAME = 'ns-portal-v16';
 const CACHE_ASSETS = [
   './manifest.json',
   'https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap',
