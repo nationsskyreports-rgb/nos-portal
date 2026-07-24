@@ -53,13 +53,52 @@ const sbClient = window.supabase.createClient(SB_URL_SCH, SB_KEY_SCH, {
 // Restore token from session if exists
 window._authToken = sessionStorage.getItem('ns-auth-token') || SB_KEY_SCH;
 
-// Auto-update token when session refreshes
+// ── تحديث التوكن تلقائياً + استرداد ذكي ──
 sbClient.auth.onAuthStateChange((event, session) => {
   if (session && session.access_token) {
     window._authToken = session.access_token;
     sessionStorage.setItem('ns-auth-token', session.access_token);
   }
+  // لو السيشن ماتت وهو على الداشبورد — ارجعه للوجين من غير ما يقفل ويفتح
+  if (event === 'SIGNED_OUT' && document.getElementById('screen-dashboard')?.style.display !== 'none') {
+    sessionStorage.removeItem('ns-session');
+    sessionStorage.removeItem('ns-auth-token');
+    window._authToken = SB_KEY_SCH;
+    _showLoginScreen();
+  }
 });
+
+// ── إعادة تنشيط السيشن لما المستخدم يرجع للتاب ──
+// المتصفح بيخنق الـ timers في التابات الخلفية فالتوكن ممكن يخلص
+// من غير ما autoRefreshToken يلحق يجدده — ده بيصلح اللحظة دي
+document.addEventListener('visibilitychange', async () => {
+  if (document.visibilityState !== 'visible') return;
+  try {
+    const { data: { session }, error } = await sbClient.auth.getSession();
+    if (error || !session) {
+      const { data: refreshed } = await sbClient.auth.refreshSession();
+      if (refreshed?.session) {
+        window._authToken = refreshed.session.access_token;
+        sessionStorage.setItem('ns-auth-token', refreshed.session.access_token);
+      }
+    } else {
+      window._authToken = session.access_token;
+      sessionStorage.setItem('ns-auth-token', session.access_token);
+    }
+  } catch(e) { console.warn('Session refresh on focus:', e); }
+});
+
+// شاشة اللوجين ترجع بسلاسة من غير ريلود
+function _showLoginScreen() {
+  const dash  = document.getElementById('screen-dashboard');
+  const login = document.getElementById('screen-login');
+  const pre   = document.getElementById('app-preloader');
+  if (dash)  dash.style.display  = 'none';
+  if (login) login.style.display = 'block';
+  if (pre)   pre.classList.add('hidden');
+  const msg = document.getElementById('login-msg');
+  if (msg) { msg.style.color = 'var(--warning)'; msg.innerHTML = '<i class="fas fa-clock"></i> Session expired — please sign in again'; }
+}
 
 
 /* ─── LOCAL DATE (Cairo timezone) ─── */
@@ -86,10 +125,24 @@ async function getAuthHeaders(extra) {
 window.SB_URL_SCH = SB_URL_SCH;
 window.SB_KEY_SCH = SB_KEY_SCH;
 
-async function sbFetchSch(path) {
+async function sbFetchSch(path, _isRetry) {
   const headers = await getAuthHeaders();
   const res = await fetch(`${SB_URL_SCH}/rest/v1/${path}`, { headers });
-  return res.json();
+  if (res.ok) return res.json();
+
+  // ── لو التوكن خلص — جدده وأعد المحاولة مرة واحدة ──
+  if (!_isRetry && (res.status === 401 || res.status === 403)) {
+    try {
+      const { data: refreshed } = await sbClient.auth.refreshSession();
+      if (refreshed?.session) {
+        window._authToken = refreshed.session.access_token;
+        sessionStorage.setItem('ns-auth-token', refreshed.session.access_token);
+        return sbFetchSch(path, true);
+      }
+    } catch(e) {}
+  }
+  // لو فشل retry — نرجّع [] بدل ما الصفحة تموت
+  try { return await res.json(); } catch(e) { return []; }
 }
 
 /* ─── UTILITY: gasRun (FIXED — CORS) ─── */
