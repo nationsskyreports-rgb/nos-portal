@@ -51,19 +51,32 @@ const sbClient = window.supabase.createClient(SB_URL_SCH, SB_KEY_SCH, {
 });
 
 // Restore token from session if exists
-window._authToken = sessionStorage.getItem('ns-auth-token') || SB_KEY_SCH;
+// ⚠️ الـ publishable key مش JWT — مينفعش يتبعت كـ Bearer
+//     لو مفيش token محفوظ، نخليه null والـ getAuthHeaders تتعامل
+window._authToken = sessionStorage.getItem('ns-auth-token') || null;
 
 // ── تحديث التوكن تلقائياً + استرداد ذكي ──
-sbClient.auth.onAuthStateChange((event, session) => {
+sbClient.auth.onAuthStateChange(async (event, session) => {
   if (session && session.access_token) {
     window._authToken = session.access_token;
     sessionStorage.setItem('ns-auth-token', session.access_token);
   }
-  // لو السيشن ماتت وهو على الداشبورد — ارجعه للوجين من غير ما يقفل ويفتح
+  // لو السيشن ماتت وهو على الداشبورد — حاول recovery الأول قبل الـ logout
   if (event === 'SIGNED_OUT' && document.getElementById('screen-dashboard')?.style.display !== 'none') {
+    // حاول تجدد السيشن — ممكن الـ event يكون من tab تاني (Admin Portal)
+    try {
+      const { data: refreshed } = await sbClient.auth.refreshSession();
+      if (refreshed?.session) {
+        window._authToken = refreshed.session.access_token;
+        sessionStorage.setItem('ns-auth-token', refreshed.session.access_token);
+        console.log('Session recovered after SIGNED_OUT event');
+        return; // ✅ اتعالجت — ما ترجعش login
+      }
+    } catch(e) {}
+    // فشل الـ recovery — ارجع login
     sessionStorage.removeItem('ns-session');
     sessionStorage.removeItem('ns-auth-token');
-    window._authToken = SB_KEY_SCH;
+    window._authToken = null;
     _showLoginScreen();
   }
 });
@@ -114,9 +127,11 @@ async function getAuthHeaders(extra) {
       sessionStorage.setItem('ns-auth-token', session.access_token);
     }
   } catch(e) {}
+  // ⚠️ لو مفيش JWT، استخدم الـ publishable key كـ Bearer (PostgREST بيقبله في الـ apikey header)
+  const bearerToken = window._authToken || SB_KEY_SCH;
   return Object.assign({
     'apikey':        SB_KEY_SCH,
-    'Authorization': `Bearer ${window._authToken || SB_KEY_SCH}`,
+    'Authorization': `Bearer ${bearerToken}`,
     'Content-Type':  'application/json'
   }, extra || {});
 }
@@ -140,6 +155,15 @@ async function sbFetchSch(path, _isRetry) {
         return sbFetchSch(path, true);
       }
     } catch(e) {}
+    // لو الـ refresh فشل — جرب بالـ apikey بدون Bearer JWT
+    if (!_isRetry) {
+      try {
+        const fallbackRes = await fetch(`${SB_URL_SCH}/rest/v1/${path}`, {
+          headers: { 'apikey': SB_KEY_SCH, 'Authorization': `Bearer ${SB_KEY_SCH}`, 'Content-Type': 'application/json' }
+        });
+        if (fallbackRes.ok) return fallbackRes.json();
+      } catch(e) {}
+    }
   }
   // لو فشل retry — نرجّع [] بدل ما الصفحة تموت
   try { return await res.json(); } catch(e) { return []; }
