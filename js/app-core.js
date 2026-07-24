@@ -140,7 +140,7 @@ window.onload = async function() {
   } catch(e) {}
   const agentListCall = fetch(
     `${SB_URL_SCH}/rest/v1/agents?select=formal_name&status=eq.Active&order=formal_name`,
-    { headers: { 'apikey': SB_KEY_SCH, 'Authorization': `Bearer ${window._authToken || SB_KEY_SCH}` } }
+    { headers: { 'apikey': SB_KEY_SCH, 'Authorization': `Bearer ${window._authToken || SB_KEY_SCH}`, 'Content-Type': 'application/json' } }
   )
   .then(r => r.json())
   .then(data => (data || []).map(a => ({ name: a.formal_name, code: '' })))
@@ -331,7 +331,7 @@ async function submitReset() {
 
 function logout() {
   logoutToast();
-  sbClient.auth.signOut();
+  sbClient.auth.signOut({ scope: 'local' });
   document.getElementById('side-menu').style.display         = 'none';
   document.getElementById('side-menu-overlay').style.display = 'none';
   try { sessionStorage.removeItem('ns-session'); sessionStorage.removeItem('ns-auth-token'); } catch(e) {}
