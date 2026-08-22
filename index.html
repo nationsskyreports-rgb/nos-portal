@@ -375,31 +375,66 @@
             </div>
           </div>
 
-            <div class="divider"></div>
-
-            <div class="section-label"><i class="fas fa-hand-holding-heart"></i> Waiving Request</div>
-            <div class="mini-form" id="waiving-form" style="display:block;">
-              <div class="mini-form-grid">
-                <div>
-                  <label class="form-label">Date</label>
-                  <input type="date" id="waiveDate" class="form-input" style="color-scheme:light dark;">
-                </div>
-                <div>
-                  <label class="form-label">Deviation Type</label>
-                  <select id="waiveType" class="form-input">
-                    <option value="Late Login">⏰ Late Login</option>
-                    <option value="Long Break">☕ Long Break</option>
-                    <option value="Early Logout">🚪 Early Logout</option>
-                  </select>
-                </div>
-              </div>
-              <label class="form-label">Reason</label>
-              <textarea id="waiveReason" class="form-input" style="margin-bottom:10px;" rows="2" placeholder="Why should this be waived?"></textarea>
-              <button class="action-btn c-accent" style="width:100%;" id="submitWaiveBtn" onclick="submitWaivingRequest()"><i class="fas fa-paper-plane"></i> Submit Waiving Request</button>
-              <div id="waive-msg" style="font-size:13px;font-weight:600;margin-top:8px;"></div>
-            </div>
-
         </div>
+
+        <!-- WAIVING REQUEST (full width, outside the 2-col grid) -->
+        <div class="divider"></div>
+        <div class="section-label"><i class="fas fa-hand-holding-heart"></i> Waiving Request</div>
+        <div class="swap-card">
+          <div class="mini-form-grid">
+            <div>
+              <label class="form-label">Date</label>
+              <input type="date" id="waiveDate" class="form-input" style="color-scheme:light dark;">
+            </div>
+            <div>
+              <label class="form-label">Deviation Type</label>
+              <select id="waiveType" class="form-input">
+                <option value="Late Login">⏰ Late Login</option>
+                <option value="Long Break">☕ Long Break</option>
+                <option value="Early Logout">🚪 Early Logout</option>
+              </select>
+            </div>
+          </div>
+          <label class="form-label" style="margin-top:10px;">Reason</label>
+          <textarea id="waiveReason" class="form-input" style="margin-bottom:10px;" rows="2" placeholder="Why should this be waived?"></textarea>
+          <button class="swap-submit-btn" id="submitWaiveBtn" onclick="submitWaivingRequest()">
+            <i class="fas fa-paper-plane"></i> Submit Waiving Request
+          </button>
+          <div id="waive-msg" style="font-size:13px;font-weight:600;margin-top:8px;"></div>
+        </div>
+
+        <!-- OUTAGE REPORT (full width) -->
+        <div class="divider"></div>
+        <div class="section-label"><i class="fas fa-bolt"></i> Outage Report</div>
+        <div class="swap-card">
+          <div class="mini-form-grid">
+            <div>
+              <label class="form-label">Date</label>
+              <input type="date" id="outageDate" class="form-input" style="color-scheme:light dark;">
+            </div>
+            <div>
+              <label class="form-label">Outage Type</label>
+              <select id="outageType" class="form-input" onchange="onOutageTypeChange()">
+                <option value="Outage">⚡ Outage (General)</option>
+                <option value="Internet">🌐 Internet</option>
+                <option value="Power">🔌 Power Cut</option>
+                <option value="System Issue">🖥️ System Issue</option>
+                <option value="Other">➕ Other</option>
+              </select>
+            </div>
+          </div>
+          <div id="outageOtherWrap" style="display:none;margin-top:10px;">
+            <label class="form-label">Specify</label>
+            <input type="text" id="outageOther" class="form-input" placeholder="Describe the outage type...">
+          </div>
+          <label class="form-label" style="margin-top:10px;">Reason / Details</label>
+          <textarea id="outageReason" class="form-input" style="margin-bottom:10px;" rows="2" placeholder="What happened, and roughly how long?"></textarea>
+          <button class="swap-submit-btn" id="submitOutageBtn" onclick="submitOutageRequest()">
+            <i class="fas fa-paper-plane"></i> Submit Outage Report
+          </button>
+          <div id="outage-msg" style="font-size:13px;font-weight:600;margin-top:8px;"></div>
+        </div>
+
       </div>
     </div>
     
