@@ -375,6 +375,30 @@
             </div>
           </div>
 
+            <div class="divider"></div>
+
+            <div class="section-label"><i class="fas fa-hand-holding-heart"></i> Waiving Request</div>
+            <div class="mini-form" id="waiving-form" style="display:block;">
+              <div class="mini-form-grid">
+                <div>
+                  <label class="form-label">Date</label>
+                  <input type="date" id="waiveDate" class="form-input" style="color-scheme:light dark;">
+                </div>
+                <div>
+                  <label class="form-label">Deviation Type</label>
+                  <select id="waiveType" class="form-input">
+                    <option value="Late Login">⏰ Late Login</option>
+                    <option value="Long Break">☕ Long Break</option>
+                    <option value="Early Logout">🚪 Early Logout</option>
+                  </select>
+                </div>
+              </div>
+              <label class="form-label">Reason</label>
+              <textarea id="waiveReason" class="form-input" style="margin-bottom:10px;" rows="2" placeholder="Why should this be waived?"></textarea>
+              <button class="action-btn c-accent" style="width:100%;" id="submitWaiveBtn" onclick="submitWaivingRequest()"><i class="fas fa-paper-plane"></i> Submit Waiving Request</button>
+              <div id="waive-msg" style="font-size:13px;font-weight:600;margin-top:8px;"></div>
+            </div>
+
         </div>
       </div>
     </div>
