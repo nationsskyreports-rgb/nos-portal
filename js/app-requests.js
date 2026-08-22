@@ -38,6 +38,7 @@ function renderRequests(requests) {
     'Time Off':         'fa-calendar-check',
     'Shift Swap':       'fa-exchange-alt',
     'Waiving Request':  'fa-hand-holding-heart',
+    'Outage':           'fa-bolt',
     'Schedule Request': 'fa-calendar-alt',
     'Break Change':     'fa-coffee',
   };
@@ -49,6 +50,7 @@ function renderRequests(requests) {
       if (req.type === 'Time Off')           details = `${d.request_type||''} · ${d.from_date||''} → ${d.to_date||''}`;
       else if (req.type === 'Shift Swap')    details = `${d.date||''} · with ${d.colleague||''}`;
       else if (req.type === 'Waiving Request') details = `${d.deviation_type||''} · ${d.date||''}`;
+      else if (req.type === 'Outage')          details = `${d.label||d.outage_type||''} · ${d.date||''}`;
       else if (req.type === 'Missing Punch') details = `Date: ${d.date||''}`;
       else if (req.type === 'Schedule Request') details = `أسبوع: ${d.week_start||''}`;
       else if (req.type === 'Break Change') details = `${d.break_type} → ${d.new_time} (${d.date||''})`;
@@ -282,6 +284,56 @@ async function submitWaivingRequest() {
     }
   } catch(e) {
     setButtonLoading(btn, false, '🙌 Submit Waiving Request');
+    msg.style.color = 'var(--danger)'; msg.innerText = '❌ Connection error!';
+  }
+}
+
+/* ─── OUTAGE REPORT ─── */
+function onOutageTypeChange() {
+  const t = document.getElementById('outageType').value;
+  const wrap = document.getElementById('outageOtherWrap');
+  if (wrap) wrap.style.display = (t === 'Other') ? 'block' : 'none';
+}
+
+async function submitOutageRequest() {
+  const type   = document.getElementById('outageType').value;
+  const other  = (document.getElementById('outageOther')?.value || '').trim();
+  const date   = document.getElementById('outageDate').value;
+  const reason = document.getElementById('outageReason').value.trim();
+  const name   = document.getElementById('user-name').innerText.trim();
+  const msg    = document.getElementById('outage-msg');
+  const btn    = document.getElementById('submitOutageBtn');
+
+  const label = (type === 'Other') ? (other || 'Other') : type;
+
+  if (!date)                        { msg.style.color='var(--danger)'; msg.innerText='Please pick a date!'; return; }
+  if (type === 'Other' && !other)   { msg.style.color='var(--danger)'; msg.innerText='Please specify the outage type!'; return; }
+  if (!reason)                      { msg.style.color='var(--danger)'; msg.innerText='Please add details!'; return; }
+  if (!schMyAgentId)                { msg.style.color='var(--danger)'; msg.innerText='Agent not found — please refresh!'; return; }
+
+  setButtonLoading(btn, true, 'Submitting...');
+  try {
+    const res = await fetch(`${SB_URL_SCH}/rest/v1/requests`, {
+      method:  'POST',
+      headers: { 'apikey': SB_KEY_SCH, 'Authorization': `Bearer ${window._authToken || SB_KEY_SCH}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+      body: JSON.stringify({
+        agent_id: schMyAgentId, agent_name: name, type: 'Outage', status: 'Pending',
+        details: JSON.stringify({ outage_type: type, label: label, date: date, reason: reason }),
+        created_at: new Date().toISOString(), updated_at: new Date().toISOString(),
+      })
+    });
+    setButtonLoading(btn, false, '⚡ Submit Outage Report');
+    if (res.ok) {
+      showToast('✅', 'Outage Reported!', 'Pending review by manager.', 'success', 6000);
+      msg.style.color = 'var(--accent)'; msg.innerText = '✅ Submitted — pending review.';
+      document.getElementById('outageReason').value = '';
+      if (document.getElementById('outageOther')) document.getElementById('outageOther').value = '';
+      if (typeof silentRefreshRequests === 'function') setTimeout(silentRefreshRequests, 1500);
+    } else {
+      msg.style.color = 'var(--danger)'; msg.innerText = '❌ Failed. Try again.';
+    }
+  } catch(e) {
+    setButtonLoading(btn, false, '⚡ Submit Outage Report');
     msg.style.color = 'var(--danger)'; msg.innerText = '❌ Connection error!';
   }
 }
