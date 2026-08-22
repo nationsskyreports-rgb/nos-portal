@@ -37,6 +37,7 @@ function renderRequests(requests) {
     'Excuse':           'fa-exclamation-circle',
     'Time Off':         'fa-calendar-check',
     'Shift Swap':       'fa-exchange-alt',
+    'Waiving Request':  'fa-hand-holding-heart',
     'Schedule Request': 'fa-calendar-alt',
     'Break Change':     'fa-coffee',
   };
@@ -47,6 +48,7 @@ function renderRequests(requests) {
       const d = typeof req.details === 'string' ? JSON.parse(req.details) : req.details;
       if (req.type === 'Time Off')           details = `${d.request_type||''} · ${d.from_date||''} → ${d.to_date||''}`;
       else if (req.type === 'Shift Swap')    details = `${d.date||''} · with ${d.colleague||''}`;
+      else if (req.type === 'Waiving Request') details = `${d.deviation_type||''} · ${d.date||''}`;
       else if (req.type === 'Missing Punch') details = `Date: ${d.date||''}`;
       else if (req.type === 'Schedule Request') details = `أسبوع: ${d.week_start||''}`;
       else if (req.type === 'Break Change') details = `${d.break_type} → ${d.new_time} (${d.date||''})`;
@@ -241,6 +243,45 @@ async function submitTimeOffRequest() {
     }
   } catch(e) {
     setButtonLoading(btn, false, '✈️ Submit Request');
+    msg.style.color = 'var(--danger)'; msg.innerText = '❌ Connection error!';
+  }
+}
+
+/* ─── WAIVING REQUEST ─── */
+async function submitWaivingRequest() {
+  const date    = document.getElementById('waiveDate').value;
+  const devType = document.getElementById('waiveType').value;
+  const reason  = document.getElementById('waiveReason').value.trim();
+  const name    = document.getElementById('user-name').innerText.trim();
+  const msg     = document.getElementById('waive-msg');
+  const btn     = document.getElementById('submitWaiveBtn');
+
+  if (!date)         { msg.style.color='var(--danger)'; msg.innerText='Please pick a date!'; return; }
+  if (!reason)       { msg.style.color='var(--danger)'; msg.innerText='Please add a reason!'; return; }
+  if (!schMyAgentId) { msg.style.color='var(--danger)'; msg.innerText='Agent not found — please refresh!'; return; }
+
+  setButtonLoading(btn, true, 'Submitting...');
+  try {
+    const res = await fetch(`${SB_URL_SCH}/rest/v1/requests`, {
+      method:  'POST',
+      headers: { 'apikey': SB_KEY_SCH, 'Authorization': `Bearer ${window._authToken || SB_KEY_SCH}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+      body: JSON.stringify({
+        agent_id: schMyAgentId, agent_name: name, type: 'Waiving Request', status: 'Pending',
+        details: JSON.stringify({ deviation_type: devType, date: date, reason: reason }),
+        created_at: new Date().toISOString(), updated_at: new Date().toISOString(),
+      })
+    });
+    setButtonLoading(btn, false, '🙌 Submit Waiving Request');
+    if (res.ok) {
+      showToast('✅', 'Waiving Request Submitted!', 'Pending review by manager.', 'success', 6000);
+      msg.style.color = 'var(--accent)'; msg.innerText = '✅ Submitted — pending review.';
+      document.getElementById('waiveReason').value = '';
+      if (typeof silentRefreshRequests === 'function') setTimeout(silentRefreshRequests, 1500);
+    } else {
+      msg.style.color = 'var(--danger)'; msg.innerText = '❌ Failed. Try again.';
+    }
+  } catch(e) {
+    setButtonLoading(btn, false, '🙌 Submit Waiving Request');
     msg.style.color = 'var(--danger)'; msg.innerText = '❌ Connection error!';
   }
 }
