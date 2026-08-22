@@ -344,6 +344,8 @@ function logout() {
 
   document.getElementById('screen-dashboard').style.display = 'none';
   document.getElementById('screen-login').style.display     = 'flex';
+  const _aiFab = document.getElementById('ai-fab');   // hide AI assistant back on the login screen
+  if (_aiFab) _aiFab.style.display = 'none';
 
   const logo = document.getElementById('nsdAnimatedLogo');
   if (logo) {
@@ -419,6 +421,8 @@ async function showDashboard(res) {
 
   document.getElementById('screen-login').style.display     = 'none';
   document.getElementById('screen-dashboard').style.display = 'block';
+  const _aiFab = document.getElementById('ai-fab');   // show AI assistant only inside the app
+  if (_aiFab) _aiFab.style.display = 'flex';
   pushHistoryState();
 
   const initials = res.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
