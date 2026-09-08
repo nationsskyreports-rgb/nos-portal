@@ -60,6 +60,32 @@ function toggleProjectCategoryFields() {
   }
 }
 
+const CATEGORY2_BY_CATEGORY1 = {
+  Request: [
+    'EOI Refund','Data Update','Finishing Process','Delivery Date',
+    'Financial - Bounced Cheque','Financial - Postponing Cheque','Financial - Receiving Cheque',
+    'Financial - Cash Discount','Financial - Cash Payment','Financial - Changing Cheques',
+    'Financial - Collective Cheque','Financial - Down Payment','Financial - Due Payment',
+    'Financial - Payment Receipt','Financial - Maintenance Cheque','Financial - Pay In Advance',
+    'Financial - Payment Details','Financial - Redeposit','Financial - Relinquishment',
+    'Financial - Reschedule','Unit Movement','Modification','Receiving Contract','EOI Payment',
+    'Pre Delivery Site Visit','Delegation','Construction Update','Cancellation',
+    'Delivery Inspection','Unit Upgrade','Unit Downgrade','Auto Cad'
+  ],
+  Complaint: ['Wrong Number','Call Dropped','Sales - Attitude','Sales - Wrong Info'],
+  Inquiry: ['Sales Lead','Events','Resale','Other']
+};
+
+function filterCategory2ByCat1() {
+  const cat1 = document.getElementById('f-category1');
+  const cat2 = document.getElementById('f-category2');
+  if (!cat1 || !cat2) return;
+  const values = CATEGORY2_BY_CATEGORY1[cat1.value] || [];
+  cat2.innerHTML = '<option value="">Select sub-category...</option>' + values.map(value => `<option>${value}</option>`).join('');
+  cat2.disabled = !cat1.value;
+  cat2.value = '';
+}
+
 window.addEventListener('load', toggleProjectCategoryFields);
 
 /* ─── QUICK LOG ─── */
@@ -247,6 +273,11 @@ function resetCallForm() {
   // أعد إظهار التفاصيل، وأخفِ التصنيفات حتى يتم اختيار مشروع فعلي
   const fullSection = document.getElementById('full-details-section');
   if (fullSection) fullSection.style.display = '';
+  const category2 = document.getElementById('f-category2');
+  if (category2) {
+    category2.disabled = true;
+    category2.innerHTML = '<option value="">Select sub-category...</option>';
+  }
   toggleProjectCategoryFields();
   document.getElementById('form-success').style.display = 'none';
   document.getElementById('form-error').style.display   = 'none';
