@@ -508,22 +508,21 @@
     <p>Call Log data entry requires a desktop browser for the best experience.</p>
   </div>
 
-  <div class="form-card">
-    <!-- Step Indicator -->
-    <div class="step-indicator">
-      <div class="step-dot active" id="sdot-1">1</div>
-      <div class="step-line" id="sline-1"></div>
-      <div class="step-dot" id="sdot-2">2</div>
-      <div class="step-line" id="sline-2"></div>
-      <div class="step-dot" id="sdot-3">3</div>
-      <div class="step-line" id="sline-3"></div>
-      <div class="step-dot" id="sdot-4">4</div>
+  <div class="form-card" style="padding:20px;">
+
+    <!-- ═══ QUICK LOG — أعلى حاجة ═══ -->
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;">
+      <div style="font-family:'Syne',sans-serif;font-size:14px;font-weight:800;color:var(--text);display:flex;align-items:center;gap:8px;"><i class="fas fa-bolt" style="color:var(--primary);"></i> Quick Log</div>
+      <div class="quick-log-grid" style="flex:1;margin:0;">
+        <div class="quick-log-btn" onclick="quickLogCall('Wrong Number')" style="padding:12px 14px;font-size:13px;"><i class="fas fa-phone-slash"></i><span>Wrong Number</span></div>
+        <div class="quick-log-btn" onclick="quickLogCall('Call Dropped')" style="padding:12px 14px;font-size:13px;"><i class="fas fa-phone-slash"></i><span>Call Dropped</span></div>
+      </div>
     </div>
 
-    <!-- STEP 1: Agent + Reason -->
-    <div class="step-panel active" id="step-1">
-      <div class="step-title">🎯 Step 1 — Basic Info</div>
-      <div class="step-sub">Select agent and call reason</div>
+    <div style="height:1px;background:var(--border);margin-bottom:20px;"></div>
+
+    <!-- ═══ ROW 1: Agent + Direction ═══ -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:4px;">
       <div class="form-group">
         <label class="form-label">Agent Name <span class="req">*</span></label>
         <select id="f-agent" class="form-input" onchange="onAgentSelect()">
@@ -541,8 +540,12 @@
           </label>
         </div>
       </div>
+    </div>
+
+    <!-- ═══ ROW 2: Project + Category 1 + Category 2 ═══ -->
+    <div id="classification-row" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-bottom:4px;">
       <div class="form-group">
-        <label class="form-label">Project</label>
+        <label class="form-label">Project <span class="req">*</span></label>
         <select id="f-project" class="form-input">
           <option value="">Select project...</option>
           <option>Sky Ridge Elite</option><option>Sky Ridge Executives</option>
@@ -550,59 +553,47 @@
           <option>Jirian</option><option>Isla</option>
         </select>
       </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
-        <div class="form-group">
-          <label class="form-label">Category 1</label>
-          <select id="f-category1" class="form-input">
-            <option value="">Select category...</option>
-            <option>Request</option><option>Complaint</option><option>Inquiry</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label class="form-label">Category 2 <span class="req">*</span></label>
-          <select id="f-category2" class="form-input" onchange="toggleFormSections()">
-            <option value="">Select sub-category...</option>
-            <option>Sales Lead</option><option>Events</option><option>EOI Refund</option>
-            <option>Wrong Number</option><option>Call Dropped</option>
-            <option>Resale</option><option>Data Update</option>
-            <option>Finishing Process</option><option>Delivery Date</option>
-            <option>Financial - Bounced Cheque</option><option>Financial - Postponing Cheque</option>
-            <option>Financial - Receiving Cheque</option><option>Financial - Cash Discount</option>
-            <option>Financial - Cash Payment</option><option>Financial - Changing Cheques</option>
-            <option>Financial - Collective Cheque</option><option>Financial - Down Payment</option>
-            <option>Financial - Due Payment</option><option>Financial - Payment Receipt</option>
-            <option>Financial - Maintenance Cheque</option><option>Financial - Pay In Advance</option>
-            <option>Financial - Payment Details</option><option>Financial - Redeposit</option>
-            <option>Financial - Relinquishment</option><option>Financial - Reschedule</option>
-            <option>Other</option><option>Unit Movement</option><option>Modification</option>
-            <option>Receiving Contract</option><option>EOI Payment</option>
-            <option>Pre Delivery Site Visit</option><option>Delegation</option>
-            <option>Construction Update</option><option>Cancellation</option>
-            <option>Delivery Inspection</option><option>Unit Upgrade</option>
-            <option>Unit Downgrade</option><option>Auto Cad</option>
-            <option>Sales - Attitude</option><option>Sales - Wrong Info</option>
-          </select>
-        </div>
+      <div class="form-group">
+        <label class="form-label">Category 1 <span class="req">*</span></label>
+        <select id="f-category1" class="form-input">
+          <option value="">Select category...</option>
+          <option>Request</option><option>Complaint</option><option>Inquiry</option>
+        </select>
       </div>
-      <!-- Quick Log -->
-      <div class="section-label" style="margin-top:8px;"><i class="fas fa-bolt"></i> Quick Log</div>
-      <div class="quick-log-grid">
-        <div class="quick-log-btn" onclick="quickLogCall('Wrong Number')"><i class="fas fa-phone-slash"></i><span>Wrong Number</span></div>
-        <div class="quick-log-btn" onclick="quickLogCall('Call Dropped')"><i class="fas fa-phone-slash"></i><span>Call Dropped</span></div>
+      <div class="form-group">
+        <label class="form-label">Category 2 <span class="req">*</span></label>
+        <select id="f-category2" class="form-input" onchange="toggleFormSections()">
+          <option value="">Select sub-category...</option>
+          <option>Sales Lead</option><option>Events</option><option>EOI Refund</option>
+          <option>Wrong Number</option><option>Call Dropped</option>
+          <option>Resale</option><option>Data Update</option>
+          <option>Finishing Process</option><option>Delivery Date</option>
+          <option>Financial - Bounced Cheque</option><option>Financial - Postponing Cheque</option>
+          <option>Financial - Receiving Cheque</option><option>Financial - Cash Discount</option>
+          <option>Financial - Cash Payment</option><option>Financial - Changing Cheques</option>
+          <option>Financial - Collective Cheque</option><option>Financial - Down Payment</option>
+          <option>Financial - Due Payment</option><option>Financial - Payment Receipt</option>
+          <option>Financial - Maintenance Cheque</option><option>Financial - Pay In Advance</option>
+          <option>Financial - Payment Details</option><option>Financial - Redeposit</option>
+          <option>Financial - Relinquishment</option><option>Financial - Reschedule</option>
+          <option>Other</option><option>Unit Movement</option><option>Modification</option>
+          <option>Receiving Contract</option><option>EOI Payment</option>
+          <option>Pre Delivery Site Visit</option><option>Delegation</option>
+          <option>Construction Update</option><option>Cancellation</option>
+          <option>Delivery Inspection</option><option>Unit Upgrade</option>
+          <option>Unit Downgrade</option><option>Auto Cad</option>
+          <option>Sales - Attitude</option><option>Sales - Wrong Info</option>
+        </select>
       </div>
-<div class="step-nav">
-        <button class="step-nav-btn next" onclick="goStep(2)">Next <i class="fas fa-arrow-right"></i></button>
-      </div>
-
     </div>
-    <!-- STEP 2: Customer Info -->
-    <div class="step-panel" id="step-2">
-      <div class="step-title">👤 Step 2 — Customer Info</div>
-      <div class="step-sub">Enter customer details</div>
 
-      <div id="mobile-section">
+    <!-- ═══ FULL DETAILS SECTION — hidden for Wrong Number / Call Dropped ═══ -->
+    <div id="full-details-section">
+
+      <!-- ROW 3: Customer Info -->
+      <div id="mobile-section" style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:4px;">
         <div class="form-group">
-          <label class="form-label">Customer Name</label>
+          <label class="form-label">Customer Name <span class="req">*</span></label>
           <input type="text" id="f-cname" class="form-input" placeholder="Enter customer name...">
         </div>
         <div class="form-group">
@@ -610,17 +601,9 @@
           <input type="tel" id="f-mobile" class="form-input" placeholder="01xxxxxxxxx">
         </div>
       </div>
-      <div class="step-nav">
-        <button class="step-nav-btn back" onclick="goStep(1)"><i class="fas fa-arrow-left"></i> Back</button>
-        <button class="step-nav-btn next" onclick="goStep(3)">Next <i class="fas fa-arrow-right"></i></button>
-      </div>
-    </div>
 
-    <!-- STEP 3: Business Details -->
-    <div class="step-panel" id="step-3">
-      <div class="step-title">💼 Step 3 — Business Details</div>
-      <div class="step-sub">Fill in business information</div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+      <!-- ROW 4: Business Relativity + Sales Call -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:4px;">
         <div class="form-group">
           <label class="form-label">Business Relativity <span class="req">*</span></label>
           <div class="radio-group" id="f-bizrel">
@@ -636,6 +619,10 @@
             <label class="radio-opt" onclick="selectRadio('f-salescall',this,'N/A')"><input type="radio"> N/A</label>
           </div>
         </div>
+      </div>
+
+      <!-- ROW 5: Channel + Media -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:4px;">
         <div class="form-group">
           <label class="form-label">Communication Channel <span class="req">*</span></label>
           <div class="radio-group" id="f-channel">
@@ -662,7 +649,9 @@
           </div>
         </div>
       </div>
-      <div class="budget-unit-grid">
+
+      <!-- ROW 6: Budget + Unit Type -->
+      <div class="budget-unit-grid" style="margin-bottom:4px;">
         <div class="form-group">
           <label class="form-label">Budget (Millions) <span class="req">*</span></label>
           <div class="radio-group" id="f-budget" style="flex-direction:column">
@@ -686,29 +675,18 @@
           </div>
         </div>
       </div>
-      <div class="step-nav">
-        <button class="step-nav-btn back" onclick="goStep(2)"><i class="fas fa-arrow-left"></i> Back</button>
-        <button class="step-nav-btn next" onclick="goStep(4)">Next <i class="fas fa-arrow-right"></i></button>
-      </div>
-    </div>
+    </div><!-- end full-details-section -->
 
-    <!-- STEP 4: Notes + Submit -->
-    <div class="step-panel" id="step-4">
-      <div class="step-title">📝 Step 4 — Notes & Submit</div>
-      <div class="step-sub">Add any extra notes and submit</div>
-      <div class="form-group">
-        <label class="form-label">Extra Notes</label>
-        <textarea id="f-extra" class="form-input" placeholder="Any additional notes..." rows="4"></textarea>
-      </div>
-      <button class="submit-btn" id="formSubmitBtn" onclick="submitCallLogForm()">
-        <i class="fas fa-paper-plane"></i> Submit to Database
-      </button>
-      <div id="form-success" class="form-feedback form-success">✅ Call logged successfully!</div>
-      <div id="form-error" class="form-feedback form-error"></div>
-      <div class="step-nav" style="margin-top:12px;">
-        <button class="step-nav-btn back" onclick="goStep(3)"><i class="fas fa-arrow-left"></i> Back</button>
-      </div>
+    <!-- ═══ NOTES + SUBMIT — always visible ═══ -->
+    <div class="form-group">
+      <label class="form-label">Extra Notes</label>
+      <textarea id="f-extra" class="form-input" placeholder="Any additional notes..." rows="3"></textarea>
     </div>
+    <button class="submit-btn" id="formSubmitBtn" onclick="submitCallLogForm()" style="margin-top:8px;">
+      <i class="fas fa-paper-plane"></i> Submit to Database
+    </button>
+    <div id="form-success" class="form-feedback form-success">✅ Call logged successfully!</div>
+    <div id="form-error" class="form-feedback form-error"></div>
 
   </div>
 
