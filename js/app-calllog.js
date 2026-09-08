@@ -26,10 +26,15 @@ function selectRadio(groupId, el, value) {
 }
 
 function toggleFormSections() {
-  const r = document.getElementById('f-reason').value;
+  const r = document.getElementById('f-category2').value;
   const q = (r === 'Wrong Number' || r === 'Call Dropped');
   const mobileSection = document.getElementById('mobile-section');
   if (mobileSection) mobileSection.style.display = q ? 'none' : 'block';
+  // إخفاء / إظهار Project و Category 1 حسب اللي اتحدد
+  const projEl = document.getElementById('f-project');
+  const cat1El = document.getElementById('f-category1');
+  if (projEl) projEl.closest('.form-group').style.display = q ? 'none' : '';
+  if (cat1El) cat1El.closest('.form-group').parentElement.style.display = q ? 'none' : '';
 }
 
 /* ─── QUICK LOG ─── */
@@ -54,6 +59,7 @@ function quickLogCall(reason) {
     body: JSON.stringify({
       agent_name: agent, call_direction: 'inbound',
       customer_name: '', customer_mobile: '',
+      project: '', category_1: '',
       call_reason: reason, communication_channel: '', media_source: '',
       business_relativity: '', sales_call_requested: '',
       budget: '', unit_type: '', extra_notes: '',
@@ -85,14 +91,18 @@ function quickLogCall(reason) {
 
 /* ─── SUBMIT FORM ─── */
 function submitCallLogForm() {
-  const agent  = document.getElementById('f-agent').value;
-  const reason = document.getElementById('f-reason').value;
-  const mobile = document.getElementById('f-mobile').value.trim();
-  const cname  = document.getElementById('f-cname').value.trim();
-  const isQ    = (reason === 'Wrong Number' || reason === 'Call Dropped');
+  const agent   = document.getElementById('f-agent').value;
+  const project = document.getElementById('f-project').value;
+  const cat1    = document.getElementById('f-category1').value;
+  const reason  = document.getElementById('f-category2').value;
+  const mobile  = document.getElementById('f-mobile').value.trim();
+  const cname   = document.getElementById('f-cname').value.trim();
+  const isQ     = (reason === 'Wrong Number' || reason === 'Call Dropped');
 
   if (!agent)                              { showFormErr('Please select Agent Name!'); return; }
-  if (!reason)                             { showFormErr('Please select Call Reason!'); return; }
+  if (!reason)                             { showFormErr('Please select Category 2!'); return; }
+  if (!isQ && !project)                    { showFormErr('Please select Project!'); return; }
+  if (!isQ && !cat1)                       { showFormErr('Please select Category 1!'); return; }
   if (!isQ && !cname)                      { showFormErr('Please enter Customer Name!'); return; }
   if (!isQ && !mobile)                     { showFormErr('Please enter Customer Mobile!'); return; }
   if (!isQ && !radioValues['f-bizrel'])    { showFormErr('Select Business Relativity!'); return; }
@@ -118,6 +128,8 @@ function submitCallLogForm() {
 
   const data = {
     agent, reason,
+    project:   isQ ? '' : project,
+    category1: isQ ? '' : cat1,
     direction: radioValues['f-direction'] || 'inbound',
     cname:     isQ ? '' : cname,
     mobile:    isQ ? '' : mobile,
@@ -143,6 +155,8 @@ function submitCallLogForm() {
       call_direction:        data.direction,
       customer_name:         data.cname,
       customer_mobile:       data.mobile,
+      project:               data.project,
+      category_1:            data.category1,
       call_reason:           data.reason,
       communication_channel: data.channel,
       media_source:          data.media,
@@ -194,7 +208,10 @@ function submitCallLogForm() {
 }
 
 function resetCallForm() {
-  ['f-reason','f-mobile','f-extra'].forEach(id => document.getElementById(id).value = '');
+  ['f-project','f-category1','f-category2','f-mobile','f-extra'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = '';
+  });
   document.getElementById('f-cname').value = '';
   radioValues = { 'f-direction': 'inbound' };
   document.querySelectorAll('.radio-opt').forEach(o => o.classList.remove('selected'));
@@ -202,6 +219,11 @@ function resetCallForm() {
   const inboundOpt = document.querySelector('#f-direction .radio-opt');
   if (inboundOpt) inboundOpt.classList.add('selected');
   document.getElementById('mobile-section').style.display = 'block';
+  // أعد إظهار Project و Category 1
+  const projEl = document.getElementById('f-project');
+  const cat1El = document.getElementById('f-category1');
+  if (projEl) projEl.closest('.form-group').style.display = '';
+  if (cat1El) cat1El.closest('.form-group').parentElement.style.display = '';
   document.getElementById('form-success').style.display   = 'none';
   document.getElementById('form-error').style.display     = 'none';
   goStep(1);
@@ -214,9 +236,15 @@ function goStep(n) {
   if (n > _currentStep) {
     if (_currentStep === 1) {
       const agent  = document.getElementById('f-agent').value;
-      const reason = document.getElementById('f-reason').value;
-      if (!agent || !reason) { showFormErr('Please select Agent and Call Reason!'); return; }
-      if (reason === 'Wrong Number' || reason === 'Call Dropped') { n = 4; }
+      const cat2   = document.getElementById('f-category2').value;
+      if (!agent || !cat2) { showFormErr('Please select Agent and Category 2!'); return; }
+      if (cat2 === 'Wrong Number' || cat2 === 'Call Dropped') { n = 4; }
+      else {
+        const project = document.getElementById('f-project').value;
+        const cat1    = document.getElementById('f-category1').value;
+        if (!project) { showFormErr('Please select Project!'); return; }
+        if (!cat1)    { showFormErr('Please select Category 1!'); return; }
+      }
     }
   }
   for (let i = 1; i <= 4; i++) {
@@ -277,12 +305,12 @@ function searchCustomer() {
           </div>
         </div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:12px;">
-          <div><span style="color:var(--muted);">Reason: </span><span style="font-weight:600;color:${reasonColor};">${r.call_reason||'-'}</span></div>
+          <div><span style="color:var(--muted);">Project: </span><span style="font-weight:600;color:var(--accent,var(--primary));">${r.project||'-'}</span></div>
+          <div><span style="color:var(--muted);">Category: </span><span style="font-weight:600;color:${reasonColor};">${r.category_1 ? r.category_1 + ' → ' : ''}${r.call_reason||'-'}</span></div>
           <div><span style="color:var(--muted);">Agent: </span><span style="font-weight:600;color:var(--text);">${r.agent_name||'-'}</span></div>
-          <div><span style="color:var(--muted);">Media: </span><span style="font-weight:600;color:var(--text);">${r.media_source||'-'}</span></div>
           <div><span style="color:var(--muted);">Channel: </span><span style="font-weight:600;color:var(--text);">${r.communication_channel||'-'}</span></div>
+          <div><span style="color:var(--muted);">Media: </span><span style="font-weight:600;color:var(--text);">${r.media_source||'-'}</span></div>
           <div><span style="color:var(--muted);">Budget: </span><span style="font-weight:600;color:var(--text);">${r.budget||'-'}</span></div>
-          <div><span style="color:var(--muted);">Unit: </span><span style="font-weight:600;color:var(--text);">${r.unit_type||'-'}</span></div>
         </div>
         ${r.extra_notes&&r.extra_notes.trim()&&r.extra_notes!=='-'?`<div style="margin-top:10px;padding:10px;background:var(--surface);border-radius:10px;border:1px solid var(--border);font-size:12px;color:var(--muted);"><i class="fas fa-sticky-note" style="margin-right:6px;color:var(--warn);"></i>${r.extra_notes}</div>`:''}
       </div>`;
@@ -328,11 +356,11 @@ async function loadLastTwoCalls(agentName) {
           </div>
         </div>
         <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;font-size:11px;">
-          <div><span style="color:var(--muted);">Reason: </span><span style="font-weight:700;color:var(--primary);">${c.call_reason||'—'}</span></div>
+          <div><span style="color:var(--muted);">Project: </span><span style="font-weight:700;color:var(--accent,var(--primary));">${c.project||'—'}</span></div>
+          <div><span style="color:var(--muted);">Category: </span><span style="font-weight:700;color:var(--primary);">${c.category_1 ? c.category_1 + ' → ' : ''}${c.call_reason||'—'}</span></div>
           <div><span style="color:var(--muted);">Channel: </span><span style="font-weight:700;color:var(--text);">${c.communication_channel||'—'}</span></div>
           <div><span style="color:var(--muted);">Media: </span><span style="font-weight:700;color:var(--text);">${c.media_source||'—'}</span></div>
           <div><span style="color:var(--muted);">Budget: </span><span style="font-weight:700;color:var(--text);">${c.budget||'—'}</span></div>
-          <div><span style="color:var(--muted);">Unit: </span><span style="font-weight:700;color:var(--text);">${c.unit_type||'—'}</span></div>
           <div><span style="color:var(--muted);">Sales: </span><span style="font-weight:700;color:var(--text);">${c.sales_call_requested||'—'}</span></div>
         </div>
         ${c.extra_notes&&c.extra_notes.trim()&&c.extra_notes!=='-'?`<div style="margin-top:8px;padding:8px;background:var(--surface);border-radius:8px;border:1px solid var(--border);font-size:11px;color:var(--muted);"><i class="fas fa-sticky-note" style="margin-right:5px;color:var(--warn);"></i>${c.extra_notes}</div>`:''}`
@@ -372,7 +400,7 @@ async function step1SearchCustomer() {
             ${getChannelBadge(c._source)}
           </div>
           <div style="color:var(--muted);font-family:monospace;">${c.customer_mobile || '-'}</div>
-          <div style="color:var(--muted);">${c.call_reason || '-'} · ${c.agent_name || '-'}</div>
+          <div style="color:var(--muted);">${c.project ? c.project + ' · ' : ''}${c.call_reason || '-'} · ${c.agent_name || '-'}</div>
           <div style="color:var(--muted);font-size:11px;">${c.logged_at ? new Date(c.logged_at).toLocaleDateString('en-GB') : ''}</div>
         </div>`).join('');
     }
@@ -512,11 +540,11 @@ async function fetchMyCallLog(agent) {
             </div>
           </div>
           <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;font-size:12px;">
-            <div><span style="color:var(--muted);">Reason: </span><span style="font-weight:700;color:${reasonColor};">${c.call_reason||'—'}</span></div>
+            <div><span style="color:var(--muted);">Project: </span><span style="font-weight:700;color:var(--accent,var(--primary));">${c.project||'—'}</span></div>
+            <div><span style="color:var(--muted);">Category: </span><span style="font-weight:700;color:${reasonColor};">${c.category_1 ? c.category_1 + ' → ' : ''}${c.call_reason||'—'}</span></div>
             <div><span style="color:var(--muted);">Channel: </span><span style="font-weight:600;color:var(--text);">${c.communication_channel||'—'}</span></div>
             <div><span style="color:var(--muted);">Media: </span><span style="font-weight:600;color:var(--text);">${c.media_source||'—'}</span></div>
             <div><span style="color:var(--muted);">Budget: </span><span style="font-weight:600;color:var(--text);">${c.budget||'—'}</span></div>
-            <div><span style="color:var(--muted);">Unit: </span><span style="font-weight:600;color:var(--text);">${c.unit_type||'—'}</span></div>
             <div><span style="color:var(--muted);">Sales: </span><span style="font-weight:600;color:var(--text);">${c.sales_call_requested||'—'}</span></div>
           </div>
           ${c.extra_notes&&c.extra_notes.trim()&&c.extra_notes!=='-' ? `
@@ -575,13 +603,15 @@ function openEditCallModal(callData) {
   const existing = document.getElementById('edit-call-modal');
   if (existing) existing.remove();
 
-  const reasonOptions  = ['Wrong Number','Call Dropped','Asking about the projects','Jirian campaign','Jirian Island campaign','Sky Ridge Elite','Sky Ridge Executives','Zomra','ISLA','Upviews','Broker','Delayed sales call','EOI Refund','Collaboration request','Non-Business General Inquiry','Business General Inquiry','Complaint',"Shakira's Event",' Perla'];
-  const channelOptions = ['Whatsapp','Mobile','Email','Alternative Mobile','SMS','N/A'];
-  const mediaOptions   = ['Billboards','Saw site','Facebook','Instagram','Linkedin','Word of mouth','TV ad.','Youtube','N/A'];
-  const budgetOptions  = ['0 - 10','10 - 20','20 +','N/A'];
-  const unitOptions    = ['Apartment','Villa','Commercial','Admin','Twin House','Stand Alone House','Town House','N/A'];
-  const bizrelOptions  = ['Business Related','Non-Business Related'];
-  const salesOptions   = ['Yes','No','N/A'];
+  const projectOptions  = ['Sky Ridge Elite','Sky Ridge Executives','Zomra','Perla','Upviews','Jirian','Isla'];
+  const cat1Options     = ['Request','Complaint','Inquiry'];
+  const reasonOptions   = ['Sales Lead','Events','EOI Refund','Wrong Number','Call Dropped','Resale','Data Update','Finishing Process','Delivery Date','Financial - Bounced Cheque','Financial - Postponing Cheque','Financial - Receiving Cheque','Financial - Cash Discount','Financial - Cash Payment','Financial - Changing Cheques','Financial - Collective Cheque','Financial - Down Payment','Financial - Due Payment','Financial - Payment Receipt','Financial - Maintenance Cheque','Financial - Pay In Advance','Financial - Payment Details','Financial - Redeposit','Financial - Relinquishment','Financial - Reschedule','Other','Unit Movement','Modification','Receiving Contract','EOI Payment','Pre Delivery Site Visit','Delegation','Construction Update','Cancellation','Delivery Inspection','Unit Upgrade','Unit Downgrade','Auto Cad','Sales - Attitude','Sales - Wrong Info'];
+  const channelOptions  = ['Whatsapp','Mobile','Email','Alternative Mobile','SMS','N/A'];
+  const mediaOptions    = ['Billboards','Saw site','Facebook','Instagram','Linkedin','Word of mouth','TV ad.','Youtube','N/A'];
+  const budgetOptions   = ['0 - 10','10 - 20','20 +','N/A'];
+  const unitOptions     = ['Apartment','Villa','Commercial','Admin','Twin House','Stand Alone House','Town House','N/A'];
+  const bizrelOptions   = ['Business Related','Non-Business Related'];
+  const salesOptions    = ['Yes','No','N/A'];
 
   function opts(list, current) {
     return list.map(o => `<option value="${o}" ${current === o ? 'selected' : ''}>${o}</option>`).join('');
@@ -618,8 +648,20 @@ function openEditCallModal(callData) {
           <label style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;display:block;margin-bottom:6px;">Customer Mobile</label>
           <input id="edit-mobile" class="form-input" type="text" value="${callData.customer_mobile || ''}" placeholder="Customer Mobile">
         </div>
+        <div id="edit-project-fields" style="${isQ ? 'display:none' : ''}">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px;">
+            <div>
+              <label style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;display:block;margin-bottom:6px;">Project</label>
+              <select id="edit-project" class="form-input"><option value="">—</option>${opts(projectOptions, callData.project)}</select>
+            </div>
+            <div>
+              <label style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;display:block;margin-bottom:6px;">Category 1</label>
+              <select id="edit-cat1" class="form-input"><option value="">—</option>${opts(cat1Options, callData.category_1)}</select>
+            </div>
+          </div>
+        </div>
         <div>
-          <label style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;display:block;margin-bottom:6px;">Call Reason</label>
+          <label style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;display:block;margin-bottom:6px;">Category 2</label>
           <select id="edit-reason" class="form-input" onchange="toggleEditSections()">${opts(reasonOptions, callData.call_reason)}</select>
         </div>
         <div id="edit-extra-fields" style="${isQ ? 'display:none' : ''}">
@@ -670,7 +712,9 @@ function toggleEditSections() {
   const reason = document.getElementById('edit-reason')?.value;
   const isQ = reason === 'Wrong Number' || reason === 'Call Dropped';
   const extra = document.getElementById('edit-extra-fields');
+  const projFields = document.getElementById('edit-project-fields');
   if (extra) extra.style.display = isQ ? 'none' : '';
+  if (projFields) projFields.style.display = isQ ? 'none' : '';
 }
 
 async function saveEditCallLog() {
@@ -681,6 +725,8 @@ async function saveEditCallLog() {
   const errEl       = document.getElementById('edit-error-msg');
   const saveBtn     = document.getElementById('edit-save-btn');
 
+  const project   = isQ ? '' : (document.getElementById('edit-project')?.value || '');
+  const cat1      = isQ ? '' : (document.getElementById('edit-cat1')?.value || '');
   const cname     = document.getElementById('edit-cname').value.trim();
   const mobile    = document.getElementById('edit-mobile').value.trim();
   const channel   = isQ ? '' : document.getElementById('edit-channel').value;
@@ -691,8 +737,10 @@ async function saveEditCallLog() {
   const salescall = isQ ? '' : document.getElementById('edit-salescall').value;
   const extra     = document.getElementById('edit-extra').value.trim();
 
-  if (!isQ && !cname)  { showEditError('Please enter Customer Name'); return; }
-  if (!isQ && !mobile) { showEditError('Please enter Customer Mobile'); return; }
+  if (!isQ && !project) { showEditError('Please select Project'); return; }
+  if (!isQ && !cat1)    { showEditError('Please select Category 1'); return; }
+  if (!isQ && !cname)   { showEditError('Please enter Customer Name'); return; }
+  if (!isQ && !mobile)  { showEditError('Please enter Customer Mobile'); return; }
 
   errEl.style.display = 'none';
   setButtonLoading(saveBtn, true, 'Saving...');
@@ -711,6 +759,8 @@ async function saveEditCallLog() {
         body: JSON.stringify({
           customer_name:         isQ ? '' : cname,
           customer_mobile:       isQ ? '' : mobile,
+          project:               project,
+          category_1:            cat1,
           call_reason:           reason,
           communication_channel: channel,
           media_source:          media,
