@@ -16,6 +16,58 @@ function getChannelBadge(channel) {
     border:1px solid #93c5fd;border-radius:6px;padding:2px 8px;font-size:10px;font-weight:700;">📞 Call</span>`;
 }
 
+/* ─── REFERENCE DATA — shared with Admin Portal ─── */
+window._callReasonOptions = [];
+window._callReasonCategories = ['Projects Leads', 'Business Related', 'Others'];
+window._projectOptions = ['Sky Ridge Elite','Sky Ridge Executives','Zomra','Perla','Upviews','Jirian','Isla'];
+
+function escapeOptionValue(value) {
+  return String(value || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+function refreshCategory2Options() {
+  const project = document.getElementById('f-project');
+  const cat1 = document.getElementById('f-category1');
+  const cat2 = document.getElementById('f-category2');
+  if (!project || !cat1 || !cat2) return;
+  const ready = Boolean(project.value && cat1.value);
+  const previous = cat2.value;
+  const reasons = window._callReasonOptions.filter(r => r.category === cat1.value);
+  cat2.disabled = !ready;
+  cat2.innerHTML = ready
+    ? '<option value="">Choose...</option>' + reasons.map(r => `<option value="${escapeOptionValue(r.name)}">${escapeOptionValue(r.name)}</option>`).join('')
+    : '<option value="">Choose a project and Category 1 first...</option>';
+  if (ready && reasons.some(r => r.name === previous)) cat2.value = previous;
+  toggleFormSections();
+}
+
+async function loadCallLogReferences() {
+  const headers = { 'apikey': SB_KEY_SCH, 'Authorization': `Bearer ${window._authToken || SB_KEY_SCH}` };
+  try {
+    const res = await fetch(`${SB_URL_SCH}/rest/v1/call_reasons?select=name,category,is_active,sort_order&is_active=eq.true&order=sort_order,name`, { headers });
+    if (!res.ok) throw new Error('Reference data unavailable');
+    const rows = await res.json();
+    window._callReasonOptions = (rows || []).filter(r => r.name && r.name !== 'Wrong Number' && r.name !== 'Call Dropped');
+    const projects = (rows || []).filter(r => r.name && r.category === 'Projects Leads' && r.name !== 'Wrong Number' && r.name !== 'Call Dropped').map(r => r.name);
+    if (projects.length) window._projectOptions = [...new Set(projects)];
+  } catch (e) {
+    window._callReasonOptions = [];
+  }
+  const cat1 = document.getElementById('f-category1');
+  const project = document.getElementById('f-project');
+  if (cat1) cat1.innerHTML = '<option value="">Choose...</option>' + window._callReasonCategories.map(c => `<option value="${escapeOptionValue(c)}">${escapeOptionValue(c)}</option>`).join('');
+  if (project) project.innerHTML = '<option value="">Choose...</option>' + window._projectOptions.map(p => `<option value="${escapeOptionValue(p)}">${escapeOptionValue(p)}</option>`).join('');
+  refreshCategory2Options();
+}
+
+window.addEventListener('load', () => {
+  const project = document.getElementById('f-project');
+  const cat1 = document.getElementById('f-category1');
+  if (project) project.addEventListener('change', refreshCategory2Options);
+  if (cat1) cat1.addEventListener('change', refreshCategory2Options);
+  loadCallLogReferences();
+});
+
 /* ─── 16. CALL LOG FORM ─── */
 function onAgentSelect() {}
 
@@ -26,20 +78,10 @@ function selectRadio(groupId, el, value) {
 }
 
 function toggleFormSections() {
-  const r = document.getElementById('f-category2').value;
-  const q = (r === 'Wrong Number' || r === 'Call Dropped');
-  // إخفاء / إظهار كل الـ details section
   const fullSection = document.getElementById('full-details-section');
   const classRow    = document.getElementById('classification-row');
-  if (fullSection) fullSection.style.display = q ? 'none' : '';
-  // اخفي Project و Cat1 لما يكون Wrong Number / Call Dropped
-  if (classRow) {
-    classRow.style.gridTemplateColumns = q ? '1fr' : '1fr 1fr 1fr';
-    const projGroup = document.getElementById('f-project')?.closest('.form-group');
-    const cat1Group = document.getElementById('f-category1')?.closest('.form-group');
-    if (projGroup) projGroup.style.display = q ? 'none' : '';
-    if (cat1Group) cat1Group.style.display = q ? 'none' : '';
-  }
+  if (fullSection) fullSection.style.display = '';
+  if (classRow) classRow.style.gridTemplateColumns = '1fr 1fr 1fr';
 }
 
 /* ─── QUICK LOG ─── */
@@ -102,20 +144,18 @@ function submitCallLogForm() {
   const reason  = document.getElementById('f-category2').value;
   const mobile  = document.getElementById('f-mobile').value.trim();
   const cname   = document.getElementById('f-cname').value.trim();
-  const isQ     = (reason === 'Wrong Number' || reason === 'Call Dropped');
-
   if (!agent)                              { showFormErr('Please select Agent Name!'); return; }
   if (!reason)                             { showFormErr('Please select Category 2!'); return; }
-  if (!isQ && !project)                    { showFormErr('Please select Project!'); return; }
-  if (!isQ && !cat1)                       { showFormErr('Please select Category 1!'); return; }
-  if (!isQ && !cname)                      { showFormErr('Please enter Customer Name!'); return; }
-  if (!isQ && !mobile)                     { showFormErr('Please enter Customer Mobile!'); return; }
-  if (!isQ && !radioValues['f-bizrel'])    { showFormErr('Select Business Relativity!'); return; }
-  if (!isQ && !radioValues['f-salescall']) { showFormErr('Select Sales Call Requested!'); return; }
-  if (!isQ && !radioValues['f-channel'])   { showFormErr('Select Communication Channel!'); return; }
-  if (!isQ && !radioValues['f-media'])     { showFormErr('Select Media Source!'); return; }
-  if (!isQ && !radioValues['f-budget'])    { showFormErr('Select Budget!'); return; }
-  if (!isQ && !radioValues['f-unit'])      { showFormErr('Select Unit Type!'); return; }
+  if (!project)                           { showFormErr('Please select Project!'); return; }
+  if (!cat1)                              { showFormErr('Please select Category 1!'); return; }
+  if (!cname)                             { showFormErr('Please enter Customer Name!'); return; }
+  if (!mobile)                            { showFormErr('Please enter Customer Mobile!'); return; }
+  if (!radioValues['f-bizrel'])           { showFormErr('Select Business Relativity!'); return; }
+  if (!radioValues['f-salescall'])        { showFormErr('Select Sales Call Requested!'); return; }
+  if (!radioValues['f-channel'])          { showFormErr('Select Communication Channel!'); return; }
+  if (!radioValues['f-media'])            { showFormErr('Select Media Source!'); return; }
+  if (!radioValues['f-budget'])           { showFormErr('Select Budget!'); return; }
+  if (!radioValues['f-unit'])             { showFormErr('Select Unit Type!'); return; }
 
   const table = getActiveTable();
   const label = (window._activeChannel === 'whatsapp') ? 'WhatsApp' : 'Call';
@@ -133,17 +173,17 @@ function submitCallLogForm() {
 
   const data = {
     agent, reason,
-    project:   isQ ? '' : project,
-    category1: isQ ? '' : cat1,
+    project,
+    category1: cat1,
     direction: radioValues['f-direction'] || 'inbound',
-    cname:     isQ ? '' : cname,
-    mobile:    isQ ? '' : mobile,
-    bizrel:    isQ ? '' : (radioValues['f-bizrel']    || ''),
-    salescall: isQ ? '' : (radioValues['f-salescall'] || ''),
-    channel:   isQ ? '' : (radioValues['f-channel']   || ''),
-    media:     isQ ? '' : (radioValues['f-media']      || ''),
-    budget:    isQ ? '' : (radioValues['f-budget']     || ''),
-    unit:      isQ ? '' : (radioValues['f-unit']       || ''),
+    cname,
+    mobile,
+    bizrel:    radioValues['f-bizrel']    || '',
+    salescall: radioValues['f-salescall'] || '',
+    channel:   radioValues['f-channel']   || '',
+    media:     radioValues['f-media']    || '',
+    budget:    radioValues['f-budget']   || '',
+    unit:      radioValues['f-unit']     || '',
     extra: document.getElementById('f-extra').value.trim()
   };
 
@@ -227,10 +267,11 @@ function resetCallForm() {
   const classRow    = document.getElementById('classification-row');
   if (fullSection) fullSection.style.display = '';
   if (classRow) classRow.style.gridTemplateColumns = '1fr 1fr 1fr';
-  const projGroup = document.getElementById('f-project')?.closest('.form-group');
-  const cat1Group = document.getElementById('f-category1')?.closest('.form-group');
-  if (projGroup) projGroup.style.display = '';
-  if (cat1Group) cat1Group.style.display = '';
+  const cat2 = document.getElementById('f-category2');
+  if (cat2) {
+    cat2.disabled = true;
+    cat2.innerHTML = '<option value="">Choose a project and Category 1 first...</option>';
+  }
   document.getElementById('form-success').style.display = 'none';
   document.getElementById('form-error').style.display   = 'none';
 }
@@ -582,9 +623,9 @@ function openEditCallModal(callData) {
   const existing = document.getElementById('edit-call-modal');
   if (existing) existing.remove();
 
-  const projectOptions  = ['Sky Ridge Elite','Sky Ridge Executives','Zomra','Perla','Upviews','Jirian','Isla'];
-  const cat1Options     = ['Request','Complaint','Inquiry'];
-  const reasonOptions   = ['Sales Lead','Events','EOI Refund','Wrong Number','Call Dropped','Resale','Data Update','Finishing Process','Delivery Date','Financial - Bounced Cheque','Financial - Postponing Cheque','Financial - Receiving Cheque','Financial - Cash Discount','Financial - Cash Payment','Financial - Changing Cheques','Financial - Collective Cheque','Financial - Down Payment','Financial - Due Payment','Financial - Payment Receipt','Financial - Maintenance Cheque','Financial - Pay In Advance','Financial - Payment Details','Financial - Redeposit','Financial - Relinquishment','Financial - Reschedule','Other','Unit Movement','Modification','Receiving Contract','EOI Payment','Pre Delivery Site Visit','Delegation','Construction Update','Cancellation','Delivery Inspection','Unit Upgrade','Unit Downgrade','Auto Cad','Sales - Attitude','Sales - Wrong Info'];
+  const projectOptions  = window._projectOptions || ['Sky Ridge Elite','Sky Ridge Executives','Zomra','Perla','Upviews','Jirian','Isla'];
+  const cat1Options     = window._callReasonCategories || ['Projects Leads','Business Related','Others'];
+  const reasonOptions   = [...new Set((window._callReasonOptions || []).map(r => r.name).concat(callData.call_reason || '').filter(Boolean))];
   const channelOptions  = ['Whatsapp','Mobile','Email','Alternative Mobile','SMS','N/A'];
   const mediaOptions    = ['Billboards','Saw site','Facebook','Instagram','Linkedin','Word of mouth','TV ad.','Youtube','N/A'];
   const budgetOptions   = ['0 - 10','10 - 20','20 +','N/A'];
@@ -631,7 +672,7 @@ function openEditCallModal(callData) {
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px;">
             <div>
               <label style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;display:block;margin-bottom:6px;">Project</label>
-              <select id="edit-project" class="form-input"><option value="">—</option>${opts(projectOptions, callData.project)}</select>
+              <select id="edit-project" class="form-input"><option value="">Choose...</option>${opts(projectOptions, callData.project)}</select>
             </div>
             <div>
               <label style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;display:block;margin-bottom:6px;">Category 1</label>
