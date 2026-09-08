@@ -28,13 +28,18 @@ function selectRadio(groupId, el, value) {
 function toggleFormSections() {
   const r = document.getElementById('f-category2').value;
   const q = (r === 'Wrong Number' || r === 'Call Dropped');
-  const mobileSection = document.getElementById('mobile-section');
-  if (mobileSection) mobileSection.style.display = q ? 'none' : 'block';
-  // إخفاء / إظهار Project و Category 1 حسب اللي اتحدد
-  const projEl = document.getElementById('f-project');
-  const cat1El = document.getElementById('f-category1');
-  if (projEl) projEl.closest('.form-group').style.display = q ? 'none' : '';
-  if (cat1El) cat1El.closest('.form-group').parentElement.style.display = q ? 'none' : '';
+  // إخفاء / إظهار كل الـ details section
+  const fullSection = document.getElementById('full-details-section');
+  const classRow    = document.getElementById('classification-row');
+  if (fullSection) fullSection.style.display = q ? 'none' : '';
+  // اخفي Project و Cat1 لما يكون Wrong Number / Call Dropped
+  if (classRow) {
+    classRow.style.gridTemplateColumns = q ? '1fr' : '1fr 1fr 1fr';
+    const projGroup = document.getElementById('f-project')?.closest('.form-group');
+    const cat1Group = document.getElementById('f-category1')?.closest('.form-group');
+    if (projGroup) projGroup.style.display = q ? 'none' : '';
+    if (cat1Group) cat1Group.style.display = q ? 'none' : '';
+  }
 }
 
 /* ─── QUICK LOG ─── */
@@ -215,50 +220,24 @@ function resetCallForm() {
   document.getElementById('f-cname').value = '';
   radioValues = { 'f-direction': 'inbound' };
   document.querySelectorAll('.radio-opt').forEach(o => o.classList.remove('selected'));
-  // Re-select Inbound as default
   const inboundOpt = document.querySelector('#f-direction .radio-opt');
   if (inboundOpt) inboundOpt.classList.add('selected');
-  document.getElementById('mobile-section').style.display = 'block';
-  // أعد إظهار Project و Category 1
-  const projEl = document.getElementById('f-project');
-  const cat1El = document.getElementById('f-category1');
-  if (projEl) projEl.closest('.form-group').style.display = '';
-  if (cat1El) cat1El.closest('.form-group').parentElement.style.display = '';
-  document.getElementById('form-success').style.display   = 'none';
-  document.getElementById('form-error').style.display     = 'none';
-  goStep(1);
+  // أعد إظهار كل الأقسام
+  const fullSection = document.getElementById('full-details-section');
+  const classRow    = document.getElementById('classification-row');
+  if (fullSection) fullSection.style.display = '';
+  if (classRow) classRow.style.gridTemplateColumns = '1fr 1fr 1fr';
+  const projGroup = document.getElementById('f-project')?.closest('.form-group');
+  const cat1Group = document.getElementById('f-category1')?.closest('.form-group');
+  if (projGroup) projGroup.style.display = '';
+  if (cat1Group) cat1Group.style.display = '';
+  document.getElementById('form-success').style.display = 'none';
+  document.getElementById('form-error').style.display   = 'none';
 }
 
-/* ─── STEP NAVIGATION ─── */
+/* ─── goStep — kept as no-op for backward compat ─── */
 let _currentStep = 1;
-
-function goStep(n) {
-  if (n > _currentStep) {
-    if (_currentStep === 1) {
-      const agent  = document.getElementById('f-agent').value;
-      const cat2   = document.getElementById('f-category2').value;
-      if (!agent || !cat2) { showFormErr('Please select Agent and Category 2!'); return; }
-      if (cat2 === 'Wrong Number' || cat2 === 'Call Dropped') { n = 4; }
-      else {
-        const project = document.getElementById('f-project').value;
-        const cat1    = document.getElementById('f-category1').value;
-        if (!project) { showFormErr('Please select Project!'); return; }
-        if (!cat1)    { showFormErr('Please select Category 1!'); return; }
-      }
-    }
-  }
-  for (let i = 1; i <= 4; i++) {
-    const dot  = document.getElementById('sdot-' + i);
-    const line = document.getElementById('sline-' + i);
-    if (i < n)        { dot.className = 'step-dot done'; dot.innerHTML = '✓'; }
-    else if (i === n) { dot.className = 'step-dot active'; dot.innerHTML = i; }
-    else              { dot.className = 'step-dot'; dot.innerHTML = i; }
-    if (line) line.className = i < n ? 'step-line done' : 'step-line';
-  }
-  document.querySelectorAll('.step-panel').forEach(p => p.classList.remove('active'));
-  document.getElementById('step-' + n).classList.add('active');
-  _currentStep = n;
-}
+function goStep(n) { /* no-op — single page form */ }
 
 function showFormErr(msg) {
   showResultPopup('error', 'Check Your Data', msg, 'Got it');
