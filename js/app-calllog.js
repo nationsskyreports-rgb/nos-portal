@@ -42,6 +42,26 @@ function toggleFormSections() {
   }
 }
 
+function toggleProjectCategoryFields() {
+  const project = document.getElementById('f-project')?.value || '';
+  const projectNames = ['Sky Ridge Elite','Sky Ridge Executives','Zomra','Perla','Upviews','Jirian','Isla'];
+  const showCategories = projectNames.includes(project);
+  const row = document.getElementById('classification-row');
+  const cat1Group = document.getElementById('f-category1')?.closest('.form-group');
+  const cat2Group = document.getElementById('f-category2')?.closest('.form-group');
+  if (cat1Group) cat1Group.style.display = showCategories ? '' : 'none';
+  if (cat2Group) cat2Group.style.display = showCategories ? '' : 'none';
+  if (row) row.style.gridTemplateColumns = showCategories ? '1fr 1fr 1fr' : '1fr';
+  if (!showCategories) {
+    const cat1 = document.getElementById('f-category1');
+    const cat2 = document.getElementById('f-category2');
+    if (cat1) cat1.value = '';
+    if (cat2) cat2.value = '';
+  }
+}
+
+window.addEventListener('load', toggleProjectCategoryFields);
+
 /* ─── QUICK LOG ─── */
 function quickLogCall(reason) {
   const agent = document.getElementById('f-agent').value;
@@ -103,11 +123,13 @@ function submitCallLogForm() {
   const mobile  = document.getElementById('f-mobile').value.trim();
   const cname   = document.getElementById('f-cname').value.trim();
   const isQ     = (reason === 'Wrong Number' || reason === 'Call Dropped');
+  const projectNames = ['Sky Ridge Elite','Sky Ridge Executives','Zomra','Perla','Upviews','Jirian','Isla'];
+  const isProject = projectNames.includes(project);
 
   if (!agent)                              { showFormErr('Please select Agent Name!'); return; }
-  if (!reason)                             { showFormErr('Please select Category 2!'); return; }
+  if (isProject && !reason)                { showFormErr('Please select Category 2!'); return; }
   if (!isQ && !project)                    { showFormErr('Please select Project!'); return; }
-  if (!isQ && !cat1)                       { showFormErr('Please select Category 1!'); return; }
+  if (isProject && !cat1)                  { showFormErr('Please select Category 1!'); return; }
   if (!isQ && !cname)                      { showFormErr('Please enter Customer Name!'); return; }
   if (!isQ && !mobile)                     { showFormErr('Please enter Customer Mobile!'); return; }
   if (!isQ && !radioValues['f-bizrel'])    { showFormErr('Select Business Relativity!'); return; }
@@ -134,7 +156,7 @@ function submitCallLogForm() {
   const data = {
     agent, reason,
     project:   isQ ? '' : project,
-    category1: isQ ? '' : cat1,
+    category1: isQ || !isProject ? '' : cat1,
     direction: radioValues['f-direction'] || 'inbound',
     cname:     isQ ? '' : cname,
     mobile:    isQ ? '' : mobile,
@@ -222,15 +244,10 @@ function resetCallForm() {
   document.querySelectorAll('.radio-opt').forEach(o => o.classList.remove('selected'));
   const inboundOpt = document.querySelector('#f-direction .radio-opt');
   if (inboundOpt) inboundOpt.classList.add('selected');
-  // أعد إظهار كل الأقسام
+  // أعد إظهار التفاصيل، وأخفِ التصنيفات حتى يتم اختيار مشروع فعلي
   const fullSection = document.getElementById('full-details-section');
-  const classRow    = document.getElementById('classification-row');
   if (fullSection) fullSection.style.display = '';
-  if (classRow) classRow.style.gridTemplateColumns = '1fr 1fr 1fr';
-  const projGroup = document.getElementById('f-project')?.closest('.form-group');
-  const cat1Group = document.getElementById('f-category1')?.closest('.form-group');
-  if (projGroup) projGroup.style.display = '';
-  if (cat1Group) cat1Group.style.display = '';
+  toggleProjectCategoryFields();
   document.getElementById('form-success').style.display = 'none';
   document.getElementById('form-error').style.display   = 'none';
 }
