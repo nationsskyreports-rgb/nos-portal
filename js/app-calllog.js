@@ -72,7 +72,7 @@ const CATEGORY2_BY_CATEGORY1 = {
     'Pre Delivery Site Visit','Delegation','Construction Update','Cancellation',
     'Delivery Inspection','Unit Upgrade','Unit Downgrade','Auto Cad'
   ],
-  Complaint: ['Wrong Number','Call Dropped','Sales - Attitude','Sales - Wrong Info'],
+  Complaint: ['Sales - Attitude','Sales - Wrong Info'],
   Inquiry: ['Sales Lead','Events','Resale','Other']
 };
 
