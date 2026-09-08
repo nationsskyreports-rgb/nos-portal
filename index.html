@@ -542,20 +542,47 @@
         </div>
       </div>
       <div class="form-group">
-        <label class="form-label">Call Reason <span class="req">*</span></label>
-        <select id="f-reason" class="form-input" onchange="toggleFormSections()">
-          <option value="">Select reason...</option>
-          <option>Wrong Number</option><option>Call Dropped</option>
-          <option>Asking about the projects</option><option>Jirian campaign</option>
-          <option>Jirian Island campaign</option><option>Sky Ridge Elite</option>
-          <option>Sky Ridge Executives</option><option>Zomra</option>
-          <option>ISLA</option><option>Upviews</option><option>Broker</option>
-          <option>Delayed sales call</option><option>EOI Refund</option>
-          <option>Collaboration request</option><option>Non-Business General Inquiry</option>
-          <option>Business General Inquiry</option><option>Complaint</option>
-          <option>Shakira's Event</option>
-          <option>Perla</option>
+        <label class="form-label">Project</label>
+        <select id="f-project" class="form-input">
+          <option value="">Select project...</option>
+          <option>Sky Ridge Elite</option><option>Sky Ridge Executives</option>
+          <option>Zomra</option><option>Perla</option><option>Upviews</option>
+          <option>Jirian</option><option>Isla</option>
         </select>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+        <div class="form-group">
+          <label class="form-label">Category 1</label>
+          <select id="f-category1" class="form-input">
+            <option value="">Select category...</option>
+            <option>Request</option><option>Complaint</option><option>Inquiry</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Category 2 <span class="req">*</span></label>
+          <select id="f-category2" class="form-input" onchange="toggleFormSections()">
+            <option value="">Select sub-category...</option>
+            <option>Sales Lead</option><option>Events</option><option>EOI Refund</option>
+            <option>Wrong Number</option><option>Call Dropped</option>
+            <option>Resale</option><option>Data Update</option>
+            <option>Finishing Process</option><option>Delivery Date</option>
+            <option>Financial - Bounced Cheque</option><option>Financial - Postponing Cheque</option>
+            <option>Financial - Receiving Cheque</option><option>Financial - Cash Discount</option>
+            <option>Financial - Cash Payment</option><option>Financial - Changing Cheques</option>
+            <option>Financial - Collective Cheque</option><option>Financial - Down Payment</option>
+            <option>Financial - Due Payment</option><option>Financial - Payment Receipt</option>
+            <option>Financial - Maintenance Cheque</option><option>Financial - Pay In Advance</option>
+            <option>Financial - Payment Details</option><option>Financial - Redeposit</option>
+            <option>Financial - Relinquishment</option><option>Financial - Reschedule</option>
+            <option>Other</option><option>Unit Movement</option><option>Modification</option>
+            <option>Receiving Contract</option><option>EOI Payment</option>
+            <option>Pre Delivery Site Visit</option><option>Delegation</option>
+            <option>Construction Update</option><option>Cancellation</option>
+            <option>Delivery Inspection</option><option>Unit Upgrade</option>
+            <option>Unit Downgrade</option><option>Auto Cad</option>
+            <option>Sales - Attitude</option><option>Sales - Wrong Info</option>
+          </select>
+        </div>
       </div>
       <!-- Quick Log -->
       <div class="section-label" style="margin-top:8px;"><i class="fas fa-bolt"></i> Quick Log</div>
