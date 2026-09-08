@@ -561,14 +561,14 @@
       </div>
       <div class="form-group">
         <label class="form-label">Category 1 <span class="req">*</span></label>
-        <select id="f-category1" class="form-input">
+        <select id="f-category1" class="form-input" onchange="filterCategory2ByCat1()">
           <option value="">Select category...</option>
           <option>Request</option><option>Complaint</option><option>Inquiry</option>
         </select>
       </div>
       <div class="form-group">
         <label class="form-label">Category 2 <span class="req">*</span></label>
-        <select id="f-category2" class="form-input" onchange="toggleFormSections()">
+        <select id="f-category2" class="form-input" onchange="toggleFormSections()" disabled>
           <option value="">Select sub-category...</option>
           <option>Sales Lead</option><option>Events</option><option>EOI Refund</option>
           <option>Wrong Number</option><option>Call Dropped</option>
