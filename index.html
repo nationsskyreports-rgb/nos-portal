@@ -510,15 +510,6 @@
 
   <div class="form-card" style="padding:20px;">
 
-    <!-- ═══ QUICK LOG — أعلى حاجة ═══ -->
-    <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;">
-      <div style="font-family:'Syne',sans-serif;font-size:14px;font-weight:800;color:var(--text);display:flex;align-items:center;gap:8px;"><i class="fas fa-bolt" style="color:var(--primary);"></i> Quick Log</div>
-      <div class="quick-log-grid" style="flex:1;margin:0;">
-        <div class="quick-log-btn" onclick="quickLogCall('Wrong Number')" style="padding:12px 14px;font-size:13px;"><i class="fas fa-phone-slash"></i><span>Wrong Number</span></div>
-        <div class="quick-log-btn" onclick="quickLogCall('Call Dropped')" style="padding:12px 14px;font-size:13px;"><i class="fas fa-phone-slash"></i><span>Call Dropped</span></div>
-      </div>
-    </div>
-
     <div style="height:1px;background:var(--border);margin-bottom:20px;"></div>
 
     <!-- ═══ ROW 1: Agent + Direction ═══ -->
@@ -571,7 +562,6 @@
         <select id="f-category2" class="form-input" onchange="toggleFormSections()" disabled>
           <option value="">Select sub-category...</option>
           <option>Sales Lead</option><option>Events</option><option>EOI Refund</option>
-          <option>Wrong Number</option><option>Call Dropped</option>
           <option>Resale</option><option>Data Update</option>
           <option>Finishing Process</option><option>Delivery Date</option>
           <option>Financial - Bounced Cheque</option><option>Financial - Postponing Cheque</option>
