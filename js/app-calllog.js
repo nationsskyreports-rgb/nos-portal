@@ -21,20 +21,29 @@ function onAgentSelect() {}
 
 /* ─── CALL LOG SUB-TABS ─── */
 function switchCLTab(panelId, btn) {
+  // WhatsApp tab uses the same form as Calls, just different channel
+  const actualPanel = (panelId === 'cl-whatsapp') ? 'cl-calls' : panelId;
+
   document.querySelectorAll('.cl-subtab').forEach(t => t.classList.remove('active'));
   document.querySelectorAll('.cl-subpanel').forEach(p => p.classList.remove('active'));
   if (btn) btn.classList.add('active');
   else document.querySelector(`.cl-subtab[onclick*="${panelId}"]`)?.classList.add('active');
-  const panel = document.getElementById(panelId);
+  const panel = document.getElementById(actualPanel);
   if (panel) panel.classList.add('active');
 
-  // Auto-load content for My Records tab
+  // Force channel without toggle — reset first so selectChannel doesn't toggle off
+  if (panelId === 'cl-calls') {
+    window._activeChannel = null;
+    if (typeof selectChannel === 'function') selectChannel('call');
+  }
+  if (panelId === 'cl-whatsapp') {
+    window._activeChannel = null;
+    if (typeof selectChannel === 'function') selectChannel('whatsapp');
+  }
   if (panelId === 'cl-records') {
     loadAgentDashboard();
     loadRecordsMyLog();
   }
-  // Auto-set channel
-  if (panelId === 'cl-calls' && typeof selectChannel === 'function') selectChannel('call');
 }
 
 async function loadRecordsMyLog() {
@@ -236,6 +245,11 @@ function filterCategory2ByCat1() { onCategory1Change(); }
 window.addEventListener('load', () => {
   loadCallLogOptions().then(() => toggleProjectCategoryFields());
   waitForAgentThenLoadDashboard();
+  // Force show calls form on initial load (fix toggle issue)
+  setTimeout(() => {
+    window._activeChannel = null;
+    if (typeof selectChannel === 'function') selectChannel('call');
+  }, 500);
 });
 
 function waitForAgentThenLoadDashboard(attempts) {
