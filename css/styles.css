@@ -596,56 +596,6 @@ html.light .nos-day-card { box-shadow: 0 1px 6px rgba(0,0,0,0.06); }
 .quick-log-btn:hover { border-color: var(--primary); color: var(--primary); background: rgba(212,175,55,0.04); transform: translateY(-2px); }
 .quick-log-btn i { font-size: 16px; }
 
-/* ─── CALL LOG PICKER (Search / Call / WhatsApp segmented tab bar) ─── */
-.calllog-picker {
-  display: flex;
-  gap: 4px;
-  padding: 5px;
-  background: var(--surface2);
-  border: 1px solid var(--border);
-  border-radius: 14px;
-}
-.calllog-pick-btn {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  padding: 12px 16px;
-  border: none;
-  background: transparent;
-  color: var(--muted);
-  font-size: 13.5px;
-  font-weight: 700;
-  font-family: 'Plus Jakarta Sans', sans-serif;
-  border-radius: 10px;
-  cursor: pointer;
-  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-  white-space: nowrap;
-}
-.calllog-pick-btn i { font-size: 14px; }
-.calllog-pick-btn:hover:not(.active) { color: var(--text); background: rgba(212,175,55,0.06); }
-html.light .calllog-pick-btn:hover:not(.active) { background: rgba(0,0,0,0.04); }
-.calllog-pick-btn.active {
-  background: var(--primary-gradient);
-  color: white;
-  box-shadow: 0 4px 16px rgba(212,175,55,0.35), 0 0 0 1px rgba(212,175,55,0.2);
-  transform: translateY(-1px);
-}
-/* WhatsApp brand color when active */
-#pick-whatsapp.active {
-  background: linear-gradient(135deg, #25d366 0%, #128c7e 100%);
-  box-shadow: 0 4px 16px rgba(37,211,102,0.35), 0 0 0 1px rgba(37,211,102,0.2);
-}
-#pick-whatsapp.active i { color: white; }
-/* View transition */
-.calllog-view { animation: tabSlideIn 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
-/* Hide labels on very narrow screens (below 380px) to keep the picker on one line */
-@media (max-width: 380px) {
-  .calllog-pick-btn span { display: none; }
-  .calllog-pick-btn i { font-size: 16px; }
-}
-
 
 /* ─────────────────────────────────────────────
    16. KNOWLEDGE BASE
@@ -1096,8 +1046,6 @@ html.light .skeleton {
   .req-detail { font-size:11px; }
   .req-date   { font-size:10px; margin-top:4px; }
   .req-status { font-size:10px; padding:4px 10px; border-radius:8px; }
-  #tab-form #calllog-picker-wrap,
-  #tab-form .calllog-view,
   #tab-form .call-log-header-card,
   #tab-form .section-label,
   #tab-form .quick-log-grid,
