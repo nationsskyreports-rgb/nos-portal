@@ -381,6 +381,35 @@ async function saveReminder(customerName, customerMobile, callLogId) {
   }
 }
 
+/* ─── MY REMINDERS — Upcoming / Done / All ─── */
+let _reminderFilter = 'upcoming';
+
+function _remTabBtn(mode, label) {
+  const active = _reminderFilter === mode;
+  return `<button data-rem-tab="${mode}" onclick="setReminderFilter('${mode}')"
+    style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;padding:9px 10px;border-radius:8px;border:none;background:${active ? 'var(--surface)' : 'transparent'};color:${active ? 'var(--text)' : 'var(--muted)'};font-size:12px;font-weight:700;font-family:inherit;cursor:pointer;transition:all 0.2s;${active ? 'box-shadow:0 2px 8px rgba(0,0,0,0.15);' : ''}">
+    <span>${label}</span>
+    <span class="rem-count" data-rem-count="${mode}" style="opacity:0.75;font-size:11px;background:var(--surface2);padding:1px 7px;border-radius:8px;min-width:20px;text-align:center;">·</span>
+  </button>`;
+}
+
+function setReminderFilter(mode) {
+  _reminderFilter = mode;
+  // Update tab visual state without full re-render
+  document.querySelectorAll('[data-rem-tab]').forEach(btn => {
+    const active = btn.dataset.remTab === mode;
+    btn.style.background = active ? 'var(--surface)' : 'transparent';
+    btn.style.color      = active ? 'var(--text)'    : 'var(--muted)';
+    btn.style.boxShadow  = active ? '0 2px 8px rgba(0,0,0,0.15)' : 'none';
+  });
+  loadMyReminders();
+}
+
+function _setRemCount(mode, n) {
+  const el = document.querySelector(`[data-rem-count="${mode}"]`);
+  if (el) el.innerText = n;
+}
+
 async function loadMyReminders() {
   const agent = document.getElementById('user-name')?.innerText?.trim();
   const wrap  = document.getElementById('reminders-list');
@@ -389,41 +418,76 @@ async function loadMyReminders() {
   try {
     const today = getLocalDateStr();
     const headers = { 'apikey': SB_KEY_SCH, 'Authorization': `Bearer ${window._authToken || SB_KEY_SCH}` };
-    const res = await fetch(`${SB_URL_SCH}/rest/v1/call_reminders?agent_name=eq.${encodeURIComponent(agent)}&is_done=eq.false&order=reminder_date,reminder_time`, { headers });
-    const data = await res.json() || [];
+    // Fetch ALL reminders for this agent so we can show counters and switch filter client-side
+    const res = await fetch(`${SB_URL_SCH}/rest/v1/call_reminders?agent_name=eq.${encodeURIComponent(agent)}&order=reminder_date.desc,reminder_time.desc&limit=300`, { headers });
+    const all = await res.json() || [];
 
-    if (!data.length) {
-      wrap.innerHTML = '<div style="text-align:center;color:var(--muted);padding:20px;font-size:13px;">No upcoming reminders ✨</div>';
+    const upcoming = all.filter(r => !r.is_done)
+                        .sort((a, b) => (a.reminder_date + (a.reminder_time || '')).localeCompare(b.reminder_date + (b.reminder_time || '')));
+    const done     = all.filter(r => r.is_done);
+
+    _setRemCount('upcoming', upcoming.length);
+    _setRemCount('done',     done.length);
+    _setRemCount('all',      all.length);
+
+    const list = _reminderFilter === 'upcoming' ? upcoming
+               : _reminderFilter === 'done'     ? done
+               : all;
+
+    if (!list.length) {
+      const emptyMsg = _reminderFilter === 'upcoming' ? 'No upcoming reminders ✨'
+                     : _reminderFilter === 'done'     ? 'No completed follow-ups yet'
+                     : 'No reminders yet';
+      wrap.innerHTML = `<div style="text-align:center;color:var(--muted);padding:20px;font-size:13px;">${emptyMsg}</div>`;
       return;
     }
 
-    wrap.innerHTML = data.map(r => {
-      const isToday  = r.reminder_date === today;
-      const isPast   = r.reminder_date < today;
-      const border   = isPast ? 'var(--danger)' : isToday ? 'var(--primary)' : 'var(--border)';
-      const dateBadge = isPast ? '🔴 Overdue' : isToday ? '🟡 Today' : r.reminder_date;
-      return `
-        <div style="display:flex;align-items:center;gap:12px;padding:12px;border:1px solid ${border};border-radius:12px;margin-bottom:8px;background:var(--surface);">
-          <div style="flex:1;">
-            <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
-              <span style="font-weight:800;font-size:13px;color:var(--text);">${r.customer_name || '—'}</span>
-              <span style="font-size:11px;color:var(--muted);font-family:monospace;">${r.customer_mobile || ''}</span>
-            </div>
-            <div style="font-size:11px;color:var(--muted);">
-              <span style="font-weight:700;${isPast?'color:var(--danger);':isToday?'color:var(--primary);':''}">${dateBadge}</span>
-              ${r.reminder_time ? ' · ' + r.reminder_time.substring(0,5) : ''}
-              ${r.note ? ' · ' + r.note : ''}
-            </div>
-          </div>
-          <button onclick="markReminderDone('${r.id}')" title="Mark done"
-            style="background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.3);border-radius:10px;padding:8px 12px;font-size:12px;font-weight:700;color:#10B981;cursor:pointer;">
-            ✓ Done
-          </button>
-        </div>`;
-    }).join('');
+    wrap.innerHTML = list.map(r => _renderReminderRow(r, today)).join('');
   } catch(e) {
     wrap.innerHTML = '<div style="color:var(--danger);font-size:12px;padding:10px;">Failed to load reminders</div>';
   }
+}
+
+function _renderReminderRow(r, today) {
+  const isDone  = r.is_done === true;
+  const isToday = !isDone && r.reminder_date === today;
+  const isPast  = !isDone && r.reminder_date && r.reminder_date < today;
+
+  const border  = isDone ? 'rgba(16,185,129,.35)'
+                : isPast  ? 'var(--danger)'
+                : isToday ? 'var(--primary)'
+                : 'var(--border)';
+  const bgTint  = isDone ? 'background-image:linear-gradient(90deg, rgba(16,185,129,.06), transparent);' : '';
+
+  const dateStr = r.reminder_date
+    ? new Date(r.reminder_date + 'T00:00:00').toLocaleDateString('en-GB', { day:'2-digit', month:'short', year:'2-digit' })
+    : '—';
+
+  const badge = isDone  ? `<span style="font-weight:800;color:#10B981;">✅ DONE</span> · <span>${_remEsc(dateStr)}</span>`
+              : isPast  ? `<span style="font-weight:800;color:var(--danger);">🔴 OVERDUE</span> · <span>${_remEsc(dateStr)}</span>`
+              : isToday ? `<span style="font-weight:800;color:var(--primary);">🟡 TODAY</span>`
+              :           `<span style="font-weight:700;">⏳ ${_remEsc(dateStr)}</span>`;
+
+  const actionBtn = isDone ? '' : `<button onclick="markReminderDone('${r.id}')" title="Mark done"
+      style="background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.3);border-radius:10px;padding:8px 12px;font-size:12px;font-weight:700;color:#10B981;cursor:pointer;flex-shrink:0;">
+      ✓ Done
+    </button>`;
+
+  return `
+    <div style="display:flex;align-items:center;gap:12px;padding:12px;border:1px solid ${border};border-radius:12px;margin-bottom:8px;background:var(--surface);${bgTint}">
+      <div style="flex:1;min-width:0;">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;flex-wrap:wrap;">
+          <span style="font-weight:800;font-size:13px;color:var(--text);${isDone ? 'opacity:0.85;' : ''}">${_remEsc(r.customer_name) || '—'}</span>
+          <span style="font-size:11px;color:var(--muted);font-family:monospace;">${_remEsc(r.customer_mobile) || ''}</span>
+        </div>
+        <div style="font-size:11px;color:var(--muted);word-wrap:break-word;">
+          ${badge}
+          ${r.reminder_time ? ' · ' + _remEsc(r.reminder_time.substring(0,5)) : ''}
+          ${r.note ? ' · ' + _remEsc(r.note) : ''}
+        </div>
+      </div>
+      ${actionBtn}
+    </div>`;
 }
 
 async function markReminderDone(id) {
@@ -818,9 +882,15 @@ async function loadMyCallLog() {
     <div style="padding:16px;">
       <!-- ═══ REMINDERS SECTION ═══ -->
       <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:16px;margin-bottom:16px;">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
           <div class="section-label" style="margin:0"><i class="fas fa-bell" style="color:#F59E0B;"></i> My Reminders</div>
           <button class="action-btn c-accent" onclick="loadMyReminders()" style="font-size:11px;padding:6px 12px;"><i class="fas fa-sync-alt"></i></button>
+        </div>
+        <!-- Reminders filter tabs -->
+        <div style="display:flex;gap:4px;padding:4px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;margin-bottom:12px;">
+          ${_remTabBtn('upcoming', '⏳ Upcoming')}
+          ${_remTabBtn('done',     '✅ Done')}
+          ${_remTabBtn('all',      '📋 All')}
         </div>
         <div id="reminders-list"><div style="text-align:center;color:var(--muted);padding:12px;font-size:12px;">Loading...</div></div>
       </div>
