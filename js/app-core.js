@@ -940,16 +940,11 @@ function switchTab(id, btn, idx) {
   if (id !== 'tab-form' && typeof _activeChannel !== 'undefined' && _activeChannel) {
     _activeChannel = null;
     var fa = document.getElementById('calllog-form-area');
-    var vs = document.getElementById('view-search');
     if (fa) fa.style.display = 'none';
-    if (vs) vs.style.display = 'block';
-    /* Reset new picker → default to Search tab */
-    var ps = document.getElementById('pick-search');
-    var pc = document.getElementById('pick-call');
-    var pw = document.getElementById('pick-whatsapp');
-    if (ps) { ps.classList.add('active');    ps.setAttribute('aria-selected', 'true'); }
-    if (pc) { pc.classList.remove('active'); pc.setAttribute('aria-selected', 'false'); }
-    if (pw) { pw.classList.remove('active'); pw.setAttribute('aria-selected', 'false'); }
+    var bc = document.getElementById('btn-channel-call');
+    var bw = document.getElementById('btn-channel-whatsapp');
+    if (bc) { bc.style.borderColor = 'var(--border)'; bc.style.background = 'var(--surface)'; }
+    if (bw) { bw.style.borderColor = 'var(--border)'; bw.style.background = 'var(--surface)'; }
   }
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
   document.querySelectorAll('.bottom-nav-btn').forEach(b => b.classList.remove('active'));
