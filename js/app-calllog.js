@@ -112,7 +112,119 @@ function filterCategory2ByCat1() { onCategory1Change(); }
 
 window.addEventListener('load', () => {
   loadCallLogOptions().then(() => toggleProjectCategoryFields());
+  setTimeout(loadAgentDashboard, 1500);
 });
+
+/* ═══ AGENT DASHBOARD — Month-to-Date KPIs ═══ */
+async function loadAgentDashboard() {
+  const agent = document.getElementById('user-name')?.innerText?.trim();
+  if (!agent) return;
+
+  try {
+    const today     = getLocalDateStr();
+    const monthStart = today.slice(0, 7) + '-01';
+    const fromISO   = new Date(monthStart + 'T00:00:00+02:00').toISOString();
+    const toISO     = new Date(today + 'T23:59:59+02:00').toISOString();
+    const headers   = { 'apikey': SB_KEY_SCH, 'Authorization': `Bearer ${window._authToken || SB_KEY_SCH}` };
+    const q = `agent_name=eq.${encodeURIComponent(agent)}&logged_at=gte.${fromISO}&logged_at=lte.${toISO}`;
+
+    const [calls, wasps, rems] = await Promise.all([
+      fetch(`${SB_URL_SCH}/rest/v1/call_logs?${q}&select=business_relativity`, { headers }).then(r => r.json()),
+      fetch(`${SB_URL_SCH}/rest/v1/whatsapp_logs?${q}&select=business_relativity`, { headers }).then(r => r.json()),
+      fetch(`${SB_URL_SCH}/rest/v1/call_reminders?agent_name=eq.${encodeURIComponent(agent)}&is_done=eq.false&reminder_date=lte.${today}&select=id`, { headers }).then(r => r.json()),
+    ]);
+
+    const callCount = (calls||[]).length;
+    const waCount   = (wasps||[]).length;
+    const total     = callCount + waCount;
+    const biz       = [...(calls||[]), ...(wasps||[])].filter(c => c.business_relativity === 'Business Related').length;
+    const remCount  = (rems||[]).length;
+
+    const el = id => document.getElementById(id);
+    el('dash-total').textContent = total;
+    el('dash-calls').textContent = callCount;
+    el('dash-wa').textContent    = waCount;
+    el('dash-biz').textContent   = biz;
+    el('dash-rem').textContent   = remCount;
+
+    if (remCount > 0) el('dash-rem').style.animation = 'pulse 2s infinite';
+  } catch(e) { /* silent */ }
+}
+
+/* ═══ AUTO-FILL — Customer name from mobile number ═══ */
+let _mobileDebounce = null;
+
+function onMobileInput(value) {
+  clearTimeout(_mobileDebounce);
+  const mobile = value.trim();
+  const hint   = document.getElementById('mobile-autofill-hint');
+  const hist   = document.getElementById('customer-history');
+
+  if (mobile.length < 8) {
+    if (hint) hint.style.display = 'none';
+    if (hist) hist.style.display = 'none';
+    return;
+  }
+
+  _mobileDebounce = setTimeout(() => lookupCustomer(mobile), 400);
+}
+
+async function lookupCustomer(mobile) {
+  const hint = document.getElementById('mobile-autofill-hint');
+  const hist = document.getElementById('customer-history');
+
+  try {
+    const headers = { 'apikey': SB_KEY_SCH, 'Authorization': `Bearer ${window._authToken || SB_KEY_SCH}` };
+    const encoded = encodeURIComponent(mobile);
+
+    const [calls, wasps] = await Promise.all([
+      fetch(`${SB_URL_SCH}/rest/v1/call_logs?customer_mobile=eq.${encoded}&select=id,customer_name,customer_mobile,project,category_1,call_reason,logged_at,agent_name&order=logged_at.desc&limit=10`, { headers }).then(r => r.json()),
+      fetch(`${SB_URL_SCH}/rest/v1/whatsapp_logs?customer_mobile=eq.${encoded}&select=id,customer_name,customer_mobile,project,category_1,call_reason,logged_at,agent_name&order=logged_at.desc&limit=10`, { headers }).then(r => r.json()),
+    ]);
+
+    const all = [...(calls||[]), ...(wasps||[])].sort((a,b) => new Date(b.logged_at) - new Date(a.logged_at));
+
+    if (!all.length) {
+      if (hint) { hint.textContent = '🆕 New customer'; hint.style.display = 'block'; hint.style.color = '#3B82F6'; }
+      if (hist) hist.style.display = 'none';
+      return;
+    }
+
+    // Auto-fill customer name
+    const lastName = all[0].customer_name;
+    const cname = document.getElementById('f-cname');
+    if (cname && !cname.value.trim() && lastName) {
+      cname.value = lastName;
+      if (hint) { hint.textContent = `✅ Auto-filled: ${lastName} (${all.length} previous call${all.length>1?'s':''})`; hint.style.display = 'block'; hint.style.color = '#10B981'; }
+    } else {
+      if (hint) { hint.textContent = `📋 ${all.length} previous call${all.length>1?'s':''} found`; hint.style.display = 'block'; hint.style.color = 'var(--primary)'; }
+    }
+
+    // Show customer history
+    if (hist) {
+      const list = document.getElementById('history-list');
+      const count = document.getElementById('history-count');
+      count.textContent = all.length + ' record(s)';
+
+      list.innerHTML = all.slice(0, 5).map(c => {
+        const date = c.logged_at ? new Date(c.logged_at).toLocaleDateString('en-GB', { day:'2-digit', month:'short' }) : '';
+        const time = c.logged_at ? new Date(c.logged_at).toLocaleTimeString('en-GB', { hour:'2-digit', minute:'2-digit' }) : '';
+        return `
+          <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);font-size:12px;">
+            <div style="min-width:70px;color:var(--muted);font-weight:700;">${date} ${time}</div>
+            <div style="flex:1;">
+              <span style="font-weight:700;color:var(--accent,var(--primary));">${c.project || '—'}</span>
+              ${c.category_1 ? '<span style="color:var(--muted);"> → </span><span style="color:var(--text);">' + c.category_1 + '</span>' : ''}
+              ${c.call_reason ? '<span style="color:var(--muted);"> → </span><span style="color:var(--text);">' + c.call_reason + '</span>' : ''}
+            </div>
+            <div style="color:var(--muted);font-size:11px;">${c.agent_name || ''}</div>
+          </div>`;
+      }).join('');
+
+      hist.style.display = '';
+    }
+  } catch(e) { /* silent */ }
+}
 
 /* ─── REMINDER SYSTEM ─── */
 async function openReminderModal(customerName, customerMobile, callLogId) {
@@ -442,6 +554,13 @@ function resetCallForm() {
   toggleProjectCategoryFields();
   document.getElementById('form-success').style.display = 'none';
   document.getElementById('form-error').style.display   = 'none';
+  // Clear autofill and customer history
+  const hint = document.getElementById('mobile-autofill-hint');
+  const hist = document.getElementById('customer-history');
+  if (hint) hint.style.display = 'none';
+  if (hist) hist.style.display = 'none';
+  // Refresh dashboard after submit
+  setTimeout(loadAgentDashboard, 500);
 }
 
 /* ─── goStep — kept as no-op for backward compat ─── */
