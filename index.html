@@ -442,45 +442,102 @@
     <!-- TAB: CALL LOG -->
     <div class="tab-content" id="tab-form">
 
-      <!-- ═══ SUB-TABS ═══ -->
-      <div id="cl-subtabs" style="display:flex;gap:0;border-bottom:2px solid var(--border);margin:0 16px 16px;overflow-x:auto;">
-        <button class="cl-subtab active" onclick="switchCLTab('cl-calls',this)"><i class="fas fa-phone-alt" style="margin-right:6px;"></i>Calls</button>
-        <button class="cl-subtab" onclick="switchCLTab('cl-whatsapp',this)"><i class="fab fa-whatsapp" style="margin-right:6px;color:#25d366;"></i>WhatsApp</button>
-        <button class="cl-subtab" onclick="switchCLTab('cl-records',this)"><i class="fas fa-chart-bar" style="margin-right:6px;"></i>My Records</button>
-        <button class="cl-subtab" onclick="switchCLTab('cl-search',this)"><i class="fas fa-search" style="margin-right:6px;"></i>Search</button>
+      <!-- Channel Selector -->
+      <div id="channel-selector" style="padding:24px 16px;">
+        <div style="font-family:'Syne',sans-serif;font-size:18px;font-weight:800;color:var(--text);margin-bottom:6px;">Log a Contact</div>
+        <div style="font-size:13px;color:var(--muted);margin-bottom:20px;">Choose the communication channel</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+
+          <div id="btn-channel-call" onclick="selectChannel('call')" style="
+            background:var(--surface);border:2px solid var(--border);border-radius:18px;
+            padding:28px 16px;text-align:center;cursor:pointer;transition:all 0.3s;
+          ">
+            <div style="font-size:36px;margin-bottom:12px;">📞</div>
+            <div style="font-family:'Syne',sans-serif;font-size:16px;font-weight:800;color:var(--text);">Call</div>
+            <div style="font-size:12px;color:var(--muted);margin-top:4px;">Phone call log</div>
+          </div>
+
+          <div id="btn-channel-whatsapp" onclick="selectChannel('whatsapp')" style="
+            background:var(--surface);border:2px solid var(--border);border-radius:18px;
+            padding:28px 16px;text-align:center;cursor:pointer;transition:all 0.3s;
+          ">
+            <i class="fab fa-whatsapp" style="font-size:40px;color:#25d366;margin-bottom:12px;display:block;"></i>
+            <div style="font-family:'Syne',sans-serif;font-size:16px;font-weight:800;color:var(--text);">WhatsApp</div>
+            <div style="font-size:12px;color:var(--muted);margin-top:4px;">WhatsApp message log</div>
+          </div>
+
+        </div>
       </div>
-      <style>
-        .cl-subtab { padding:12px 20px;font-size:13px;font-weight:700;border:none;background:none;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;white-space:nowrap;font-family:inherit;transition:all .2s; }
-        .cl-subtab:hover { color:var(--text); }
-        .cl-subtab.active { color:var(--primary);border-bottom-color:var(--primary); }
-        .cl-subpanel { display:none; }
-        .cl-subpanel.active { display:block; }
-      </style>
 
-      <!-- ═══ SUB-PANEL: CALLS ═══ -->
-      <div class="cl-subpanel active" id="cl-calls">
-        <div id="calllog-form-area-calls" style="padding:0 16px;">
+<div id="calllog-form-area" style="display:none;">
+  <!-- Channel Header -->
+  <div id="calllog-channel-header" style="display:flex;align-items:center;gap:14px;padding:16px 20px;margin:0 16px 16px;border-radius:16px;border:2px solid var(--border);background:var(--surface2);">
+    <div id="calllog-channel-icon" style="font-size:28px;">📞</div>
+    <div style="flex:1;">
+      <div id="calllog-channel-title" style="font-family:'Syne',sans-serif;font-size:16px;font-weight:800;color:var(--text);">Call Log</div>
+      <div style="font-size:12px;color:var(--muted);">Tap to switch channel</div>
+    </div>
+    <div style="display:flex;gap:8px;">
+      <button id="switch-call-btn" onclick="selectChannel('call')" style="padding:8px 14px;border-radius:10px;border:2px solid var(--border);background:var(--surface);color:var(--muted);font-size:12px;font-weight:700;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;transition:all 0.2s;">📞 Call</button>
+      <button id="switch-wa-btn" onclick="selectChannel('whatsapp')" style="padding:8px 14px;border-radius:10px;border:2px solid var(--border);background:var(--surface);color:var(--muted);font-size:12px;font-weight:700;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;transition:all 0.2s;"><i class="fab fa-whatsapp" style="color:#25d366;margin-right:4px;"></i> WhatsApp</button>
+    </div>
+  </div>
 
-<div id="calllog-form-area" style="display:block;">
+  <!-- Fixed Customer Search — sticky at the top of the Call Log tab -->
+  <div id="calllog-fixed-search" style="position:sticky;top:0;z-index:50;margin:0 16px 16px;background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:16px;box-shadow:0 4px 16px rgba(0,0,0,0.08);">
+    <div class="section-label" style="margin-bottom:10px;"><i class="fas fa-search"></i> Customer Search</div>
+    <div style="display:flex;gap:8px;">
+      <input type="text" id="step1-search-input" placeholder="Search by name or mobile..."
+        class="form-input" style="flex:1;margin:0;"
+        onkeydown="if(event.key==='Enter') step1SearchCustomer()">
+      <button onclick="step1SearchCustomer()"
+        style="padding:10px 16px;background:var(--primary-gradient);color:white;border:none;border-radius:11px;cursor:pointer;font-weight:700;font-family:inherit;white-space:nowrap;">
+        🔍 Search
+      </button>
+      <button onclick="clearStep1Search()"
+        style="padding:10px 16px;background:var(--surface2);border:1px solid var(--border);border-radius:11px;color:var(--muted);cursor:pointer;font-weight:700;font-family:inherit;white-space:nowrap;">
+        ✕
+      </button>
+    </div>
+    <div id="step1-search-results" style="margin-top:8px;"></div>
+    <div id="search-results" style="margin-top:8px;"></div>
+  </div>
+
+  <div class="mobile-calllog-warning">
+    <div class="warn-icon">🖥️</div>
+    <h3>Desktop Only</h3>
+    <p>Call Log data entry requires a desktop browser for the best experience.</p>
+  </div>
 
   <div class="form-card" style="padding:20px;">
 
-    <!-- ═══ QUICK LOG — Wrong Number / Call Dropped ═══ -->
-    <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">
-      <div style="font-size:13px;font-weight:800;color:var(--text);display:flex;align-items:center;gap:8px;white-space:nowrap;"><i class="fas fa-bolt" style="color:var(--primary);"></i> Quick Log</div>
-      <button onclick="quickLogCall('Wrong Number')"
-        style="flex:1;padding:12px;background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.25);border-radius:12px;font-size:13px;font-weight:700;color:#EF4444;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:6px;transition:all .2s;"
-        onmouseover="this.style.background='rgba(239,68,68,0.15)'" onmouseout="this.style.background='rgba(239,68,68,0.08)'">
-        <i class="fas fa-phone-slash"></i> Wrong Number
-      </button>
-      <button onclick="quickLogCall('Call Dropped')"
-        style="flex:1;padding:12px;background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.25);border-radius:12px;font-size:13px;font-weight:700;color:#F59E0B;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:6px;transition:all .2s;"
-        onmouseover="this.style.background='rgba(245,158,11,0.15)'" onmouseout="this.style.background='rgba(245,158,11,0.08)'">
-        <i class="fas fa-phone-slash"></i> Call Dropped
-      </button>
+    <!-- ═══ AGENT DASHBOARD — Today's Stats ═══ -->
+    <div id="agent-dashboard" style="margin-bottom:16px;">
+      <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:14px;">
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:12px;text-align:center;">
+          <div style="font-size:9px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;">This Month</div>
+          <div id="dash-total" style="font-size:22px;font-weight:900;color:var(--primary);margin-top:2px;">—</div>
+        </div>
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:12px;text-align:center;">
+          <div style="font-size:9px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;">📞 Calls</div>
+          <div id="dash-calls" style="font-size:22px;font-weight:900;color:#2563eb;margin-top:2px;">—</div>
+        </div>
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:12px;text-align:center;">
+          <div style="font-size:9px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;">💬 WA</div>
+          <div id="dash-wa" style="font-size:22px;font-weight:900;color:#16a34a;margin-top:2px;">—</div>
+        </div>
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:12px;text-align:center;">
+          <div style="font-size:9px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;">🏢 Business</div>
+          <div id="dash-biz" style="font-size:22px;font-weight:900;color:var(--gold);margin-top:2px;">—</div>
+        </div>
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:12px;text-align:center;">
+          <div style="font-size:9px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;">⏰ Reminders</div>
+          <div id="dash-rem" style="font-size:22px;font-weight:900;color:#F59E0B;margin-top:2px;">—</div>
+        </div>
+      </div>
     </div>
 
-    <div style="height:1px;background:var(--border);margin-bottom:16px;"></div>
+    <div style="height:1px;background:var(--border);margin-bottom:20px;"></div>
 
     <!-- ═══ ROW 1: Agent + Direction ═══ -->
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:4px;">
@@ -501,6 +558,17 @@
           </label>
         </div>
       </div>
+    </div>
+
+    <!-- ═══ QUICK LOG — one-click submit (skips classification & details) ═══ -->
+    <div class="section-label" style="margin-top:14px;"><i class="fas fa-bolt"></i> Quick Log</div>
+    <div class="quick-log-grid">
+      <button type="button" class="quick-log-btn" onclick="quickLogCall('Wrong Number')">
+        <i class="fas fa-exchange-alt"></i> Wrong Number
+      </button>
+      <button type="button" class="quick-log-btn" onclick="quickLogCall('Call Dropped')">
+        <i class="fas fa-phone-slash"></i> Call Dropped
+      </button>
     </div>
 
     <!-- ═══ ROW 2: Project + Category 1 + Category 2 ═══ -->
@@ -638,72 +706,7 @@
 
   </div>
 
-        </div><!-- end calllog-form-area-calls -->
-      </div><!-- end cl-calls -->
-
-      <!-- ═══ SUB-PANEL: WHATSAPP ═══ -->
-      <div class="cl-subpanel" id="cl-whatsapp">
-        <div style="padding:16px;text-align:center;">
-          <div style="font-size:48px;margin-bottom:12px;">💬</div>
-          <div style="font-family:'Syne',sans-serif;font-size:16px;font-weight:800;color:var(--text);margin-bottom:6px;">WhatsApp Log</div>
-          <div style="font-size:13px;color:var(--muted);margin-bottom:20px;">Switch to WhatsApp channel to log messages</div>
-          <button onclick="switchCLTab('cl-calls',document.querySelector('.cl-subtab'));selectChannel('whatsapp')"
-            style="padding:14px 28px;background:linear-gradient(135deg,#25d366,#128c7e);color:white;border:none;border-radius:12px;font-size:14px;font-weight:800;cursor:pointer;font-family:inherit;">
-            <i class="fab fa-whatsapp" style="margin-right:8px;"></i> Open WhatsApp Form
-          </button>
-        </div>
-      </div>
-
-      <!-- ═══ SUB-PANEL: MY RECORDS ═══ -->
-      <div class="cl-subpanel" id="cl-records">
-        <div style="padding:16px;">
-          <!-- Dashboard KPIs -->
-          <div id="agent-dashboard">
-            <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:16px;">
-              <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:12px;text-align:center;">
-                <div style="font-size:9px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;">This Month</div>
-                <div id="dash-total" style="font-size:22px;font-weight:900;color:var(--primary);margin-top:2px;">—</div>
-              </div>
-              <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:12px;text-align:center;">
-                <div style="font-size:9px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;">📞 Calls</div>
-                <div id="dash-calls" style="font-size:22px;font-weight:900;color:#2563eb;margin-top:2px;">—</div>
-              </div>
-              <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:12px;text-align:center;">
-                <div style="font-size:9px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;">💬 WA</div>
-                <div id="dash-wa" style="font-size:22px;font-weight:900;color:#16a34a;margin-top:2px;">—</div>
-              </div>
-              <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:12px;text-align:center;">
-                <div style="font-size:9px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;">🏢 Business</div>
-                <div id="dash-biz" style="font-size:22px;font-weight:900;color:var(--gold);margin-top:2px;">—</div>
-              </div>
-              <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:12px;text-align:center;">
-                <div style="font-size:9px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;">⏰ Reminders</div>
-                <div id="dash-rem" style="font-size:22px;font-weight:900;color:#F59E0B;margin-top:2px;">—</div>
-              </div>
-            </div>
-          </div>
-          <!-- My Log content loads here dynamically -->
-          <div id="records-mylog-content"></div>
-        </div>
-      </div>
-
-      <!-- ═══ SUB-PANEL: SEARCH ═══ -->
-      <div class="cl-subpanel" id="cl-search">
-        <div style="padding:16px;">
-          <div class="section-label" style="margin-bottom:12px;"><i class="fas fa-search"></i> Customer Search</div>
-          <div style="display:flex;gap:8px;margin-bottom:12px;">
-            <input type="text" id="cl-search-input" placeholder="Search by name or mobile..."
-              class="form-input" style="flex:1;margin:0;"
-              onkeydown="if(event.key==='Enter') clSearchCustomer()">
-            <button onclick="clSearchCustomer()"
-              style="padding:10px 16px;background:var(--primary-gradient);color:white;border:none;border-radius:11px;cursor:pointer;font-weight:700;font-family:inherit;white-space:nowrap;">
-              🔍 Search
-            </button>
-          </div>
-          <div id="cl-search-results"></div>
-        </div>
-      </div>
-
+</div><!-- end calllog-form-area -->
     </div><!-- end tab-form -->
     <!-- TAB: KNOWLEDGE BASE -->
     <div class="tab-content" id="tab-kb">
