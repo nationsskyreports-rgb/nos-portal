@@ -25,68 +25,227 @@ function selectRadio(groupId, el, value) {
   radioValues[groupId] = value;
 }
 
-function toggleFormSections() {
-  const r = document.getElementById('f-category2').value;
-  const q = (r === 'Wrong Number' || r === 'Call Dropped');
-  // إخفاء / إظهار كل الـ details section
-  const fullSection = document.getElementById('full-details-section');
-  const classRow    = document.getElementById('classification-row');
-  if (fullSection) fullSection.style.display = q ? 'none' : '';
-  // اخفي Project و Cat1 لما يكون Wrong Number / Call Dropped
-  if (classRow) {
-    classRow.style.gridTemplateColumns = q ? '1fr' : '1fr 1fr 1fr';
-    const projGroup = document.getElementById('f-project')?.closest('.form-group');
-    const cat1Group = document.getElementById('f-category1')?.closest('.form-group');
-    if (projGroup) projGroup.style.display = q ? 'none' : '';
-    if (cat1Group) cat1Group.style.display = q ? 'none' : '';
-  }
+/* ─── DYNAMIC CALL LOG OPTIONS FROM SUPABASE ─── */
+let _chooseOptions = [];  // from call_log_choose_options
+let _cat1Options   = [];  // from call_log_categories
+let _cat2Cache     = {};  // cat1_id -> [items] from call_log_category2
+
+async function loadCallLogOptions() {
+  const headers = { 'apikey': SB_KEY_SCH, 'Authorization': `Bearer ${window._authToken || SB_KEY_SCH}` };
+  try {
+    const [chooseRes, cat1Res] = await Promise.all([
+      fetch(`${SB_URL_SCH}/rest/v1/call_log_choose_options?is_active=eq.true&order=sort_order,name`, { headers }).then(r => r.json()),
+      fetch(`${SB_URL_SCH}/rest/v1/call_log_categories?is_active=eq.true&order=sort_order,name`, { headers }).then(r => r.json()),
+    ]);
+    _chooseOptions = chooseRes || [];
+    _cat1Options   = cat1Res || [];
+
+    // Populate Choose dropdown
+    const projSel = document.getElementById('f-project');
+    projSel.innerHTML = '<option value="">Choose...</option>';
+    const projects = _chooseOptions.filter(o => o.option_type === 'project');
+    const others   = _chooseOptions.filter(o => o.option_type !== 'project');
+    if (projects.length) {
+      projSel.innerHTML += '<option disabled style="font-weight:800;color:var(--primary);">── Projects ──</option>';
+      projects.forEach(o => projSel.innerHTML += `<option>${o.name}</option>`);
+    }
+    if (others.length) {
+      projSel.innerHTML += '<option disabled style="font-weight:800;color:var(--primary);">── General ──</option>';
+      others.forEach(o => projSel.innerHTML += `<option>${o.name}</option>`);
+    }
+
+    // Populate Category 1 dropdown
+    const cat1Sel = document.getElementById('f-category1');
+    cat1Sel.innerHTML = '<option value="">Choose...</option>';
+    _cat1Options.forEach(c => cat1Sel.innerHTML += `<option value="${c.id}">${c.name}</option>`);
+
+  } catch(e) { console.error('loadCallLogOptions error:', e); }
 }
 
 function toggleProjectCategoryFields() {
   const project = document.getElementById('f-project')?.value || '';
-  const projectNames = ['Sky Ridge Elite','Sky Ridge Executives','Zomra','Perla','Upviews','Jirian','Isla'];
-  const showCategories = projectNames.includes(project);
+  const isProject = _chooseOptions.some(o => o.name === project && o.option_type === 'project');
   const row = document.getElementById('classification-row');
   const cat1Group = document.getElementById('f-category1')?.closest('.form-group');
   const cat2Group = document.getElementById('f-category2')?.closest('.form-group');
-  if (cat1Group) cat1Group.style.display = showCategories ? '' : 'none';
-  if (cat2Group) cat2Group.style.display = showCategories ? '' : 'none';
-  if (row) row.style.gridTemplateColumns = showCategories ? '1fr 1fr 1fr' : '1fr';
-  if (!showCategories) {
+  if (cat1Group) cat1Group.style.display = isProject ? '' : 'none';
+  if (cat2Group) cat2Group.style.display = isProject ? '' : 'none';
+  if (row) row.style.gridTemplateColumns = isProject ? '1fr 1fr 1fr' : '1fr';
+  if (!isProject) {
     const cat1 = document.getElementById('f-category1');
     const cat2 = document.getElementById('f-category2');
     if (cat1) cat1.value = '';
-    if (cat2) cat2.value = '';
+    if (cat2) { cat2.innerHTML = '<option value="">Select Category 1 first...</option>'; cat2.disabled = true; }
   }
 }
 
-const CATEGORY2_BY_CATEGORY1 = {
-  Request: [
-    'EOI Refund','Data Update','Finishing Process','Delivery Date',
-    'Financial - Bounced Cheque','Financial - Postponing Cheque','Financial - Receiving Cheque',
-    'Financial - Cash Discount','Financial - Cash Payment','Financial - Changing Cheques',
-    'Financial - Collective Cheque','Financial - Down Payment','Financial - Due Payment',
-    'Financial - Payment Receipt','Financial - Maintenance Cheque','Financial - Pay In Advance',
-    'Financial - Payment Details','Financial - Redeposit','Financial - Relinquishment',
-    'Financial - Reschedule','Unit Movement','Modification','Receiving Contract','EOI Payment',
-    'Pre Delivery Site Visit','Delegation','Construction Update','Cancellation',
-    'Delivery Inspection','Unit Upgrade','Unit Downgrade','Auto Cad'
-  ],
-  Complaint: ['Sales - Attitude','Sales - Wrong Info'],
-  Inquiry: ['Sales Lead','Events','Resale','Other']
-};
+async function onCategory1Change() {
+  const cat1Sel = document.getElementById('f-category1');
+  const cat2    = document.getElementById('f-category2');
+  const cat1Id  = cat1Sel.value;
 
-function filterCategory2ByCat1() {
-  const cat1 = document.getElementById('f-category1');
-  const cat2 = document.getElementById('f-category2');
-  if (!cat1 || !cat2) return;
-  const values = CATEGORY2_BY_CATEGORY1[cat1.value] || [];
-  cat2.innerHTML = '<option value="">Select sub-category...</option>' + values.map(value => `<option>${value}</option>`).join('');
-  cat2.disabled = !cat1.value;
-  cat2.value = '';
+  if (!cat1Id) {
+    cat2.innerHTML = '<option value="">Select Category 1 first...</option>';
+    cat2.disabled = true;
+    return;
+  }
+
+  // Fetch from Supabase (cache for performance)
+  if (!_cat2Cache[cat1Id]) {
+    try {
+      const headers = { 'apikey': SB_KEY_SCH, 'Authorization': `Bearer ${window._authToken || SB_KEY_SCH}` };
+      const res = await fetch(`${SB_URL_SCH}/rest/v1/call_log_category2?category1_id=eq.${cat1Id}&is_active=eq.true&order=sort_order,name`, { headers });
+      _cat2Cache[cat1Id] = await res.json() || [];
+    } catch(e) { _cat2Cache[cat1Id] = []; }
+  }
+
+  const items = _cat2Cache[cat1Id];
+  cat2.disabled = false;
+  cat2.innerHTML = '<option value="">Choose...</option>' +
+    items.map(o => `<option>${o.name}</option>`).join('');
 }
 
-window.addEventListener('load', toggleProjectCategoryFields);
+function toggleFormSections() { /* no-op — Wrong Number/Call Dropped are Quick Log only */ }
+
+// Keep old function name as alias for backward compat
+function filterCategory2ByCat1() { onCategory1Change(); }
+
+window.addEventListener('load', () => {
+  loadCallLogOptions().then(() => toggleProjectCategoryFields());
+});
+
+/* ─── REMINDER SYSTEM ─── */
+async function openReminderModal(customerName, customerMobile, callLogId) {
+  const existing = document.getElementById('reminder-modal');
+  if (existing) existing.remove();
+
+  const tomorrow = new Date();
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  const defDate = tomorrow.toLocaleDateString('en-CA');
+
+  const modal = document.createElement('div');
+  modal.id = 'reminder-modal';
+  modal.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.7);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;padding:16px;';
+  modal.innerHTML = `
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:20px;width:100%;max-width:420px;padding:24px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
+        <div style="font-size:16px;font-weight:800;color:var(--text);">⏰ Set Reminder</div>
+        <button onclick="document.getElementById('reminder-modal').remove()"
+          style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;width:34px;height:34px;font-size:16px;cursor:pointer;color:var(--muted);">✕</button>
+      </div>
+      <div style="background:var(--surface2);border-radius:12px;padding:12px;margin-bottom:16px;font-size:13px;">
+        <div style="font-weight:700;color:var(--text);">👤 ${customerName || '—'}</div>
+        <div style="color:var(--muted);font-family:monospace;">${customerMobile || '—'}</div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px;">
+        <div>
+          <label style="font-size:11px;font-weight:700;color:var(--muted);display:block;margin-bottom:6px;">Date</label>
+          <input type="date" id="rem-date" class="form-input" value="${defDate}">
+        </div>
+        <div>
+          <label style="font-size:11px;font-weight:700;color:var(--muted);display:block;margin-bottom:6px;">Time (optional)</label>
+          <input type="time" id="rem-time" class="form-input">
+        </div>
+      </div>
+      <div style="margin-bottom:16px;">
+        <label style="font-size:11px;font-weight:700;color:var(--muted);display:block;margin-bottom:6px;">Note</label>
+        <textarea id="rem-note" class="form-input" rows="3" placeholder="Follow up about..."></textarea>
+      </div>
+      <button onclick="saveReminder('${(customerName||'').replace(/'/g,"\\'")}','${(customerMobile||'').replace(/'/g,"\\'")}','${callLogId||''}')"
+        style="width:100%;padding:14px;background:var(--primary-gradient);color:white;border:none;border-radius:12px;font-size:14px;font-weight:800;cursor:pointer;font-family:inherit;">
+        ⏰ Save Reminder
+      </button>
+    </div>`;
+  document.body.appendChild(modal);
+}
+
+async function saveReminder(customerName, customerMobile, callLogId) {
+  const date = document.getElementById('rem-date').value;
+  const time = document.getElementById('rem-time').value || null;
+  const note = document.getElementById('rem-note').value.trim();
+  const agent = document.getElementById('user-name')?.innerText?.trim() || '';
+
+  if (!date) { showToast('⚠️', 'Error', 'Please select a date', 'warn', 3000); return; }
+
+  try {
+    const headers = { 'apikey': SB_KEY_SCH, 'Authorization': `Bearer ${window._authToken || SB_KEY_SCH}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' };
+    const res = await fetch(`${SB_URL_SCH}/rest/v1/call_reminders`, {
+      method: 'POST', headers,
+      body: JSON.stringify({
+        agent_id: window.schMyAgentId || null,
+        agent_name: agent,
+        customer_name: customerName,
+        customer_mobile: customerMobile,
+        reminder_date: date,
+        reminder_time: time,
+        note: note,
+        call_log_id: callLogId || null,
+        is_done: false,
+      })
+    });
+    if (!res.ok) throw new Error(await res.text());
+
+    document.getElementById('reminder-modal').remove();
+    showToast('✅', 'Reminder Set!', `${customerName} — ${date}`, 'success', 4000);
+    if (typeof loadMyReminders === 'function') loadMyReminders();
+  } catch(e) {
+    showToast('❌', 'Error', e.message, 'error', 5000);
+  }
+}
+
+async function loadMyReminders() {
+  const agent = document.getElementById('user-name')?.innerText?.trim();
+  const wrap  = document.getElementById('reminders-list');
+  if (!wrap || !agent) return;
+
+  try {
+    const today = getLocalDateStr();
+    const headers = { 'apikey': SB_KEY_SCH, 'Authorization': `Bearer ${window._authToken || SB_KEY_SCH}` };
+    const res = await fetch(`${SB_URL_SCH}/rest/v1/call_reminders?agent_name=eq.${encodeURIComponent(agent)}&is_done=eq.false&order=reminder_date,reminder_time`, { headers });
+    const data = await res.json() || [];
+
+    if (!data.length) {
+      wrap.innerHTML = '<div style="text-align:center;color:var(--muted);padding:20px;font-size:13px;">No upcoming reminders ✨</div>';
+      return;
+    }
+
+    wrap.innerHTML = data.map(r => {
+      const isToday  = r.reminder_date === today;
+      const isPast   = r.reminder_date < today;
+      const border   = isPast ? 'var(--danger)' : isToday ? 'var(--primary)' : 'var(--border)';
+      const dateBadge = isPast ? '🔴 Overdue' : isToday ? '🟡 Today' : r.reminder_date;
+      return `
+        <div style="display:flex;align-items:center;gap:12px;padding:12px;border:1px solid ${border};border-radius:12px;margin-bottom:8px;background:var(--surface);">
+          <div style="flex:1;">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
+              <span style="font-weight:800;font-size:13px;color:var(--text);">${r.customer_name || '—'}</span>
+              <span style="font-size:11px;color:var(--muted);font-family:monospace;">${r.customer_mobile || ''}</span>
+            </div>
+            <div style="font-size:11px;color:var(--muted);">
+              <span style="font-weight:700;${isPast?'color:var(--danger);':isToday?'color:var(--primary);':''}">${dateBadge}</span>
+              ${r.reminder_time ? ' · ' + r.reminder_time.substring(0,5) : ''}
+              ${r.note ? ' · ' + r.note : ''}
+            </div>
+          </div>
+          <button onclick="markReminderDone('${r.id}')" title="Mark done"
+            style="background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.3);border-radius:10px;padding:8px 12px;font-size:12px;font-weight:700;color:#10B981;cursor:pointer;">
+            ✓ Done
+          </button>
+        </div>`;
+    }).join('');
+  } catch(e) {
+    wrap.innerHTML = '<div style="color:var(--danger);font-size:12px;padding:10px;">Failed to load reminders</div>';
+  }
+}
+
+async function markReminderDone(id) {
+  try {
+    const headers = { 'apikey': SB_KEY_SCH, 'Authorization': `Bearer ${window._authToken || SB_KEY_SCH}`, 'Content-Type': 'application/json' };
+    await fetch(`${SB_URL_SCH}/rest/v1/call_reminders?id=eq.${id}`, { method: 'PATCH', headers, body: JSON.stringify({ is_done: true }) });
+    showToast('✅', 'Done!', 'Reminder marked as complete', 'success', 3000);
+    loadMyReminders();
+  } catch(e) { showToast('❌', 'Error', e.message, 'error', 4000); }
+}
 
 /* ─── QUICK LOG ─── */
 function quickLogCall(reason) {
@@ -149,13 +308,15 @@ function submitCallLogForm() {
   const mobile  = document.getElementById('f-mobile').value.trim();
   const cname   = document.getElementById('f-cname').value.trim();
   const isQ     = (reason === 'Wrong Number' || reason === 'Call Dropped');
-  const projectNames = ['Sky Ridge Elite','Sky Ridge Executives','Zomra','Perla','Upviews','Jirian','Isla'];
-  const isProject = projectNames.includes(project);
+  const isProject = _chooseOptions.some(o => o.name === project && o.option_type === 'project');
 
   if (!agent)                              { showFormErr('Please select Agent Name!'); return; }
   if (isProject && !reason)                { showFormErr('Please select Category 2!'); return; }
-  if (!isQ && !project)                    { showFormErr('Please select Project!'); return; }
+  if (!isQ && !project)                    { showFormErr('Please select Choose!'); return; }
   if (isProject && !cat1)                  { showFormErr('Please select Category 1!'); return; }
+
+  // Resolve Category 1 name from the ID for storage
+  const cat1Name = isProject ? (_cat1Options.find(c => c.id === cat1)?.name || cat1) : '';
   if (!isQ && !cname)                      { showFormErr('Please enter Customer Name!'); return; }
   if (!isQ && !mobile)                     { showFormErr('Please enter Customer Mobile!'); return; }
   if (!isQ && !radioValues['f-bizrel'])    { showFormErr('Select Business Relativity!'); return; }
@@ -182,7 +343,7 @@ function submitCallLogForm() {
   const data = {
     agent, reason,
     project:   isQ ? '' : project,
-    category1: isQ || !isProject ? '' : cat1,
+    category1: isQ || !isProject ? '' : cat1Name,
     direction: radioValues['f-direction'] || 'inbound',
     cname:     isQ ? '' : cname,
     mobile:    isQ ? '' : mobile,
@@ -460,6 +621,15 @@ async function loadMyCallLog() {
 
   container.innerHTML = `
     <div style="padding:16px;">
+      <!-- ═══ REMINDERS SECTION ═══ -->
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:16px;margin-bottom:16px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+          <div class="section-label" style="margin:0"><i class="fas fa-bell" style="color:#F59E0B;"></i> My Reminders</div>
+          <button class="action-btn c-accent" onclick="loadMyReminders()" style="font-size:11px;padding:6px 12px;"><i class="fas fa-sync-alt"></i></button>
+        </div>
+        <div id="reminders-list"><div style="text-align:center;color:var(--muted);padding:12px;font-size:12px;">Loading...</div></div>
+      </div>
+
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:10px;">
         <div class="section-label" style="margin:0"><i class="fas fa-phone-alt"></i> My Log</div>
         <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
@@ -472,6 +642,7 @@ async function loadMyCallLog() {
     </div>`;
 
   await fetchMyCallLog(agent);
+  loadMyReminders();
 }
 
 async function fetchMyCallLog(agent) {
@@ -563,6 +734,11 @@ async function fetchMyCallLog(agent) {
                   onmouseover="this.style.background='rgba(239,68,68,0.15)'" onmouseout="this.style.background='rgba(239,68,68,0.08)'">
                   🗑️ Delete
                 </button>
+                ${!isQ ? `<button onclick="openReminderModal('${(c.customer_name||'').replace(/'/g,"\\'")}','${(c.customer_mobile||'').replace(/'/g,"\\'")}','${c.id}')"
+                  style="background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.25);border-radius:10px;padding:7px 13px;font-size:12px;font-weight:700;color:#F59E0B;cursor:pointer;display:flex;align-items:center;gap:5px;white-space:nowrap;transition:all 0.2s;"
+                  onmouseover="this.style.background='rgba(245,158,11,0.15)'" onmouseout="this.style.background='rgba(245,158,11,0.08)'">
+                  ⏰ Remind
+                </button>` : ''}
               </div>
             </div>
           </div>
