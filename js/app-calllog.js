@@ -289,7 +289,7 @@ function quickLogCall(reason) {
   .catch(() => {
     if (submissionId !== _activeSubmission) return;
     if (typeof addOfflineCall === 'function') {
-      addOfflineCall({ agent, reason, cname:'', mobile:'', bizrel:'', salescall:'',
+      addOfflineCall({ agent, reason, project:'', category1:'', cname:'', mobile:'', bizrel:'', salescall:'',
         channel:'', media:'', budget:'', unit:'', extra:'', _channel: window._activeChannel || 'call' });
       if (window.showToast) showToast('📥','Saved Offline!', reason + ' — Will sync when back online.', 'warn', 6000);
       if (typeof setStatusBar === 'function') setStatusBar('offline', `You're offline — ${getOfflineCalls().length} call(s) pending sync`);
@@ -806,9 +806,16 @@ function openEditCallModal(callData) {
   const existing = document.getElementById('edit-call-modal');
   if (existing) existing.remove();
 
-  const projectOptions  = ['Sky Ridge Elite','Sky Ridge Executives','Zomra','Perla','Upviews','Jirian','Isla','Asking about the projects','Jirian campaign','Jirian Island campaign','Broker','Delayed sales call','EOI Refund','Collaboration request','Non-Business General Inquiry','Business General Inquiry','Complaint',"Shakira's Event"];
-  const cat1Options     = ['Request','Complaint','Inquiry'];
-  const reasonOptions   = ['Sales Lead','Events','EOI Refund','Wrong Number','Call Dropped','Resale','Data Update','Finishing Process','Delivery Date','Financial - Bounced Cheque','Financial - Postponing Cheque','Financial - Receiving Cheque','Financial - Cash Discount','Financial - Cash Payment','Financial - Changing Cheques','Financial - Collective Cheque','Financial - Down Payment','Financial - Due Payment','Financial - Payment Receipt','Financial - Maintenance Cheque','Financial - Pay In Advance','Financial - Payment Details','Financial - Redeposit','Financial - Relinquishment','Financial - Reschedule','Other','Unit Movement','Modification','Receiving Contract','EOI Payment','Pre Delivery Site Visit','Delegation','Construction Update','Cancellation','Delivery Inspection','Unit Upgrade','Unit Downgrade','Auto Cad','Sales - Attitude','Sales - Wrong Info'];
+  // Dynamic options from loaded Supabase data
+  const projectOptions = _chooseOptions.map(o => o.name);
+  const cat1Options    = _cat1Options.map(c => c.name);
+  // For edit modal, include all possible cat2 values (from all cat1s + old values for backward compat)
+  let reasonOptions = [];
+  Object.values(_cat2Cache).forEach(items => items.forEach(i => { if (!reasonOptions.includes(i.name)) reasonOptions.push(i.name); }));
+  // Also add the current call_reason if not in list (backward compat with old records)
+  if (callData.call_reason && !reasonOptions.includes(callData.call_reason)) reasonOptions.push(callData.call_reason);
+  if (!reasonOptions.length) reasonOptions = ['Wrong Number','Call Dropped','Sales Lead','Events','Other'];
+
   const channelOptions  = ['Whatsapp','Mobile','Email','Alternative Mobile','SMS','N/A'];
   const mediaOptions    = ['Billboards','Saw site','Facebook','Instagram','Linkedin','Word of mouth','TV ad.','Youtube','N/A'];
   const budgetOptions   = ['0 - 10','10 - 20','20 +','N/A'];
