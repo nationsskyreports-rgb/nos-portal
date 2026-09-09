@@ -311,66 +311,56 @@ function copySummary() {
   });
 }
 
-/* ─── CALL LOG ENTRY PICKER (Search / Call / WhatsApp) ─── */
+/* ─── CHANNEL SELECTOR ─── */
 var _activeChannel = null;
 
-function pickCalllog(mode) {
-  var btnSearch  = document.getElementById('pick-search');
-  var btnCall    = document.getElementById('pick-call');
-  var btnWA      = document.getElementById('pick-whatsapp');
-  var viewSearch = document.getElementById('view-search');
-  var formArea   = document.getElementById('calllog-form-area');
+function selectChannel(ch) {
+  var formArea  = document.getElementById('calllog-form-area');
+  var btnCall   = document.getElementById('btn-channel-call');
+  var btnWA     = document.getElementById('btn-channel-whatsapp');
+  var swCall    = document.getElementById('switch-call-btn');
+  var swWA      = document.getElementById('switch-wa-btn');
+  var icon      = document.getElementById('calllog-channel-icon');
+  var title     = document.getElementById('calllog-channel-title');
 
-  if (!btnSearch || !btnCall || !btnWA) return;
-
-  /* Cancel any in-flight submission when switching entry mode */
-  _activeSubmission++;
   goStep(1);
   _currentStep = 1;
 
-  /* Reset all tab states */
-  [btnSearch, btnCall, btnWA].forEach(function(b) {
-    b.classList.remove('active');
-    b.setAttribute('aria-selected', 'false');
-  });
+  /* ─── FIX: إلغاء أي submission قديمة عند تغيير الـ channel ─── */
+  _activeSubmission++;
 
-  if (mode === 'search') {
-    btnSearch.classList.add('active');
-    btnSearch.setAttribute('aria-selected', 'true');
-    if (viewSearch) viewSearch.style.display = 'block';
-    if (formArea)   formArea.style.display   = 'none';
+  if (_activeChannel === ch) {
     _activeChannel = null;
-    setTimeout(function() {
-      var input = document.getElementById('step1-search-input');
-      if (input) input.focus();
-    }, 250);
+    formArea.style.display = 'none';
+    btnCall.style.borderColor = 'var(--border)'; btnCall.style.background = 'var(--surface)';
+    btnWA.style.borderColor   = 'var(--border)'; btnWA.style.background   = 'var(--surface)';
     return;
   }
 
-  /* Call or WhatsApp: hide search, show form */
-  if (viewSearch) viewSearch.style.display = 'none';
-  if (formArea)   formArea.style.display   = 'block';
+  _activeChannel = ch;
+  formArea.style.display = 'block';
 
-  if (mode === 'call') {
-    btnCall.classList.add('active');
-    btnCall.setAttribute('aria-selected', 'true');
-    _activeChannel = 'call';
+  if (ch === 'call') {
+    icon.innerText  = '📞'; title.innerText = 'Call Log';
+    btnCall.style.borderColor = 'var(--primary)'; btnCall.style.background = 'rgba(212,175,55,0.1)';
+    btnWA.style.borderColor   = 'var(--border)';  btnWA.style.background   = 'var(--surface)';
+    swCall.style.borderColor  = 'var(--primary)'; swCall.style.color       = 'var(--primary)';
+    swWA.style.borderColor    = 'var(--border)';  swWA.style.color         = 'var(--muted)';
     setTimeout(function() {
       var mobileOpt = document.querySelector('#f-channel .radio-opt:nth-child(2)');
       if (mobileOpt) selectRadio('f-channel', mobileOpt, 'Mobile');
     }, 100);
-  } else if (mode === 'whatsapp') {
-    btnWA.classList.add('active');
-    btnWA.setAttribute('aria-selected', 'true');
-    _activeChannel = 'whatsapp';
+  } else {
+    icon.innerText  = '💬'; title.innerText = 'WhatsApp Log';
+    btnWA.style.borderColor   = '#25d366';        btnWA.style.background   = 'rgba(37,211,102,0.08)';
+    btnCall.style.borderColor = 'var(--border)';  btnCall.style.background = 'var(--surface)';
+    swWA.style.borderColor    = '#25d366';         swWA.style.color         = '#25d366';
+    swCall.style.borderColor  = 'var(--border)';  swCall.style.color       = 'var(--muted)';
     setTimeout(function() {
       var waOpt = document.querySelector('#f-channel .radio-opt:first-child');
       if (waOpt) selectRadio('f-channel', waOpt, 'Whatsapp');
     }, 100);
   }
 
-  if (formArea) formArea.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  formArea.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
-
-/* Backward-compat alias — kept in case any external code still calls selectChannel() */
-function selectChannel(ch) { pickCalllog(ch); }
