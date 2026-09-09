@@ -442,72 +442,52 @@
     <!-- TAB: CALL LOG -->
     <div class="tab-content" id="tab-form">
 
-      <!-- Channel Selector -->
-      <div id="channel-selector" style="padding:24px 16px;">
-        <div style="font-family:'Syne',sans-serif;font-size:18px;font-weight:800;color:var(--text);margin-bottom:6px;">Log a Contact</div>
-        <div style="font-size:13px;color:var(--muted);margin-bottom:20px;">Choose the communication channel</div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+      <!-- Mobile-only "Desktop Only" warning (shown on mobile via CSS) -->
+      <div class="mobile-calllog-warning">
+        <div class="warn-icon">🖥️</div>
+        <h3>Desktop Only</h3>
+        <p>Call Log data entry requires a desktop browser for the best experience.</p>
+      </div>
 
-          <div id="btn-channel-call" onclick="selectChannel('call')" style="
-            background:var(--surface);border:2px solid var(--border);border-radius:18px;
-            padding:28px 16px;text-align:center;cursor:pointer;transition:all 0.3s;
-          ">
-            <div style="font-size:36px;margin-bottom:12px;">📞</div>
-            <div style="font-family:'Syne',sans-serif;font-size:16px;font-weight:800;color:var(--text);">Call</div>
-            <div style="font-size:12px;color:var(--muted);margin-top:4px;">Phone call log</div>
-          </div>
-
-          <div id="btn-channel-whatsapp" onclick="selectChannel('whatsapp')" style="
-            background:var(--surface);border:2px solid var(--border);border-radius:18px;
-            padding:28px 16px;text-align:center;cursor:pointer;transition:all 0.3s;
-          ">
-            <i class="fab fa-whatsapp" style="font-size:40px;color:#25d366;margin-bottom:12px;display:block;"></i>
-            <div style="font-family:'Syne',sans-serif;font-size:16px;font-weight:800;color:var(--text);">WhatsApp</div>
-            <div style="font-size:12px;color:var(--muted);margin-top:4px;">WhatsApp message log</div>
-          </div>
-
+      <!-- ═══ SEGMENTED PICKER: Search / Call / WhatsApp ═══ -->
+      <div id="calllog-picker-wrap" style="padding:20px 16px 0;">
+        <div class="calllog-picker" role="tablist" aria-label="Call log entry">
+          <button id="pick-search" class="calllog-pick-btn active" role="tab" aria-selected="true" onclick="pickCalllog('search')">
+            <i class="fas fa-search"></i><span>Search</span>
+          </button>
+          <button id="pick-call" class="calllog-pick-btn" role="tab" aria-selected="false" onclick="pickCalllog('call')">
+            <i class="fas fa-phone-alt"></i><span>Call</span>
+          </button>
+          <button id="pick-whatsapp" class="calllog-pick-btn" role="tab" aria-selected="false" onclick="pickCalllog('whatsapp')">
+            <i class="fab fa-whatsapp"></i><span>WhatsApp</span>
+          </button>
         </div>
       </div>
 
-<div id="calllog-form-area" style="display:none;">
-  <!-- Channel Header -->
-  <div id="calllog-channel-header" style="display:flex;align-items:center;gap:14px;padding:16px 20px;margin:0 16px 16px;border-radius:16px;border:2px solid var(--border);background:var(--surface2);">
-    <div id="calllog-channel-icon" style="font-size:28px;">📞</div>
-    <div style="flex:1;">
-      <div id="calllog-channel-title" style="font-family:'Syne',sans-serif;font-size:16px;font-weight:800;color:var(--text);">Call Log</div>
-      <div style="font-size:12px;color:var(--muted);">Tap to switch channel</div>
-    </div>
-    <div style="display:flex;gap:8px;">
-      <button id="switch-call-btn" onclick="selectChannel('call')" style="padding:8px 14px;border-radius:10px;border:2px solid var(--border);background:var(--surface);color:var(--muted);font-size:12px;font-weight:700;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;transition:all 0.2s;">📞 Call</button>
-      <button id="switch-wa-btn" onclick="selectChannel('whatsapp')" style="padding:8px 14px;border-radius:10px;border:2px solid var(--border);background:var(--surface);color:var(--muted);font-size:12px;font-weight:700;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;transition:all 0.2s;"><i class="fab fa-whatsapp" style="color:#25d366;margin-right:4px;"></i> WhatsApp</button>
-    </div>
-  </div>
+      <!-- ═══ VIEW: SEARCH (default) ═══ -->
+      <div id="view-search" class="calllog-view" role="tabpanel" aria-labelledby="pick-search" style="padding:16px;">
+        <div class="form-card" style="padding:24px;">
+          <div class="section-label" style="margin-bottom:6px;"><i class="fas fa-search"></i> Customer Search</div>
+          <div style="font-size:12px;color:var(--muted);margin-bottom:14px;">Look up a customer by name or mobile — searches both Call &amp; WhatsApp history.</div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;">
+            <input type="text" id="step1-search-input" placeholder="Search by name or mobile..."
+              class="form-input" style="flex:1;min-width:200px;margin:0;"
+              onkeydown="if(event.key==='Enter') step1SearchCustomer()">
+            <button id="inline-search-btn" onclick="step1SearchCustomer()"
+              style="padding:12px 20px;background:var(--primary-gradient);color:white;border:none;border-radius:11px;cursor:pointer;font-weight:700;font-family:inherit;white-space:nowrap;">
+              🔍 Search
+            </button>
+            <button onclick="clearStep1Search()"
+              style="padding:12px 16px;background:var(--surface2);border:1px solid var(--border);border-radius:11px;color:var(--muted);cursor:pointer;font-weight:700;font-family:inherit;white-space:nowrap;">
+              ✕ Clear
+            </button>
+          </div>
+          <div id="step1-search-results" style="margin-top:14px;"></div>
+          <div id="search-results" style="margin-top:8px;"></div>
+        </div>
+      </div>
 
-  <!-- Fixed Customer Search — sticky at the top of the Call Log tab -->
-  <div id="calllog-fixed-search" style="position:sticky;top:0;z-index:50;margin:0 16px 16px;background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:16px;box-shadow:0 4px 16px rgba(0,0,0,0.08);">
-    <div class="section-label" style="margin-bottom:10px;"><i class="fas fa-search"></i> Customer Search</div>
-    <div style="display:flex;gap:8px;">
-      <input type="text" id="step1-search-input" placeholder="Search by name or mobile..."
-        class="form-input" style="flex:1;margin:0;"
-        onkeydown="if(event.key==='Enter') step1SearchCustomer()">
-      <button onclick="step1SearchCustomer()"
-        style="padding:10px 16px;background:var(--primary-gradient);color:white;border:none;border-radius:11px;cursor:pointer;font-weight:700;font-family:inherit;white-space:nowrap;">
-        🔍 Search
-      </button>
-      <button onclick="clearStep1Search()"
-        style="padding:10px 16px;background:var(--surface2);border:1px solid var(--border);border-radius:11px;color:var(--muted);cursor:pointer;font-weight:700;font-family:inherit;white-space:nowrap;">
-        ✕
-      </button>
-    </div>
-    <div id="step1-search-results" style="margin-top:8px;"></div>
-    <div id="search-results" style="margin-top:8px;"></div>
-  </div>
-
-  <div class="mobile-calllog-warning">
-    <div class="warn-icon">🖥️</div>
-    <h3>Desktop Only</h3>
-    <p>Call Log data entry requires a desktop browser for the best experience.</p>
-  </div>
+<div id="calllog-form-area" class="calllog-view" role="tabpanel" style="display:none;padding:0 16px 16px;">
 
   <div class="form-card" style="padding:20px;">
 
