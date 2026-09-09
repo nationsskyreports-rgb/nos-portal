@@ -996,3 +996,115 @@ function showEditError(msg) {
   const el = document.getElementById('edit-error-msg');
   if (el) { el.textContent = msg; el.style.display = 'block'; }
 }
+
+/* ═══════════════════════════════════════════════════
+   REMINDER AUTO-CHECK — Browser Notifications
+   ═══════════════════════════════════════════════════ */
+let _reminderCheckInterval = null;
+let _notifiedReminderIds   = new Set(JSON.parse(localStorage.getItem('nos_notified_reminders') || '[]'));
+
+function initReminderAutoCheck() {
+  // Request browser notification permission
+  if ('Notification' in window && Notification.permission === 'default') {
+    Notification.requestPermission();
+  }
+
+  // Check immediately on load, then every 60 seconds
+  setTimeout(() => checkDueReminders(), 3000);
+  _reminderCheckInterval = setInterval(checkDueReminders, 60000);
+}
+
+async function checkDueReminders() {
+  const agent = document.getElementById('user-name')?.innerText?.trim();
+  if (!agent) return;
+
+  try {
+    const now     = new Date();
+    const today   = getLocalDateStr();
+    const curTime = now.toLocaleTimeString('en-GB', { timeZone: 'Africa/Cairo', hour: '2-digit', minute: '2-digit' });
+    const headers = { 'apikey': SB_KEY_SCH, 'Authorization': `Bearer ${window._authToken || SB_KEY_SCH}` };
+
+    // Fetch all non-done reminders for today or overdue
+    const res = await fetch(
+      `${SB_URL_SCH}/rest/v1/call_reminders?agent_name=eq.${encodeURIComponent(agent)}&is_done=eq.false&reminder_date=lte.${today}&order=reminder_date,reminder_time`,
+      { headers }
+    );
+    const reminders = await res.json() || [];
+    if (!reminders.length) return;
+
+    // Filter to ones that are due now (overdue dates, or today with time <= now)
+    const due = reminders.filter(r => {
+      if (r.reminder_date < today) return true;  // overdue
+      if (!r.reminder_time) return true;          // today, no specific time
+      return r.reminder_time.substring(0, 5) <= curTime;  // today, time passed
+    });
+
+    if (!due.length) return;
+
+    // Show notifications for new ones only
+    due.forEach(r => {
+      if (_notifiedReminderIds.has(r.id)) return;
+      _notifiedReminderIds.add(r.id);
+
+      const title = `⏰ Reminder: ${r.customer_name || 'Customer'}`;
+      const body  = [
+        r.customer_mobile || '',
+        r.note || '',
+        r.reminder_date < today ? '🔴 OVERDUE' : ''
+      ].filter(Boolean).join(' · ');
+
+      // In-app toast
+      if (typeof showToast === 'function') {
+        showToast('⏰', title, body, 'warn', 10000);
+      }
+
+      // Browser desktop notification
+      if ('Notification' in window && Notification.permission === 'granted') {
+        try {
+          const n = new Notification(title, {
+            body: body,
+            icon: 'assets/icon-192.png',
+            tag: 'reminder-' + r.id,
+            requireInteraction: true,
+          });
+          n.onclick = () => { window.focus(); n.close(); };
+        } catch(e) { /* mobile Safari doesn't support new Notification() */ }
+      }
+    });
+
+    // Save notified IDs to localStorage (keep only last 200)
+    const arr = [..._notifiedReminderIds].slice(-200);
+    localStorage.setItem('nos_notified_reminders', JSON.stringify(arr));
+
+    // Update reminder badge if exists
+    updateReminderBadge(due.length);
+
+  } catch(e) { /* silent — don't break the app */ }
+}
+
+function updateReminderBadge(count) {
+  let badge = document.getElementById('reminder-badge');
+  if (!badge) {
+    // Create a floating badge at top-right
+    badge = document.createElement('div');
+    badge.id = 'reminder-badge';
+    badge.style.cssText = 'position:fixed;top:12px;right:70px;z-index:9990;cursor:pointer;';
+    badge.onclick = () => { switchTab('mylog'); };
+    document.body.appendChild(badge);
+  }
+  if (count > 0) {
+    badge.innerHTML = `
+      <div style="display:flex;align-items:center;gap:6px;background:rgba(245,158,11,0.15);border:1px solid rgba(245,158,11,0.4);border-radius:12px;padding:6px 14px;animation:pulse 2s infinite;">
+        <span style="font-size:14px;">⏰</span>
+        <span style="font-size:12px;font-weight:800;color:#F59E0B;">${count} reminder${count > 1 ? 's' : ''} due</span>
+      </div>`;
+    badge.style.display = '';
+  } else {
+    badge.style.display = 'none';
+  }
+}
+
+// Start auto-check when page loads
+document.addEventListener('DOMContentLoaded', () => {
+  setTimeout(initReminderAutoCheck, 2000);
+});
