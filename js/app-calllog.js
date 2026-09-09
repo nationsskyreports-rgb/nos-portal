@@ -227,6 +227,10 @@ async function lookupCustomer(mobile) {
 }
 
 /* ─── REMINDER SYSTEM ─── */
+function _remEsc(s) {
+  return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
 async function openReminderModal(customerName, customerMobile, callLogId) {
   const existing = document.getElementById('reminder-modal');
   if (existing) existing.remove();
@@ -237,18 +241,22 @@ async function openReminderModal(customerName, customerMobile, callLogId) {
 
   const modal = document.createElement('div');
   modal.id = 'reminder-modal';
-  modal.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.7);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;padding:16px;';
+  modal.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.7);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;padding:16px;overflow-y:auto;';
   modal.innerHTML = `
-    <div style="background:var(--surface);border:1px solid var(--border);border-radius:20px;width:100%;max-width:420px;padding:24px;">
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:20px;width:100%;max-width:460px;padding:24px;max-height:90vh;overflow-y:auto;">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
         <div style="font-size:16px;font-weight:800;color:var(--text);">⏰ Set Reminder</div>
         <button onclick="document.getElementById('reminder-modal').remove()"
           style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;width:34px;height:34px;font-size:16px;cursor:pointer;color:var(--muted);">✕</button>
       </div>
-      <div style="background:var(--surface2);border-radius:12px;padding:12px;margin-bottom:16px;font-size:13px;">
-        <div style="font-weight:700;color:var(--text);">👤 ${customerName || '—'}</div>
-        <div style="color:var(--muted);font-family:monospace;">${customerMobile || '—'}</div>
+      <div style="background:var(--surface2);border-radius:12px;padding:12px;margin-bottom:14px;font-size:13px;">
+        <div style="font-weight:700;color:var(--text);">👤 ${_remEsc(customerName) || '—'}</div>
+        <div style="color:var(--muted);font-family:monospace;">${_remEsc(customerMobile) || '—'}</div>
       </div>
+
+      <!-- Previous follow-ups — populated async, hidden if none/error -->
+      <div id="rem-history" style="display:none;margin-bottom:14px;"></div>
+
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px;">
         <div>
           <label style="font-size:11px;font-weight:700;color:var(--muted);display:block;margin-bottom:6px;">Date</label>
@@ -269,6 +277,74 @@ async function openReminderModal(customerName, customerMobile, callLogId) {
       </button>
     </div>`;
   document.body.appendChild(modal);
+
+  // Fire-and-forget: fetch previous follow-ups for this customer.
+  // If it fails (e.g. RLS blocks it) the modal still works for creating a new one.
+  if (customerMobile) loadReminderHistory(customerMobile);
+}
+
+async function loadReminderHistory(customerMobile) {
+  const wrap = document.getElementById('rem-history');
+  if (!wrap) return;
+  const currentAgent = document.getElementById('user-name')?.innerText?.trim() || '';
+
+  try {
+    const headers = { 'apikey': SB_KEY_SCH, 'Authorization': `Bearer ${window._authToken || SB_KEY_SCH}` };
+    const encoded = encodeURIComponent(customerMobile);
+    const res = await fetch(
+      `${SB_URL_SCH}/rest/v1/call_reminders?customer_mobile=eq.${encoded}&order=reminder_date.desc,reminder_time.desc&limit=10`,
+      { headers }
+    );
+    if (!res.ok) return;
+    const data = await res.json();
+    if (!Array.isArray(data) || !data.length) return;
+
+    const today = new Date().toISOString().slice(0, 10);
+    const rows = data.map(r => {
+      const isDone  = r.is_done === true;
+      const isPast  = !isDone && r.reminder_date && r.reminder_date < today;
+      const isToday = !isDone && r.reminder_date === today;
+      const icon    = isDone ? '✅' : isPast ? '🔴' : isToday ? '🟡' : '⏳';
+      const color   = isDone ? '#10B981' : isPast ? '#EF4444' : isToday ? '#F59E0B' : 'var(--muted)';
+      const label   = isDone ? 'Done' : isPast ? 'Overdue' : isToday ? 'Today' : 'Upcoming';
+      const dateStr = r.reminder_date
+        ? new Date(r.reminder_date + 'T00:00:00').toLocaleDateString('en-GB', { day:'2-digit', month:'short', year:'2-digit' })
+        : '—';
+      const timeStr = r.reminder_time ? r.reminder_time.substring(0, 5) : '';
+      const who     = (r.agent_name && r.agent_name === currentAgent) ? 'You' : (r.agent_name || '?');
+      const note    = (r.note || '').trim() || '(no note)';
+
+      return `
+        <div style="display:flex;gap:10px;padding:9px 0;border-bottom:1px solid var(--border);font-size:12px;">
+          <div style="min-width:18px;padding-top:1px;font-size:14px;">${icon}</div>
+          <div style="flex:1;min-width:0;">
+            <div style="display:flex;gap:8px;align-items:baseline;flex-wrap:wrap;">
+              <span style="font-weight:700;color:var(--text);">${_remEsc(dateStr)}${timeStr ? ' · ' + _remEsc(timeStr) : ''}</span>
+              <span style="font-size:10px;font-weight:800;color:${color};text-transform:uppercase;letter-spacing:0.6px;">${label}</span>
+              <span style="font-size:10px;color:var(--muted);">by ${_remEsc(who)}</span>
+            </div>
+            <div style="color:var(--muted);margin-top:3px;line-height:1.45;word-wrap:break-word;">${_remEsc(note)}</div>
+          </div>
+        </div>`;
+    }).join('');
+
+    wrap.innerHTML = `
+      <div style="background:var(--surface2);border-radius:12px;padding:12px 14px;border:1px solid var(--border);">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+          <div style="font-size:11px;font-weight:800;color:var(--primary);text-transform:uppercase;letter-spacing:0.7px;">
+            📋 Previous Follow-ups
+          </div>
+          <div style="font-size:10px;color:var(--muted);font-weight:700;">${data.length} record${data.length > 1 ? 's' : ''}</div>
+        </div>
+        <div style="max-height:200px;overflow-y:auto;margin:0 -4px;padding:0 4px;">
+          ${rows}
+        </div>
+      </div>`;
+    wrap.style.display = 'block';
+    // Remove trailing border on last row
+    const rowsWrap = wrap.querySelector('div[style*="max-height:200px"]');
+    if (rowsWrap && rowsWrap.lastElementChild) rowsWrap.lastElementChild.style.borderBottom = 'none';
+  } catch (e) { /* silent — modal still works */ }
 }
 
 async function saveReminder(customerName, customerMobile, callLogId) {
