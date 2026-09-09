@@ -323,7 +323,7 @@ function selectChannel(ch) {
   var icon      = document.getElementById('calllog-channel-icon');
   var title     = document.getElementById('calllog-channel-title');
 
-  goStep(1);
+  if (typeof goStep === 'function') goStep(1);
   _currentStep = 1;
 
   /* ─── FIX: إلغاء أي submission قديمة عند تغيير الـ channel ─── */
@@ -331,36 +331,38 @@ function selectChannel(ch) {
 
   if (_activeChannel === ch) {
     _activeChannel = null;
-    formArea.style.display = 'none';
-    btnCall.style.borderColor = 'var(--border)'; btnCall.style.background = 'var(--surface)';
-    btnWA.style.borderColor   = 'var(--border)'; btnWA.style.background   = 'var(--surface)';
+    if (formArea) formArea.style.display = 'none';
+    if (btnCall) { btnCall.style.borderColor = 'var(--border)'; btnCall.style.background = 'var(--surface)'; }
+    if (btnWA)   { btnWA.style.borderColor   = 'var(--border)'; btnWA.style.background   = 'var(--surface)'; }
     return;
   }
 
   _activeChannel = ch;
-  formArea.style.display = 'block';
+  if (formArea) formArea.style.display = 'block';
 
   if (ch === 'call') {
-    icon.innerText  = '📞'; title.innerText = 'Call Log';
-    btnCall.style.borderColor = 'var(--primary)'; btnCall.style.background = 'rgba(212,175,55,0.1)';
-    btnWA.style.borderColor   = 'var(--border)';  btnWA.style.background   = 'var(--surface)';
-    swCall.style.borderColor  = 'var(--primary)'; swCall.style.color       = 'var(--primary)';
-    swWA.style.borderColor    = 'var(--border)';  swWA.style.color         = 'var(--muted)';
+    if (icon)    icon.innerText  = '📞';
+    if (title)   title.innerText = 'Call Log';
+    if (btnCall) { btnCall.style.borderColor = 'var(--primary)'; btnCall.style.background = 'rgba(212,175,55,0.1)'; }
+    if (btnWA)   { btnWA.style.borderColor   = 'var(--border)';  btnWA.style.background   = 'var(--surface)'; }
+    if (swCall)  { swCall.style.borderColor  = 'var(--primary)'; swCall.style.color       = 'var(--primary)'; }
+    if (swWA)    { swWA.style.borderColor    = 'var(--border)';  swWA.style.color         = 'var(--muted)'; }
     setTimeout(function() {
       var mobileOpt = document.querySelector('#f-channel .radio-opt:nth-child(2)');
       if (mobileOpt) selectRadio('f-channel', mobileOpt, 'Mobile');
     }, 100);
   } else {
-    icon.innerText  = '💬'; title.innerText = 'WhatsApp Log';
-    btnWA.style.borderColor   = '#25d366';        btnWA.style.background   = 'rgba(37,211,102,0.08)';
-    btnCall.style.borderColor = 'var(--border)';  btnCall.style.background = 'var(--surface)';
-    swWA.style.borderColor    = '#25d366';         swWA.style.color         = '#25d366';
-    swCall.style.borderColor  = 'var(--border)';  swCall.style.color       = 'var(--muted)';
+    if (icon)    icon.innerText  = '💬';
+    if (title)   title.innerText = 'WhatsApp Log';
+    if (btnWA)   { btnWA.style.borderColor   = '#25d366';        btnWA.style.background   = 'rgba(37,211,102,0.08)'; }
+    if (btnCall) { btnCall.style.borderColor = 'var(--border)';  btnCall.style.background = 'var(--surface)'; }
+    if (swWA)    { swWA.style.borderColor    = '#25d366';         swWA.style.color         = '#25d366'; }
+    if (swCall)  { swCall.style.borderColor  = 'var(--border)';  swCall.style.color       = 'var(--muted)'; }
     setTimeout(function() {
       var waOpt = document.querySelector('#f-channel .radio-opt:first-child');
       if (waOpt) selectRadio('f-channel', waOpt, 'Whatsapp');
     }, 100);
   }
 
-  formArea.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  if (formArea) formArea.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
