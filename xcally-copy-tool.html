@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>xCally Copy Tool — Setup</title>
+<link rel="icon" type="image/png" href="assets/logo.png">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&family=Syne:wght@700;800&family=JetBrains+Mono:wght@600;700&display=swap');
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family:'Plus Jakarta Sans',sans-serif; background:#0B1120; color:#cbd5e1; min-height:100vh; display:flex; align-items:center; justify-content:center; padding:24px; }
+  .card { background:rgba(15,23,42,.9); border:1px solid rgba(255,255,255,.06); border-radius:24px; max-width:660px; width:100%; padding:40px; box-shadow:0 20px 60px rgba(0,0,0,.4); }
+  h1 { font-family:'Syne',sans-serif; font-size:26px; font-weight:800; color:#e2e8f0; margin-bottom:6px; }
+  .sub { font-size:14px; color:#64748b; margin-bottom:28px; }
+  .gold { color:#D4AF37; }
+  .step { display:flex; gap:14px; margin-bottom:24px; }
+  .step-num { width:32px; height:32px; border-radius:10px; background:linear-gradient(135deg,#D4AF37,#F4D03F); color:#0f172a; font-family:'Syne',sans-serif; font-weight:800; font-size:14px; display:flex; align-items:center; justify-content:center; flex-shrink:0; margin-top:2px; }
+  .step-body { flex:1; }
+  .step-title { font-weight:800; color:#e2e8f0; font-size:15px; margin-bottom:4px; }
+  .step-desc { font-size:13px; color:#94a3b8; line-height:1.6; }
+  .bookmarklet-link {
+    display:inline-flex; align-items:center; gap:10px;
+    padding:14px 28px; border-radius:14px;
+    background:linear-gradient(135deg,#D4AF37 0%,#F4D03F 50%,#D4AF37 100%);
+    color:#0f172a; font-family:'Syne',sans-serif; font-size:16px; font-weight:800;
+    text-decoration:none; cursor:grab;
+    box-shadow:0 6px 24px rgba(212,175,55,.35);
+    transition:all .2s; margin:12px 0;
+  }
+  .bookmarklet-link:hover { transform:translateY(-2px); box-shadow:0 10px 32px rgba(212,175,55,.45); }
+  .bookmarklet-link:active { cursor:grabbing; transform:scale(.97); }
+  .drag-hint { display:flex; align-items:center; gap:8px; padding:12px 16px; background:rgba(245,158,11,.08); border:1px solid rgba(245,158,11,.2); border-radius:12px; font-size:12px; color:#f59e0b; margin:14px 0; }
+  .demo-box { background:#1e293b; border:1px solid rgba(255,255,255,.06); border-radius:14px; padding:20px; margin-top:24px; }
+  .demo-title { font-size:12px; font-weight:800; color:#64748b; text-transform:uppercase; letter-spacing:.8px; margin-bottom:12px; }
+  .demo-row { display:flex; align-items:center; gap:10px; padding:10px 12px; border-radius:10px; border-bottom:1px solid rgba(255,255,255,.04); }
+  .demo-row:last-child { border-bottom:none; }
+  .demo-num { font-family:'JetBrains Mono',monospace; font-size:14px; font-weight:700; color:#e2e8f0; flex:1; }
+  .demo-btn { padding:6px 14px; border-radius:8px; border:1px solid rgba(212,175,55,.3); background:rgba(212,175,55,.08); color:#D4AF37; cursor:pointer; font-size:12px; font-weight:700; font-family:inherit; transition:all .15s; }
+  .demo-btn:hover { background:rgba(212,175,55,.15); }
+  kbd { display:inline-block; padding:2px 7px; border-radius:5px; background:#1e293b; border:1px solid rgba(255,255,255,.1); font-family:'JetBrains Mono',monospace; font-size:11px; color:#e2e8f0; }
+  .separator { height:1px; background:rgba(255,255,255,.06); margin:24px 0; }
+  .note { font-size:12px; color:#64748b; line-height:1.6; }
+  .note strong { color:#94a3b8; }
+</style>
+</head>
+<body>
+<div class="card">
+  <h1>📞 <span class="gold">xCally Copy Tool</span></h1>
+  <p class="sub">Get phone numbers from xCally with one click — no proxy needed.</p>
+
+  <div class="step">
+    <div class="step-num">1</div>
+    <div class="step-body">
+      <div class="step-title">Show your Bookmarks Bar</div>
+      <div class="step-desc">Press <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>B</kbd> to show the bookmarks bar in Chrome.</div>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-num">2</div>
+    <div class="step-body">
+      <div class="step-title">Drag this button to your Bookmarks Bar</div>
+      <div class="step-desc">Click and hold the golden button below, then drag it up to your bookmarks bar and release.</div>
+
+      <!-- THE BOOKMARKLET -->
+      <a class="bookmarklet-link" href="javascript:void(function(){if(document.getElementById('_xc_overlay')){document.getElementById('_xc_overlay').remove();return;}var t=document.body.innerText||'';var m=t.match(/(?:\+?2?0|\b0)\d{10}\b/g)||[];var u=[...new Set(m)].slice(0,20);var o=document.createElement('div');o.id='_xc_overlay';o.style.cssText='position:fixed;top:0;right:0;z-index:999999;width:340px;max-height:100vh;overflow-y:auto;background:#0f172a;border-left:2px solid #D4AF37;box-shadow:-8px 0 32px rgba(0,0,0,.5);font-family:sans-serif;padding:16px;';o.innerHTML='<div style=\"display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;\"><div style=\"font-size:15px;font-weight:800;color:#D4AF37;\">📞 xCally Numbers</div><button onclick=\"this.closest(%27%23_xc_overlay%27).remove()\" style=\"background:none;border:none;color:#64748b;font-size:18px;cursor:pointer;\">✕</button></div>'+(u.length?u.map(function(n,i){return'<div style=\"display:flex;align-items:center;gap:8px;padding:10px;border-radius:10px;border-bottom:1px solid rgba(255,255,255,.06);margin-bottom:4px;\"><span style=\"font-family:monospace;font-size:14px;font-weight:700;color:#e2e8f0;flex:1;\">'+n+'</span><button onclick=\"navigator.clipboard.writeText(%27'+n+'%27).then(function(){this.innerText=%27✓ Copied%27;this.style.color=%27%2310B981%27;setTimeout(function(){this.innerText=%27Copy%27;this.style.color=%27%23D4AF37%27;}.bind(this),1500);}.bind(this))\" style=\"padding:5px 12px;border-radius:8px;border:1px solid rgba(212,175,55,.3);background:rgba(212,175,55,.08);color:#D4AF37;cursor:pointer;font-size:12px;font-weight:700;\">Copy</button></div>';}).join(''):'<div style=\"text-align:center;padding:20px;color:#64748b;font-size:13px;\">No phone numbers found on this page</div>');document.body.appendChild(o);}())">
+        ⭐ xCally Copy Tool
+      </a>
+
+      <div class="drag-hint">
+        <span>⬆️</span>
+        <span><strong>Drag</strong> the button above to your bookmarks bar. Don't click it here — it only works on the xCally page.</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-num">3</div>
+    <div class="step-body">
+      <div class="step-title">Use it on xCally</div>
+      <div class="step-desc">When a call comes in on xCally, click <strong>"⭐ xCally Copy Tool"</strong> in your bookmarks bar. A panel will slide in from the right showing all phone numbers on the page. Click <strong>Copy</strong> next to any number.</div>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-num">4</div>
+    <div class="step-body">
+      <div class="step-title">Paste in NOS Portal</div>
+      <div class="step-desc">Switch to the NOS Portal tab and click <strong>"Paste Number"</strong> — the number fills in automatically and triggers customer lookup.</div>
+    </div>
+  </div>
+
+  <div class="separator"></div>
+
+  <div class="demo-box">
+    <div class="demo-title">Preview — this is what you'll see on xCally</div>
+    <div class="demo-row">
+      <span class="demo-num">01557796004</span>
+      <button class="demo-btn" onclick="navigator.clipboard.writeText('01557796004').then(()=>{this.innerText='✓ Copied';this.style.color='#10B981';setTimeout(()=>{this.innerText='Copy';this.style.color='#D4AF37';},1500)})">Copy</button>
+    </div>
+    <div class="demo-row">
+      <span class="demo-num">01123456789</span>
+      <button class="demo-btn" onclick="navigator.clipboard.writeText('01123456789').then(()=>{this.innerText='✓ Copied';this.style.color='#10B981';setTimeout(()=>{this.innerText='Copy';this.style.color='#D4AF37';},1500)})">Copy</button>
+    </div>
+    <div class="demo-row">
+      <span class="demo-num">+201001234567</span>
+      <button class="demo-btn" onclick="navigator.clipboard.writeText('+201001234567').then(()=>{this.innerText='✓ Copied';this.style.color='#10B981';setTimeout(()=>{this.innerText='Copy';this.style.color='#D4AF37';},1500)})">Copy</button>
+    </div>
+  </div>
+
+  <div class="separator"></div>
+
+  <div class="note">
+    <strong>How it works:</strong> The bookmarklet scans the visible text on the xCally page for Egyptian mobile number patterns (01xxxxxxxxx, +201xxxxxxxxx). It doesn't send any data anywhere — everything happens locally in your browser. Click it again to close the panel.
+  </div>
+</div>
+</body>
+</html>
