@@ -12,7 +12,7 @@ body{font-family:'Cairo',sans-serif;background:#0f172a;color:#e2e8f0;min-height:
 h1{font-size:24px;font-weight:900;color:#D4AF37;margin-bottom:6px;}
 .sub{color:#64748b;font-size:14px;margin-bottom:30px;}
 .big-btn{display:inline-block;padding:18px 40px;border-radius:14px;background:linear-gradient(135deg,#D4AF37,#F4D03F);color:#0f172a;font-family:'Cairo',sans-serif;font-size:20px;font-weight:900;text-decoration:none;cursor:grab;box-shadow:0 8px 28px rgba(212,175,55,.35);transition:all .2s;margin-bottom:16px;}
-.big-btn:hover{transform:translateY(-2px);box-shadow:0 12px 36px rgba(212,175,55,.45);}
+.big-btn:hover{transform:translateY(-2px);}
 .big-btn:active{cursor:grabbing;transform:scale(.97);}
 .arrow{font-size:32px;color:#D4AF37;margin-bottom:8px;}
 .hint{color:#94a3b8;font-size:13px;line-height:1.8;margin-bottom:24px;}
@@ -23,15 +23,16 @@ h1{font-size:24px;font-weight:900;color:#D4AF37;margin-bottom:6px;}
 .st{font-size:14px;color:#cbd5e1;line-height:1.7;}
 .st b{color:#e2e8f0;}
 .warn{background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.2);border-radius:10px;padding:12px 16px;font-size:12px;color:#f87171;margin-top:20px;line-height:1.7;text-align:right;}
+.ok{background:rgba(16,185,129,.08);border:1px solid rgba(16,185,129,.2);border-radius:10px;padding:12px 16px;font-size:12px;color:#34d399;margin-top:12px;line-height:1.7;text-align:right;}
 .alt{background:rgba(59,130,246,.08);border:1px solid rgba(59,130,246,.2);border-radius:10px;padding:12px 16px;font-size:12px;color:#60a5fa;margin-top:12px;line-height:1.7;text-align:right;}
-.code-box{margin-top:12px;}
-.code-box input{width:100%;padding:8px 12px;border-radius:8px;background:#0f172a;border:1px solid #334155;color:#94a3b8;font-family:'JetBrains Mono',monospace;font-size:9px;cursor:pointer;direction:ltr;text-align:left;}
+.code-box{margin-top:10px;}
+.code-box input{width:100%;padding:8px 12px;border-radius:8px;background:#0f172a;border:1px solid #334155;color:#94a3b8;font-family:monospace;font-size:9px;cursor:pointer;direction:ltr;text-align:left;}
 </style>
 </head>
 <body>
 <div class="box">
   <h1>📞 نسخ رقم xCally</h1>
-  <p class="sub">ضغطة واحدة = الرقم في الكليبورد</p>
+  <p class="sub">ضغطة واحدة = الرقم يطلعلك في نافذة صغيرة تفضل مفتوحة</p>
 
   <div class="arrow">⬇️</div>
   <div class="hint"><b>اسحب الزرار ده</b> لشريط المفضلة فوق في Chrome</div>
@@ -40,19 +41,23 @@ h1{font-size:24px;font-weight:900;color:#D4AF37;margin-bottom:6px;}
 
   <div class="steps">
     <div class="step"><div class="sn">١</div><div class="st">اظهر شريط المفضلة: <b>Ctrl+Shift+B</b></div></div>
-    <div class="step"><div class="sn">٢</div><div class="st"><b>اسحب</b> الزرار الذهبي فوق لشريط المفضلة</div></div>
-    <div class="step"><div class="sn">٣</div><div class="st">لما مكالمة تدخل → <b>روح تاب xCally</b> في Chrome</div></div>
-    <div class="step"><div class="sn">٤</div><div class="st">ادوس <b>⭐ نسخ الرقم</b> من شريط المفضلة</div></div>
-    <div class="step"><div class="sn">٥</div><div class="st">هيظهرلك <b>"✓ تم نسخ: 01111509666"</b> فوق الشاشة</div></div>
-    <div class="step"><div class="sn">٦</div><div class="st">روح NOS Portal ← ادوس <b>Paste Number</b> أو <b>📋 Paste</b></div></div>
+    <div class="step"><div class="sn">٢</div><div class="st"><b>اسحب</b> الزرار الذهبي لشريط المفضلة</div></div>
+    <div class="step"><div class="sn">٣</div><div class="st">مكالمة دخلت ← <b>وإنت على تاب xCally</b> ادوس ⭐ نسخ الرقم</div></div>
+    <div class="step"><div class="sn">٤</div><div class="st"><b>نافذة صغيرة هتطلع</b> فيها الرقم — هتفضل مفتوحة حتى لو المكالمة خلصت</div></div>
+    <div class="step"><div class="sn">٥</div><div class="st">ادوس <b>نسخ</b> في النافذة في أي وقت — حتى بعد المكالمة</div></div>
+    <div class="step"><div class="sn">٦</div><div class="st">روح NOS Portal ← ادوس <b>Paste</b></div></div>
+  </div>
+
+  <div class="ok">
+    ✅ <b>الميزة:</b> النافذة بتفضل مفتوحة — حتى لو xCally مسح الرقم أو غيّرت تاب. ادوس نسخ وقتك!
   </div>
 
   <div class="warn">
-    ⚠️ <b>مهم:</b> لازم تكون على <b>تاب xCally</b> لما تدوس الزرار — مش على تاب NOS Portal!
+    ⚠️ <b>مهم:</b> ادوس الزرار وإنت على <b>تاب xCally</b> — أول ما المكالمة تدخل وقبل ما تخلص.
   </div>
 
   <div class="alt">
-    💡 لو مش عارف تسحب الزرار: كليك يمين على شريط المفضلة ← Add page ← في خانة Name اكتب "نسخ الرقم" ← في خانة URL الصق الكود ده:
+    💡 لو مش عارف تسحب الزرار: كليك يمين على شريط المفضلة ← Add page ← Name: "نسخ الرقم" ← URL: الصق الكود ده:
     <div class="code-box">
       <input id="bm-code" readonly onclick="this.select();document.execCommand('copy');this.style.borderColor='#10B981';" value="Loading...">
     </div>
@@ -60,36 +65,34 @@ h1{font-size:24px;font-weight:900;color:#D4AF37;margin-bottom:6px;}
 </div>
 
 <script>
-// Aggressive phone finder: scans ALL elements, inputs, attributes
-// Copies first Egyptian mobile number found directly to clipboard
-// Shows a toast — no panel, no clicks needed
 var code = `javascript:void(function(){`
+// Scan everything for phone numbers
 +`var ns=new Set();`
-// 1. Scan all elements textContent
-+`document.querySelectorAll('*').forEach(function(el){`
-+`try{var t=el.textContent||'';var m=t.match(/(?:\\+?2?0|\\b0)1[0-9]{9}\\b/g);if(m)m.forEach(function(x){ns.add(x)});}catch(e){}`
-+`});`
-// 2. Scan input/textarea values
-+`document.querySelectorAll('input,textarea').forEach(function(el){`
-+`try{var v=el.value||'';var m=v.match(/(?:\\+?2?0|\\b0)1[0-9]{9}\\b/g);if(m)m.forEach(function(x){ns.add(x)});}catch(e){}`
-+`});`
-// 3. Scan title, placeholder, aria-label, data attributes
-+`document.querySelectorAll('[title],[placeholder],[aria-label]').forEach(function(el){`
-+`try{['title','placeholder','aria-label'].forEach(function(a){var v=el.getAttribute(a)||'';var m=v.match(/(?:\\+?2?0|\\b0)1[0-9]{9}\\b/g);if(m)m.forEach(function(x){ns.add(x)});});}catch(e){}`
-+`});`
-// 4. Try iframes
-+`try{document.querySelectorAll('iframe').forEach(function(f){`
-+`try{var t=f.contentDocument.body.innerText||'';var m=t.match(/(?:\\+?2?0|\\b0)1[0-9]{9}\\b/g);if(m)m.forEach(function(x){ns.add(x)});}catch(e){}});}catch(e){}`
-// 5. Pick the number and copy
++`document.querySelectorAll('*').forEach(function(el){try{var t=(el.textContent||'')+(el.value||'');var m=t.match(/(?:\\+?2?0|\\b0)1[0-9]{9}\\b/g);if(m)m.forEach(function(x){ns.add(x)});}catch(e){}});`
++`document.querySelectorAll('input,textarea').forEach(function(el){try{var v=el.value||'';var m=v.match(/(?:\\+?2?0|\\b0)1[0-9]{9}\\b/g);if(m)m.forEach(function(x){ns.add(x)});}catch(e){}});`
++`document.querySelectorAll('[title],[placeholder],[aria-label]').forEach(function(el){try{['title','placeholder','aria-label'].forEach(function(a){var v=el.getAttribute(a)||'';var m=v.match(/(?:\\+?2?0|\\b0)1[0-9]{9}\\b/g);if(m)m.forEach(function(x){ns.add(x)});});}catch(e){}});`
 +`var arr=[...ns];`
-+`if(!arr.length){`
-+`var d=document.createElement('div');d.style.cssText='position:fixed;top:20px;left:50%;transform:translateX(-50%);z-index:999999;background:%23ef4444;color:white;padding:14px 28px;border-radius:12px;font:700 16px sans-serif;box-shadow:0 8px 24px rgba(0,0,0,.4);';`
-+`d.textContent='❌ مفيش رقم موبايل في الصفحة دي';document.body.appendChild(d);setTimeout(function(){d.remove();},3000);return;}`
-+`var num=arr[0];`
-+`navigator.clipboard.writeText(num).then(function(){`
-+`var d=document.createElement('div');d.style.cssText='position:fixed;top:20px;left:50%;transform:translateX(-50%);z-index:999999;background:%2310B981;color:white;padding:14px 28px;border-radius:12px;font:700 18px sans-serif;box-shadow:0 8px 24px rgba(0,0,0,.4);direction:ltr;';`
-+`d.textContent='✓ Copied: '+num;document.body.appendChild(d);setTimeout(function(){d.remove();},3000);`
++`if(!arr.length){alert('مفيش رقم موبايل في الصفحة دي');return;}`
+// Open popup window with the numbers — this window PERSISTS after tab switch or call end
++`var h='<!DOCTYPE html><html><head><title>📞 Caller</title><style>'`
++`+'*{margin:0;padding:0;box-sizing:border-box;}'`
++`+'body{font-family:sans-serif;background:%230f172a;color:%23e2e8f0;padding:20px;}'`
++`+'h2{font-size:14px;color:%23D4AF37;margin-bottom:12px;text-align:center;}'`
++`+'.r{display:flex;align-items:center;gap:10px;padding:12px;background:%231e293b;border:1px solid %23334155;border-radius:12px;margin-bottom:8px;}'`
++`+'.n{flex:1;font-family:monospace;font-size:22px;font-weight:700;letter-spacing:2px;}'`
++`+'.b{padding:10px 20px;border-radius:10px;border:none;background:%23D4AF37;color:%230f172a;font-size:14px;font-weight:800;cursor:pointer;}'`
++`+'.b:hover{opacity:.85;}'`
++`+'.ok{color:%2310B981;}'`
++`+'</style></head><body>'`
++`+'<h2>📞 رقم المتصل</h2>';`
++`arr.forEach(function(n){`
++`h+='<div class=\"r\"><span class=\"n\">'+n+'</span>'`
++`+'<button class=\"b\" onclick=\"navigator.clipboard.writeText(\\x27'+n+'\\x27).then(function(){this.textContent=\\x27✓ تم\\x27;this.classList.add(\\x27ok\\x27);}.bind(this))\">نسخ</button></div>';`
 +`});`
++`h+='<div style=\"text-align:center;margin-top:12px;font-size:11px;color:%2364748b;\">النافذة دي بتفضل مفتوحة — انسخ الرقم في أي وقت</div>';`
++`h+='</body></html>';`
++`var w=window.open('','_xcally_num','width=380,height='+Math.min(300,120+arr.length*70)+',top=80,left=80,toolbar=no,menubar=no,scrollbars=no,resizable=yes');`
++`if(w){w.document.write(h);w.document.close();w.focus();}else{navigator.clipboard.writeText(arr[0]);alert('تم نسخ: '+arr[0]);}`
 +`}())`;
 
 document.getElementById('bm-link').href = code;
