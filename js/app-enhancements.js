@@ -490,14 +490,145 @@
   };
 
   // ═════════════════════════════════════
+  // 5. RECENT xCALLY CALLS (copy-friendly)
+  // ═════════════════════════════════════
+  function injectXcallyStyles() {
+    const css = `
+.xcally-recent { background:var(--surface,#0f172a); border:1px solid var(--border,rgba(255,255,255,.08)); border-radius:14px; padding:14px; margin-bottom:14px; }
+.xcally-recent-title { font-size:11px; font-weight:800; color:var(--primary,#D4AF37); text-transform:uppercase; letter-spacing:.7px; margin-bottom:10px; display:flex; align-items:center; gap:8px; }
+.xcally-row { display:flex; align-items:center; gap:10px; padding:9px 10px; border-radius:10px; border-bottom:1px solid var(--border,rgba(255,255,255,.06)); transition:background .15s; }
+.xcally-row:last-child { border-bottom:none; }
+.xcally-row:hover { background:rgba(212,175,55,.04); }
+.xcally-num { font-family:'JetBrains Mono','IBM Plex Mono',monospace; font-size:13px; font-weight:700; color:var(--text,#e2e8f0); flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.xcally-meta { font-size:10px; color:var(--muted,#64748b); white-space:nowrap; }
+.xcally-copy-btn {
+  padding:5px 10px; border-radius:8px; border:1px solid var(--border,rgba(255,255,255,.08));
+  background:transparent; color:var(--muted,#64748b); cursor:pointer; font-size:11px; font-weight:700;
+  font-family:inherit; transition:all .15s; white-space:nowrap; display:flex; align-items:center; gap:4px;
+}
+.xcally-copy-btn:hover { color:var(--primary,#D4AF37); border-color:var(--primary,#D4AF37); background:rgba(212,175,55,.06); }
+.xcally-copy-btn.copied { background:rgba(16,185,129,.1); border-color:rgba(16,185,129,.3); color:#10B981; }
+.xcally-source { display:inline-block; padding:2px 7px; border-radius:6px; font-size:9px; font-weight:800; text-transform:uppercase; letter-spacing:.3px; }
+.xcally-source.inbound { background:rgba(37,99,235,.12); color:#3B82F6; }
+.xcally-source.outbound { background:rgba(245,158,11,.12); color:#F59E0B; }
+.xcally-empty { text-align:center; padding:20px; font-size:12px; color:var(--muted,#64748b); }
+    `;
+    const s = document.createElement('style');
+    s.textContent = css;
+    document.head.appendChild(s);
+  }
+
+  function initRecentXcallyCalls() {
+    // Inject after the agent-dashboard div, inside the form area
+    const formCard = document.querySelector('#calllog-form-area .form-card, #calllog-form-area > div.form-card');
+    // Alt: inject above the customer-history area
+    const channelHeader = document.getElementById('calllog-channel-header');
+    const insertTarget = channelHeader || formCard;
+    if (!insertTarget) return;
+
+    const widget = document.createElement('div');
+    widget.className = 'xcally-recent';
+    widget.id = 'xcally-recent-widget';
+    widget.style.display = 'none'; // hidden until channel selected
+    widget.innerHTML = '<div class="xcally-recent-title"><i class="fas fa-headset"></i> Recent xCally Calls<button onclick="window._refreshXcallyCalls()" style="margin-left:auto;background:none;border:none;color:var(--muted);cursor:pointer;font-size:11px;" title="Refresh"><i class="fas fa-sync-alt"></i></button></div><div id="xcally-recent-list" class="xcally-empty">Select a channel to see recent calls</div>';
+
+    // Insert after channel header if it exists
+    if (channelHeader && channelHeader.parentElement) {
+      channelHeader.parentElement.insertBefore(widget, channelHeader.nextSibling);
+    }
+
+    // Hook into selectChannel to show/refresh
+    const origSelect = window.selectChannel;
+    window.selectChannel = function(ch) {
+      if (origSelect) origSelect.apply(this, arguments);
+      const w = document.getElementById('xcally-recent-widget');
+      if (w) {
+        w.style.display = 'block';
+        w.style.margin = '0 16px 16px';
+        setTimeout(() => window._refreshXcallyCalls(), 200);
+      }
+    };
+
+    window._refreshXcallyCalls = async function() {
+      const list = document.getElementById('xcally-recent-list');
+      if (!list) return;
+      list.innerHTML = '<div style="text-align:center;padding:10px;"><i class="fas fa-spinner fa-spin" style="color:var(--muted);"></i></div>';
+
+      try {
+        const session = JSON.parse(localStorage.getItem('nos_session') || 'null');
+        if (!session || !session.name) { list.innerHTML = '<div class="xcally-empty">Not logged in</div>'; return; }
+
+        const agentName = session.name;
+        const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Africa/Cairo' });
+
+        const headers = { 'apikey': SB_KEY_SCH, 'Authorization': `Bearer ${window._authToken || SB_KEY_SCH}` };
+        const url = `${SB_URL_SCH}/rest/v1/xcally_calls_logs?agent_name=eq.${encodeURIComponent(agentName)}&call_date=eq.${today}&order=call_time.desc&limit=15`;
+        const res = await fetch(url, { headers });
+
+        if (!res.ok) { list.innerHTML = '<div class="xcally-empty">Could not load — try refreshing</div>'; return; }
+        const calls = await res.json();
+
+        if (!calls || !calls.length) {
+          list.innerHTML = '<div class="xcally-empty">No xCally calls imported for today yet</div>';
+          return;
+        }
+
+        list.innerHTML = calls.map((c, i) => {
+          const num = c.customer_mobile || '—';
+          const time = c.call_time ? c.call_time.substring(0, 5) : '—';
+          const src = c.call_source || 'inbound';
+          const name = c.customer_name || '';
+          const hasNum = num && num !== '—' && num.length >= 7;
+
+          return `<div class="xcally-row">
+            <span class="xcally-source ${src}">${src === 'outbound' ? '📤 OUT' : '📥 IN'}</span>
+            <span class="xcally-num" title="${_escH(num)}">${_escH(num)}${name ? ' — ' + _escH(name) : ''}</span>
+            <span class="xcally-meta">${time}</span>
+            ${hasNum ? `<button class="xcally-copy-btn" id="xc-copy-${i}" onclick="window._copyXcallyNum('${_escH(num)}',${i})"><i class="fas fa-copy"></i> Copy</button>` : ''}
+            ${hasNum ? `<button class="xcally-copy-btn" onclick="window._useXcallyNum('${_escH(num)}')"><i class="fas fa-arrow-right"></i> Use</button>` : ''}
+          </div>`;
+        }).join('');
+
+      } catch(e) {
+        list.innerHTML = '<div class="xcally-empty">Error: ' + (e.message || 'unknown') + '</div>';
+      }
+    };
+
+    window._copyXcallyNum = async function(num, idx) {
+      try {
+        await navigator.clipboard.writeText(num);
+        const btn = document.getElementById('xc-copy-' + idx);
+        if (btn) { btn.classList.add('copied'); btn.innerHTML = '<i class="fas fa-check"></i> Copied!'; setTimeout(() => { btn.classList.remove('copied'); btn.innerHTML = '<i class="fas fa-copy"></i> Copy'; }, 2000); }
+        if (typeof showToast === 'function') showToast('Copied: ' + num, 'success');
+      } catch(e) {
+        if (typeof showToast === 'function') showToast('Copy failed — use manual copy', 'warning');
+      }
+    };
+
+    window._useXcallyNum = function(num) {
+      const input = document.getElementById('f-mobile');
+      if (input) {
+        input.value = num;
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+        if (typeof onMobileInput === 'function') onMobileInput(num);
+        if (typeof showToast === 'function') showToast('Number filled: ' + num, 'success');
+      }
+    };
+  }
+
+  function _escH(s) { return String(s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+  // ═════════════════════════════════════
   // INIT ALL
   // ═════════════════════════════════════
   _ready(function () {
     injectStyles();
+    injectXcallyStyles();
     initPasteCallerID();
     initCallTimer();
     initReminderAlerts();
     initDailyTarget();
+    initRecentXcallyCalls();
   });
 
 })();
