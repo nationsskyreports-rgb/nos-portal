@@ -35,37 +35,6 @@
   box-shadow:0 2px 8px rgba(5,150,105,0.3);
 }
 
-/* ── Call Timer Widget ── */
-.call-timer-widget {
-  position:fixed; bottom:90px; right:20px; z-index:8000;
-  background:var(--surface,#0f172a); border:1.5px solid var(--border,rgba(255,255,255,0.08));
-  border-radius:18px; padding:12px 16px;
-  box-shadow:0 8px 32px rgba(0,0,0,0.3);
-  display:flex; align-items:center; gap:10px;
-  font-family:'Plus Jakarta Sans',sans-serif;
-  transition:all 0.3s cubic-bezier(0.4,0,0.2,1);
-  opacity:0; transform:translateY(20px); pointer-events:none;
-}
-.call-timer-widget.visible { opacity:1; transform:translateY(0); pointer-events:all; }
-.call-timer-widget.recording { border-color:rgba(239,68,68,0.5); }
-.call-timer-widget.recording .ct-dot { background:#ef4444; animation:ct-pulse 1s infinite; }
-
-.ct-dot { width:10px; height:10px; border-radius:50%; background:var(--muted,#64748b); flex-shrink:0; transition:background 0.3s; }
-@keyframes ct-pulse { 0%,100%{opacity:1;transform:scale(1);} 50%{opacity:0.5;transform:scale(1.3);} }
-
-.ct-time { font-family:'JetBrains Mono',monospace; font-size:20px; font-weight:800; color:var(--text,#e2e8f0); min-width:72px; text-align:center; letter-spacing:1px; }
-
-.ct-btns { display:flex; gap:4px; }
-.ct-btn {
-  width:32px; height:32px; border-radius:10px;
-  border:1px solid var(--border,rgba(255,255,255,0.08));
-  background:var(--surface2,#1e293b); color:var(--muted,#64748b);
-  display:flex; align-items:center; justify-content:center;
-  cursor:pointer; font-size:12px; transition:all 0.15s;
-}
-.ct-btn:hover { color:var(--text,#e2e8f0); border-color:var(--primary,#2563eb); background:rgba(37,99,235,0.1); }
-.ct-btn.active { color:#ef4444; border-color:rgba(239,68,68,0.3); background:rgba(239,68,68,0.08); }
-
 /* ── Reminder Alert Banner ── */
 .reminder-alert-banner {
   position:fixed; top:0; left:0; right:0; z-index:9999;
@@ -197,84 +166,6 @@
         window._pasteCallerID();
       }
     });
-  }
-
-  // ═════════════════════════════════════
-  // 2. CALL TIMER
-  // ═════════════════════════════════════
-  let _timerInterval = null;
-  let _timerSeconds = 0;
-  let _timerRunning = false;
-
-  function initCallTimer() {
-    const widget = document.createElement('div');
-    widget.className = 'call-timer-widget';
-    widget.id = 'call-timer-widget';
-    widget.innerHTML = `
-      <div class="ct-dot"></div>
-      <div class="ct-time" id="ct-display">00:00</div>
-      <div class="ct-btns">
-        <button class="ct-btn" id="ct-toggle" title="Start/Pause" onclick="window._toggleTimer()">
-          <i class="fas fa-play"></i>
-        </button>
-        <button class="ct-btn" id="ct-reset" title="Reset" onclick="window._resetTimer()">
-          <i class="fas fa-redo"></i>
-        </button>
-      </div>
-    `;
-    document.body.appendChild(widget);
-
-    // Show timer when Call Log tab is active
-    const checkTabVisibility = () => {
-      const formTab = document.getElementById('tab-form');
-      const timerW = document.getElementById('call-timer-widget');
-      if (!formTab || !timerW) return;
-      const isActive = formTab.classList.contains('active') || formTab.style.display === 'block';
-      timerW.classList.toggle('visible', isActive);
-    };
-
-    // Override switchTab to hook into tab changes
-    const origSwitch = window.switchTab;
-    window.switchTab = function () {
-      if (origSwitch) origSwitch.apply(this, arguments);
-      setTimeout(checkTabVisibility, 50);
-    };
-    setTimeout(checkTabVisibility, 1000);
-
-    window._toggleTimer = function () {
-      const btn = document.getElementById('ct-toggle');
-      const widget = document.getElementById('call-timer-widget');
-      if (_timerRunning) {
-        // Pause
-        clearInterval(_timerInterval);
-        _timerRunning = false;
-        btn.innerHTML = '<i class="fas fa-play"></i>';
-        btn.classList.remove('active');
-        widget.classList.remove('recording');
-      } else {
-        // Start
-        _timerRunning = true;
-        btn.innerHTML = '<i class="fas fa-pause"></i>';
-        btn.classList.add('active');
-        widget.classList.add('recording');
-        _timerInterval = setInterval(() => {
-          _timerSeconds++;
-          const m = String(Math.floor(_timerSeconds / 60)).padStart(2, '0');
-          const s = String(_timerSeconds % 60).padStart(2, '0');
-          document.getElementById('ct-display').textContent = `${m}:${s}`;
-        }, 1000);
-      }
-    };
-
-    window._resetTimer = function () {
-      clearInterval(_timerInterval);
-      _timerRunning = false;
-      _timerSeconds = 0;
-      document.getElementById('ct-display').textContent = '00:00';
-      document.getElementById('ct-toggle').innerHTML = '<i class="fas fa-play"></i>';
-      document.getElementById('ct-toggle').classList.remove('active');
-      document.getElementById('call-timer-widget').classList.remove('recording');
-    };
   }
 
   // ═════════════════════════════════════
@@ -623,9 +514,7 @@
   // ═════════════════════════════════════
   _ready(function () {
     injectStyles();
-    injectXcallyStyles();
     initPasteCallerID();
-    initCallTimer();
     initReminderAlerts();
     initDailyTarget();
     initRecentXcallyCalls();
