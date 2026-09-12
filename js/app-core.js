@@ -2,6 +2,14 @@
    app-core.js — Theme, Login, Dashboard, Navigation
    ═══════════════════════════════════════════════════ */
 
+/* ─── 01. RECOVERY REDIRECT — intercept Supabase password reset tokens ─── */
+(function() {
+  var hash = window.location.hash || '';
+  if (hash.includes('type=recovery') || hash.includes('type=magiclink')) {
+    window.location.replace('Set-password.html?mode=recovery' + hash);
+  }
+})();
+
 /* ─── 02. THEME ─── */
 function applyTheme() {
   const dmIcon   = document.getElementById('side-darkmode-icon');
