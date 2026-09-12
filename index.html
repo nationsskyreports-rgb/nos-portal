@@ -87,15 +87,14 @@
     </form>
 
     <div class="login-card hidden" id="reset-form">
-      <div class="login-title">Change Password</div>
-      <div class="login-sub" id="reset-agent-name"></div>
-      <label class="form-label">Old Password</label>
-      <div class="pw-wrap"><input type="password" id="old-pass" class="form-input" placeholder="Old Password"><button class="pw-toggle" onclick="togglePw('old-pass',this)"><i class="fas fa-eye"></i></button></div>
-      <label class="form-label">New Password</label>
-      <div class="pw-wrap"><input type="password" id="new-pass" class="form-input" placeholder="New Password"><button class="pw-toggle" onclick="togglePw('new-pass',this)"><i class="fas fa-eye"></i></button></div>
-      <label class="form-label">Confirm Password</label>
-      <div class="pw-wrap"><input type="password" id="confirm-pass" class="form-input" placeholder="Confirm"><button class="pw-toggle" onclick="togglePw('confirm-pass',this)"><i class="fas fa-eye"></i></button></div>
-      <button type="button" class="btn-primary" onclick="submitReset()"><i class="fas fa-key"></i> Update Password</button>
+      <div class="login-title">Reset Password</div>
+      <div class="login-sub" id="reset-agent-name" style="margin-bottom:16px;"></div>
+      <div style="font-size:13px;color:var(--muted,#94a3b8);line-height:1.7;margin-bottom:20px;text-align:center;">
+        هنبعتلك لينك على الإيميل المسجّل عندنا.<br>ادوس عليه وغيّر الباسورد.
+      </div>
+      <div id="reset-email-preview" style="background:rgba(59,130,246,.08);border:1px solid rgba(59,130,246,.2);border-radius:10px;padding:12px;margin-bottom:16px;text-align:center;font-size:13px;color:#60a5fa;font-weight:700;display:none;"></div>
+      <button type="button" class="btn-primary" id="reset-send-btn" onclick="sendResetEmail()"><i class="fas fa-envelope"></i> Send Reset Link</button>
+      <div id="reset-msg" style="font-size:13px;font-weight:600;margin-top:12px;text-align:center;"></div>
       <button type="button" class="btn-ghost" onclick="toggleReset(false)">Cancel</button>
     </div>
     </div><!-- /login-left-col -->
