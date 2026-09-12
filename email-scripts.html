@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NOS — Email Scripts</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Syne:wght@700;800&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f3f4f6;--surface:#fff;--surface2:#f9fafb;--border:#e5e7eb;--gold:#d4af37;--text:#111827;--muted:#6b7280;--radius:10px;--radius-lg:14px;}
+@media(prefers-color-scheme:dark){:root{--bg:#0f172a;--surface:rgba(15,23,42,.85);--surface2:rgba(15,23,42,.6);--border:rgba(255,255,255,.06);--text:#e2e8f0;--muted:#64748b;}}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Plus Jakarta Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;font-size:14px;line-height:1.6;}
+.topbar{display:flex;align-items:center;padding:14px 20px;background:var(--surface);border-bottom:1px solid var(--border);gap:12px;}
+.topbar h1{font-family:'Syne',sans-serif;font-size:18px;font-weight:800;flex:1;}
+.topbar h1 span{color:var(--gold);}
+.search-box{padding:10px 16px;border:1px solid var(--border);border-radius:var(--radius);background:var(--surface2);font-size:13px;width:260px;font-family:inherit;color:var(--text);outline:none;}
+.search-box:focus{border-color:var(--gold);}
+.layout{display:grid;grid-template-columns:260px 1fr;min-height:calc(100vh - 56px);}
+@media(max-width:768px){.layout{grid-template-columns:1fr;}.sidebar-cats{display:flex;overflow-x:auto;border-right:none!important;border-bottom:1px solid var(--border);padding:8px!important;gap:6px!important;}.cat-btn{white-space:nowrap;}}
+.sidebar-cats{background:var(--surface);border-right:1px solid var(--border);padding:16px 12px;display:flex;flex-direction:column;gap:4px;overflow-y:auto;}
+.cat-label{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:1.2px;color:var(--muted);padding:12px 8px 4px;}
+.cat-btn{display:flex;align-items:center;gap:8px;padding:10px 14px;border-radius:var(--radius);border:none;background:transparent;color:var(--muted);font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;transition:all .15s;text-align:left;width:100%;}
+.cat-btn:hover{background:rgba(212,175,55,.06);color:var(--text);}
+.cat-btn.active{background:var(--gold);color:#000;font-weight:700;}
+.cat-count{margin-left:auto;font-size:11px;font-weight:800;background:rgba(0,0,0,.06);padding:2px 8px;border-radius:20px;}
+.cat-btn.active .cat-count{background:rgba(0,0,0,.15);}
+.main-area{padding:20px;overflow-y:auto;}
+.cards-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px;}
+.tmpl-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden;transition:all .2s;cursor:pointer;}
+.tmpl-card:hover{border-color:var(--gold);box-shadow:0 4px 20px rgba(212,175,55,.12);transform:translateY(-2px);}
+.tmpl-card-header{padding:16px 18px;border-bottom:1px solid var(--border);}
+.tmpl-card-name{font-weight:800;font-size:15px;color:var(--text);margin-bottom:4px;}
+.tmpl-card-subject{font-size:12px;color:var(--muted);}
+.tmpl-card-body{padding:14px 18px;font-size:12px;color:var(--muted);line-height:1.7;max-height:120px;overflow:hidden;position:relative;}
+.tmpl-card-body::after{content:'';position:absolute;bottom:0;left:0;right:0;height:40px;background:linear-gradient(transparent,var(--surface));}
+.tmpl-card-footer{padding:12px 18px;border-top:1px solid var(--border);display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+.email-tag{font-size:10px;padding:2px 8px;border-radius:6px;font-weight:700;}
+.email-tag.to{background:rgba(37,99,235,.1);color:#3B82F6;}
+.email-tag.cc{background:rgba(139,92,246,.1);color:#8B5CF6;}
+.send-btn{margin-left:auto;padding:8px 18px;border-radius:var(--radius);border:none;background:var(--gold);color:#000;font-size:13px;font-weight:800;cursor:pointer;font-family:inherit;transition:all .15s;display:flex;align-items:center;gap:6px;}
+.send-btn:hover{opacity:.85;transform:translateY(-1px);}
+.empty-msg{text-align:center;padding:60px 20px;color:var(--muted);font-size:14px;}
+.empty-msg .icon{font-size:48px;margin-bottom:12px;}
+/* Placeholder highlights */
+.ph{background:rgba(59,130,246,.12);color:#3B82F6;padding:1px 5px;border-radius:3px;font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:600;}
+</style>
+</head>
+<body>
+<div class="topbar">
+  <h1>📧 <span>Email Scripts</span></h1>
+  <input class="search-box" id="search-input" placeholder="🔍 Search templates..." oninput="filterTemplates()">
+</div>
+<div class="layout">
+  <div class="sidebar-cats" id="cat-sidebar"></div>
+  <div class="main-area" id="main-area">
+    <div class="empty-msg"><div class="icon">⏳</div>Loading templates...</div>
+  </div>
+</div>
+<script>
+const SB_URL='https://xzxdaupwwwdcwfnqweub.supabase.co';
+const SB_KEY='sb_publishable_o6WgAntCWj8sD9jBhQQ0Tw_FA3GngrR';
+let allTemplates=[], activeCat='all';
+
+async function loadTemplates(){
+  try{
+    const res=await fetch(SB_URL+'/rest/v1/email_templates?is_active=eq.true&order=category,sort_order,name',{
+      headers:{'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY}
+    });
+    allTemplates=await res.json()||[];
+    renderCategories();
+    renderCards();
+  }catch(e){
+    document.getElementById('main-area').innerHTML='<div class="empty-msg"><div class="icon">❌</div>Failed to load: '+e.message+'</div>';
+  }
+}
+
+function esc(s){return String(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+
+function highlightPlaceholders(text){
+  return esc(text).replace(/\[([^\]]+)\]/g,'<span class="ph">[$1]</span>');
+}
+
+function renderCategories(){
+  const cats={};
+  allTemplates.forEach(t=>{const c=t.category||'General';if(!cats[c])cats[c]=0;cats[c]++;});
+  const sb=document.getElementById('cat-sidebar');
+  let html='<button class="cat-btn '+(activeCat==='all'?'active':'')+'" onclick="selectCat(\'all\')"><i class="fas fa-th-large"></i> All <span class="cat-count">'+allTemplates.length+'</span></button>';
+  Object.entries(cats).sort((a,b)=>a[0].localeCompare(b[0])).forEach(([cat,count])=>{
+    html+='<button class="cat-btn '+(activeCat===cat?'active':'')+'" onclick="selectCat(\''+esc(cat)+'\')"><i class="fas fa-folder"></i> '+esc(cat)+' <span class="cat-count">'+count+'</span></button>';
+  });
+  sb.innerHTML=html;
+}
+
+function selectCat(cat){
+  activeCat=cat;
+  renderCategories();
+  renderCards();
+}
+
+function filterTemplates(){
+  renderCards();
+}
+
+function getFiltered(){
+  const q=(document.getElementById('search-input').value||'').toLowerCase().trim();
+  return allTemplates.filter(t=>{
+    if(activeCat!=='all'&&(t.category||'General')!==activeCat)return false;
+    if(q&&!t.name.toLowerCase().includes(q)&&!(t.subject||'').toLowerCase().includes(q)&&!(t.body||'').toLowerCase().includes(q))return false;
+    return true;
+  });
+}
+
+function renderCards(){
+  const area=document.getElementById('main-area');
+  const list=getFiltered();
+  if(!list.length){area.innerHTML='<div class="empty-msg"><div class="icon">📭</div>No templates found</div>';return;}
+  area.innerHTML='<div class="cards-grid">'+list.map(t=>{
+    const toTags=(t.to_emails||[]).map(e=>'<span class="email-tag to">TO: '+esc(e)+'</span>').join('');
+    const ccTags=(t.cc_emails||[]).map(e=>'<span class="email-tag cc">CC: '+esc(e)+'</span>').join('');
+    const bodyPreview=highlightPlaceholders(t.body||'');
+    return`<div class="tmpl-card" ondblclick="openEmail('${t.id}')">
+      <div class="tmpl-card-header">
+        <div class="tmpl-card-name">${esc(t.name)}</div>
+        <div class="tmpl-card-subject">📋 ${esc(t.subject)}</div>
+      </div>
+      <div class="tmpl-card-body">${bodyPreview}</div>
+      <div class="tmpl-card-footer">
+        ${toTags}${ccTags}
+        <button class="send-btn" onclick="event.stopPropagation();openEmail('${t.id}')"><i class="fas fa-paper-plane"></i> Send</button>
+      </div>
+    </div>`;
+  }).join('')+'</div>';
+}
+
+function openEmail(id){
+  const t=allTemplates.find(x=>x.id===id);if(!t)return;
+  const to=(t.to_emails||[]).join(',');
+  const cc=(t.cc_emails||[]).join(',');
+  const subject=encodeURIComponent(t.subject||'');
+  const body=encodeURIComponent(t.body||'');
+  let mailto='mailto:'+to+'?subject='+subject+'&body='+body;
+  if(cc)mailto+='&cc='+cc;
+  window.open(mailto,'_blank');
+}
+
+loadTemplates();
+</script>
+</body>
+</html>
