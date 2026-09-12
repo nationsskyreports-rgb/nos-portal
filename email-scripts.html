@@ -134,13 +134,18 @@ function renderCards(){
 
 function openEmail(id){
   const t=allTemplates.find(x=>x.id===id);if(!t)return;
-  const to=(t.to_emails||[]).join(',');
-  const cc=(t.cc_emails||[]).join(',');
-  const subject=encodeURIComponent(t.subject||'');
-  const body=encodeURIComponent(t.body||'');
-  let mailto='mailto:'+to+'?subject='+subject+'&body='+body;
-  if(cc)mailto+='&cc='+cc;
-  window.open(mailto,'_blank');
+  // Semicolons work better with Outlook; commas for Gmail — try both
+  const to=(t.to_emails||[]).join('; ');
+  const cc=(t.cc_emails||[]).join('; ');
+  const subject=t.subject||'';
+  const body=t.body||'';
+  // Build mailto with proper encoding
+  let params=[];
+  if(subject) params.push('subject='+encodeURIComponent(subject));
+  if(cc) params.push('cc='+encodeURIComponent(cc));
+  if(body) params.push('body='+encodeURIComponent(body));
+  const mailto='mailto:'+encodeURIComponent(to)+(params.length?'?'+params.join('&'):'');
+  window.location.href=mailto;
 }
 
 loadTemplates();
