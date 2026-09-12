@@ -1193,3 +1193,6 @@ html:not(.light) .form-input:focus {
 @media (prefers-reduced-motion: reduce) {
   .kpi-card, .btn-primary, .tab-btn { transition: none !important; }
 }
+
+/* Pulse animation for Notchnco logout button */
+@keyframes pulse-btn { 0%,100%{transform:scale(1);box-shadow:0 2px 8px rgba(37,211,102,.3);} 50%{transform:scale(1.05);box-shadow:0 4px 16px rgba(37,211,102,.5);} }
