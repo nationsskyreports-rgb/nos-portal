@@ -145,8 +145,17 @@
         <span class="nav-name" id="user-name">Loading...</span>
       </div>
       <div class="nav-right">
-        <a href="https://172.16.1.20/dashboards/general" target="_blank" class="nav-btn" title="Open xCally" style="display:inline-flex;align-items:center;gap:5px;text-decoration:none;font-size:11px;font-weight:700;">
-          <i class="fas fa-headset"></i> xCally
+        <!-- Notchnco WhatsApp Hub -->
+        <a href="https://nos.notch-ncohub.com" target="_blank" id="notchnco-btn" title="Open Notchnco — WhatsApp Hub"
+          style="display:inline-flex;align-items:center;gap:8px;text-decoration:none;
+            padding:8px 16px;border-radius:12px;
+            background:linear-gradient(135deg,#25d366,#128c7e);
+            color:white;font-size:12px;font-weight:800;font-family:inherit;
+            box-shadow:0 2px 10px rgba(37,211,102,.3);
+            transition:all .2s;white-space:nowrap;position:relative;">
+          <i class="fab fa-whatsapp" style="font-size:16px;"></i>
+          <span>Notchnco</span>
+          <span id="notchnco-status" style="width:8px;height:8px;border-radius:50%;background:#fbbf24;box-shadow:0 0 6px rgba(251,191,36,.6);flex-shrink:0;" title="Check your status in Notchnco"></span>
         </a>
         <button class="nav-btn" onclick="refreshData()" title="Refresh Data"><i class="fas fa-sync-alt"></i></button>
         <button class="nav-btn danger" onclick="logout()" title="Logout"><i class="fas fa-sign-out-alt"></i></button>
