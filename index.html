@@ -182,7 +182,18 @@
 
     <div class="notif-bar notif-shift hidden" id="shift-end-notif">
       <div class="notif-icon"><i class="fas fa-door-open"></i></div>
-      <div><div class="notif-title" id="shift-notif-title">Shift Ended!</div><div class="notif-sub">Time to log off. See you tomorrow!</div></div>
+      <div style="flex:1;">
+        <div class="notif-title" id="shift-notif-title">Shift Ended!</div>
+        <div class="notif-sub">Time to log off. See you tomorrow!</div>
+      </div>
+      <a href="https://nos.notch-ncohub.com/Notchncohub/nos/Gateway/identity/Account/Login" target="_blank"
+        style="display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:10px;
+          background:linear-gradient(135deg,#25d366,#128c7e);color:white;font-size:12px;font-weight:800;
+          text-decoration:none;white-space:nowrap;box-shadow:0 2px 8px rgba(37,211,102,.3);
+          animation:pulse-btn 1.5s infinite;"
+        onclick="this.style.animation='none';">
+        <i class="fab fa-whatsapp"></i> Log out from Notchnco
+      </a>
       <button class="notif-close" onclick="stopNotifSound();this.closest('.notif-bar').classList.add('hidden')"><i class="fas fa-times"></i></button>
     </div>
 
