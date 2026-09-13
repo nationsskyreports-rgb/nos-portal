@@ -666,6 +666,7 @@
   _ready(function () {
     injectStyles();
     initPasteCallerID();
+    initReminderAlerts();
     initNotchncoReminder();
     initCommentTemplates();
   });
