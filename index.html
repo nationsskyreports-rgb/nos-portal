@@ -736,8 +736,18 @@ window.__recoveryMode = false;
 
     <!-- ═══ NOTES + SUBMIT — always visible ═══ -->
     <div class="form-group">
-      <label class="form-label">Extra Notes</label>
-      <textarea id="f-extra" class="form-input" placeholder="Any additional notes..." rows="3"></textarea>
+      <label class="form-label">Comment <span class="req">*</span></label>
+      <!-- Quick comment templates -->
+      <div id="comment-templates-bar" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px;align-items:center;">
+        <span id="ct-chips"></span>
+        <button type="button" onclick="openCommentTemplatesManager()"
+          style="display:inline-flex;align-items:center;gap:4px;padding:5px 10px;border-radius:8px;border:1px dashed var(--border);background:transparent;color:var(--muted);cursor:pointer;font-size:11px;font-weight:700;font-family:inherit;transition:all .15s;"
+          onmouseover="this.style.borderColor='var(--primary)';this.style.color='var(--primary)';"
+          onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--muted)';">
+          <i class="fas fa-cog"></i> Manage
+        </button>
+      </div>
+      <textarea id="f-extra" class="form-input" placeholder="Type a comment or tap a template above..." rows="3"></textarea>
     </div>
     <button class="submit-btn" id="formSubmitBtn" onclick="submitCallLogForm()" style="margin-top:8px;">
       <i class="fas fa-paper-plane"></i> Submit to Database
