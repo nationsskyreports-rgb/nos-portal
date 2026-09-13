@@ -167,11 +167,12 @@ function showBanner(bannerId, title, sub) {
   if (t) t.innerText = title;
   if (s) s.innerText = sub;
   el.classList.remove('hidden');
+  el.style.display = 'flex';
 }
 
 function hideBanner(bannerId) {
   const el = document.getElementById(bannerId);
-  if (el) el.classList.add('hidden');
+  if (el) { el.classList.add('hidden'); el.style.display = 'none'; }
 }
 
 function sendNotif(title, body) {
