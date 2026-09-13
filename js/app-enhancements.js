@@ -37,8 +37,8 @@
 
 /* ── Reminder Alert Banner ── */
 .reminder-alert-banner {
-  position:fixed; top:70px; right:20px; left:auto; z-index:9999;
-  max-width:360px; border-radius:16px;
+  position:fixed; bottom:20px; right:20px; top:auto; left:auto; z-index:9997;
+  max-width:340px; border-radius:16px;
   background:linear-gradient(135deg,#f59e0b,#d97706);
   color:#0f172a; padding:14px 18px;
   display:flex; align-items:center; gap:12px;
@@ -667,7 +667,6 @@
     injectStyles();
     initPasteCallerID();
     initReminderAlerts();
-    initDailyTarget();
     initRecentXcallyCalls();
     initNotchncoReminder();
     initCommentTemplates();
