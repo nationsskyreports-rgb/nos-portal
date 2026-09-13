@@ -2,7 +2,13 @@
 <html lang="en">
 <head>
 <script>
-// Handle Supabase password recovery — show change-password form when recovery session detected
+// Handle Supabase password recovery via token_hash
+(function(){
+  var p = new URLSearchParams(window.location.search);
+  if (p.get('type') === 'recovery' && p.get('token_hash')) {
+    window.location.replace('Set-password.html?mode=recovery&token_hash=' + p.get('token_hash') + '&type=recovery');
+  }
+})();
 window.__recoveryMode = false;
 </script>
 <meta charset="UTF-8">
