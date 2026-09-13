@@ -221,29 +221,49 @@
     let banner = document.getElementById('reminder-alert-banner');
     if (!banner) {
       banner = document.createElement('div');
-      banner.className = 'reminder-alert-banner';
       banner.id = 'reminder-alert-banner';
       document.body.appendChild(banner);
     }
 
+    // Forced inline positioning — bottom-right, immune to any cached CSS
+    banner.style.cssText = [
+      'position:fixed !important',
+      'bottom:20px !important',
+      'right:20px !important',
+      'top:auto !important',
+      'left:auto !important',
+      'z-index:9997 !important',
+      'max-width:320px',
+      'border-radius:16px',
+      'background:linear-gradient(135deg,#f59e0b,#d97706)',
+      'color:#0f172a',
+      'padding:14px 18px',
+      'display:flex',
+      'align-items:center',
+      'gap:10px',
+      'font-size:13px',
+      'font-weight:700',
+      "font-family:'Plus Jakarta Sans',sans-serif",
+      'box-shadow:0 8px 32px rgba(245,158,11,0.45)',
+      'transform:translateX(400px)',
+      'transition:transform 0.4s cubic-bezier(0.4,0,0.2,1)'
+    ].join(';');
+
     const overdueText = overdue > 0 ? `${overdue} overdue` : '';
     const todayText = todayCount > 0 ? `${todayCount} today` : '';
     const parts = [overdueText, todayText].filter(Boolean).join(' + ');
-
     const name = firstReminder.customer_name || firstReminder.customer_mobile || 'Unknown';
 
     banner.innerHTML = `
-      <span class="ra-icon">🔔</span>
-      <span class="ra-text">
-        You have <strong>${total} pending reminder${total > 1 ? 's' : ''}</strong> (${parts})
-        — Next: <strong>${name}</strong>
+      <span style="font-size:20px;flex-shrink:0;">🔔</span>
+      <span style="flex:1;">
+        <strong>${total} pending reminder${total > 1 ? 's' : ''}</strong> (${parts})<br>Next: <strong>${name}</strong>
       </span>
-      <span class="ra-count">${total}</span>
-      <button class="ra-action" onclick="window._goToReminders()">View All</button>
-      <button class="ra-close" onclick="this.parentElement.classList.remove('visible')">✕</button>
+      <button onclick="window._goToReminders()" style="background:rgba(0,0,0,0.12);border:none;border-radius:8px;padding:6px 12px;color:#0f172a;cursor:pointer;font-size:11px;font-weight:800;font-family:inherit;white-space:nowrap;">View</button>
+      <button onclick="this.parentElement.style.transform='translateX(400px)';" style="background:rgba(0,0,0,0.1);border:none;border-radius:8px;width:26px;height:26px;color:#0f172a;cursor:pointer;font-size:13px;flex-shrink:0;">✕</button>
     `;
 
-    setTimeout(() => banner.classList.add('visible'), 100);
+    setTimeout(() => { banner.style.transform = 'translateX(0)'; }, 100);
   }
 
   window._goToReminders = function () {
