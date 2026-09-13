@@ -61,6 +61,34 @@ sbClient.auth.onAuthStateChange(async (event, session) => {
     window._authToken = session.access_token;
     sessionStorage.setItem('ns-auth-token', session.access_token);
   }
+
+  // ── PASSWORD RECOVERY: show change-password form immediately ──
+  if (event === 'PASSWORD_RECOVERY' && session) {
+    window.__recoveryMode = true;
+    window.__recoverySession = session;
+    // Wait for DOM to be ready, then show the password form
+    const waitForForm = setInterval(() => {
+      const modal = document.getElementById('cp-modal');
+      const overlay = document.getElementById('cp-overlay');
+      if (modal && overlay) {
+        clearInterval(waitForForm);
+        // Show user info
+        const email = session.user?.email || '';
+        const infoEl = document.getElementById('cp-user-info');
+        if (infoEl) infoEl.innerText = '🔑 Reset Password for: ' + email;
+        // Show the modal
+        overlay.style.display = 'block';
+        modal.style.display = 'block';
+        // Make sure login screen is hidden if dashboard is showing
+        const loginScreen = document.getElementById('screen-login');
+        if (loginScreen) loginScreen.style.display = 'none';
+        const dashScreen = document.getElementById('screen-dashboard');
+        if (dashScreen) dashScreen.style.display = 'block';
+      }
+    }, 500);
+    return;
+  }
+
   // لو السيشن ماتت وهو على الداشبورد — حاول recovery الأول قبل الـ logout
   if (event === 'SIGNED_OUT' && document.getElementById('screen-dashboard')?.style.display !== 'none') {
     // حاول تجدد السيشن — ممكن الـ event يكون من tab تاني (Admin Portal)
