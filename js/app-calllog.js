@@ -1364,8 +1364,8 @@ function updateReminderBadge(count) {
     // Create a floating badge at top-right
     badge = document.createElement('div');
     badge.id = 'reminder-badge';
-    badge.style.cssText = 'position:fixed;top:12px;right:70px;z-index:9990;cursor:pointer;';
-    badge.onclick = () => { switchTab('mylog'); };
+    badge.style.cssText = 'position:fixed;bottom:20px;right:20px;z-index:9990;cursor:pointer;';
+    badge.onclick = () => { switchTab('tab-mylog', null, 6); };
     document.body.appendChild(badge);
   }
   if (count > 0) {
