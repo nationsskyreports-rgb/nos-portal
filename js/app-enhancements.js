@@ -37,15 +37,16 @@
 
 /* ── Reminder Alert Banner ── */
 .reminder-alert-banner {
-  position:fixed; top:0; left:0; right:0; z-index:9999;
+  position:fixed; top:70px; right:20px; left:auto; z-index:9999;
+  max-width:360px; border-radius:16px;
   background:linear-gradient(135deg,#f59e0b,#d97706);
-  color:#0f172a; padding:10px 20px;
+  color:#0f172a; padding:14px 18px;
   display:flex; align-items:center; gap:12px;
   font-size:13px; font-weight:700; font-family:'Plus Jakarta Sans',sans-serif;
-  transform:translateY(-100%); transition:transform 0.4s cubic-bezier(0.4,0,0.2,1);
-  box-shadow:0 4px 20px rgba(245,158,11,0.3);
+  transform:translateX(400px); transition:transform 0.4s cubic-bezier(0.4,0,0.2,1);
+  box-shadow:0 8px 32px rgba(245,158,11,0.45);
 }
-.reminder-alert-banner.visible { transform:translateY(0); }
+.reminder-alert-banner.visible { transform:translateX(0); }
 .reminder-alert-banner .ra-icon { font-size:20px; flex-shrink:0; }
 .reminder-alert-banner .ra-text { flex:1; }
 .reminder-alert-banner .ra-count {
@@ -528,6 +529,138 @@
     };
   }
 
+  // ═════════════════════════════════════
+  // 8. COMMENT TEMPLATES (per-agent, Supabase)
+  // ═════════════════════════════════════
+  let _commentTemplates = [];
+
+  function _ctAgent() {
+    const session = JSON.parse(localStorage.getItem('nos_session') || 'null');
+    return session?.name || document.getElementById('user-name')?.innerText?.trim() || '';
+  }
+
+  function _ctEsc(s) { return String(s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+  async function loadCommentTemplates() {
+    const agent = _ctAgent();
+    if (!agent) return;
+    try {
+      const res = await fetch(`${SB_URL_SCH}/rest/v1/comment_templates?agent_name=eq.${encodeURIComponent(agent)}&order=sort_order,created_at`,
+        { headers: { 'apikey': SB_KEY_SCH, 'Authorization': `Bearer ${window._authToken || SB_KEY_SCH}` } });
+      _commentTemplates = await res.json() || [];
+      renderCommentChips();
+    } catch(e) { /* silent */ }
+  }
+
+  function renderCommentChips() {
+    const wrap = document.getElementById('ct-chips');
+    if (!wrap) return;
+    if (!_commentTemplates.length) {
+      wrap.innerHTML = '<span style="font-size:11px;color:var(--muted);">No templates yet — tap Manage to add.</span>';
+      return;
+    }
+    wrap.innerHTML = _commentTemplates.map(t =>
+      `<button type="button" onclick="window._insertComment('${_ctEsc(t.text).replace(/'/g,"\\'")}');"
+        style="display:inline-flex;align-items:center;padding:5px 12px;border-radius:8px;border:1px solid rgba(212,175,55,.3);background:rgba(212,175,55,.08);color:var(--primary);cursor:pointer;font-size:11px;font-weight:700;font-family:inherit;transition:all .15s;margin-right:4px;"
+        onmouseover="this.style.background='rgba(212,175,55,.18)';"
+        onmouseout="this.style.background='rgba(212,175,55,.08)';"
+        title="Click to insert">${_ctEsc(t.text.length > 40 ? t.text.substring(0,40)+'…' : t.text)}</button>`
+    ).join('');
+  }
+
+  window._insertComment = function(text) {
+    const ta = document.getElementById('f-extra');
+    if (!ta) return;
+    const cur = ta.value.trim();
+    ta.value = cur ? (cur + '\n' + text) : text;
+    ta.dispatchEvent(new Event('input', { bubbles: true }));
+    ta.focus();
+  };
+
+  window.openCommentTemplatesManager = function() {
+    let modal = document.getElementById('ct-manager');
+    if (modal) modal.remove();
+    modal = document.createElement('div');
+    modal.id = 'ct-manager';
+    modal.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.65);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;padding:16px;';
+    modal.onclick = function(e) { if (e.target === modal) modal.remove(); };
+    modal.innerHTML = `
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:18px;width:100%;max-width:460px;max-height:80vh;overflow-y:auto;padding:22px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+          <div style="font-size:16px;font-weight:800;color:var(--text);"><i class="fas fa-comment-dots" style="color:var(--primary);margin-right:8px;"></i>My Comment Templates</div>
+          <button onclick="document.getElementById('ct-manager').remove()" style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;width:34px;height:34px;font-size:14px;cursor:pointer;color:var(--muted);">✕</button>
+        </div>
+        <div style="display:flex;gap:8px;margin-bottom:14px;">
+          <input id="ct-new-input" placeholder="Type a new template..." class="form-input" style="flex:1;margin:0;" onkeydown="if(event.key==='Enter')window._addCommentTemplate()">
+          <button onclick="window._addCommentTemplate()" style="padding:10px 16px;background:var(--primary-gradient);color:#fff;border:none;border-radius:11px;cursor:pointer;font-weight:700;font-family:inherit;white-space:nowrap;">+ Add</button>
+        </div>
+        <div id="ct-list"></div>
+      </div>`;
+    document.body.appendChild(modal);
+    renderCtManagerList();
+    setTimeout(() => document.getElementById('ct-new-input')?.focus(), 100);
+  };
+
+  function renderCtManagerList() {
+    const list = document.getElementById('ct-list');
+    if (!list) return;
+    if (!_commentTemplates.length) {
+      list.innerHTML = '<div style="text-align:center;color:var(--muted);padding:20px;font-size:13px;">No templates yet. Add your first one above! 👆</div>';
+      return;
+    }
+    list.innerHTML = _commentTemplates.map(t => `
+      <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid var(--border);border-radius:10px;margin-bottom:8px;background:var(--surface2);">
+        <span style="flex:1;font-size:13px;color:var(--text);word-break:break-word;">${_ctEsc(t.text)}</span>
+        <button onclick="window._deleteCommentTemplate('${t.id}')" style="background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);border-radius:8px;width:30px;height:30px;font-size:12px;cursor:pointer;color:#ef4444;flex-shrink:0;" title="Delete">🗑</button>
+      </div>`).join('');
+  }
+
+  window._addCommentTemplate = async function() {
+    const input = document.getElementById('ct-new-input');
+    const text = input.value.trim();
+    if (!text) return;
+    const agent = _ctAgent();
+    if (!agent) { if (typeof showToast==='function') showToast('Not logged in','warning'); return; }
+    try {
+      const res = await fetch(`${SB_URL_SCH}/rest/v1/comment_templates`, {
+        method: 'POST',
+        headers: { 'apikey': SB_KEY_SCH, 'Authorization': `Bearer ${window._authToken || SB_KEY_SCH}`, 'Content-Type': 'application/json', 'Prefer': 'return=representation' },
+        body: JSON.stringify({ agent_name: agent, text: text, sort_order: _commentTemplates.length })
+      });
+      const created = await res.json();
+      if (created && created[0]) _commentTemplates.push(created[0]);
+      input.value = '';
+      renderCtManagerList();
+      renderCommentChips();
+      input.focus();
+    } catch(e) { if (typeof showToast==='function') showToast('Failed to add','error'); }
+  };
+
+  window._deleteCommentTemplate = async function(id) {
+    try {
+      await fetch(`${SB_URL_SCH}/rest/v1/comment_templates?id=eq.${id}`, {
+        method: 'DELETE',
+        headers: { 'apikey': SB_KEY_SCH, 'Authorization': `Bearer ${window._authToken || SB_KEY_SCH}` }
+      });
+      _commentTemplates = _commentTemplates.filter(t => t.id !== id);
+      renderCtManagerList();
+      renderCommentChips();
+    } catch(e) { if (typeof showToast==='function') showToast('Failed to delete','error'); }
+  };
+
+  function initCommentTemplates() {
+    // Load after a short delay to ensure session is ready
+    setTimeout(loadCommentTemplates, 1500);
+    // Reload when a channel is selected (form becomes visible)
+    const origSelect = window.selectChannel;
+    if (origSelect) {
+      window.selectChannel = function() {
+        origSelect.apply(this, arguments);
+        setTimeout(renderCommentChips, 300);
+      };
+    }
+  }
+
   // INIT ALL
   // ═════════════════════════════════════
   _ready(function () {
@@ -537,6 +670,7 @@
     initDailyTarget();
     initRecentXcallyCalls();
     initNotchncoReminder();
+    initCommentTemplates();
   });
 
 })();
