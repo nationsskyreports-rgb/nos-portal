@@ -6,8 +6,8 @@
 <title>NOS — Email Scripts</title>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Syne:wght@700;800&display=swap" rel="stylesheet">
 <style>
-:root{--bg:#f3f4f6;--surface:#fff;--surface2:#f9fafb;--border:#e5e7eb;--gold:#d4af37;--text:#111827;--muted:#6b7280;--radius:10px;--radius-lg:14px;}
-@media(prefers-color-scheme:dark){:root{--bg:#0f172a;--surface:rgba(15,23,42,.85);--surface2:rgba(15,23,42,.6);--border:rgba(255,255,255,.06);--text:#e2e8f0;--muted:#64748b;}}
+:root{--bg:#0f172a;--surface:rgba(15,23,42,.85);--surface2:rgba(15,23,42,.6);--border:rgba(255,255,255,.06);--gold:#d4af37;--text:#e2e8f0;--muted:#64748b;--radius:10px;--radius-lg:14px;}
+html.light{--bg:#f3f4f6;--surface:#fff;--surface2:#f9fafb;--border:#e5e7eb;--text:#111827;--muted:#6b7280;}
 *{box-sizing:border-box;margin:0;padding:0;}
 body{font-family:'Plus Jakarta Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;font-size:14px;line-height:1.6;}
 .topbar{display:flex;align-items:center;padding:14px 20px;background:var(--surface);border-bottom:1px solid var(--border);gap:12px;}
@@ -147,6 +147,21 @@ function openEmail(id){
   const mailto='mailto:'+encodeURIComponent(to)+(params.length?'?'+params.join('&'):'');
   window.location.href=mailto;
 }
+
+// Sync theme with parent portal
+try {
+  if (window.parent && window.parent.document.documentElement.classList.contains('light')) {
+    document.documentElement.classList.add('light');
+  }
+  // Watch for theme changes
+  const obs = new MutationObserver(function() {
+    try {
+      const isLight = window.parent.document.documentElement.classList.contains('light');
+      document.documentElement.classList.toggle('light', isLight);
+    } catch(e) {}
+  });
+  obs.observe(window.parent.document.documentElement, { attributes: true, attributeFilter: ['class'] });
+} catch(e) {}
 
 loadTemplates();
 </script>
