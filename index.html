@@ -185,21 +185,32 @@ if(window.location.hash && window.location.hash.indexOf('type=recovery')!==-1){
       <button class="notif-close" onclick="stopNotifSound();this.closest('.notif-bar').classList.add('hidden')"><i class="fas fa-times"></i></button>
     </div>
 
-    <div class="notif-bar notif-shift hidden" id="shift-end-notif">
-      <div class="notif-icon"><i class="fas fa-door-open"></i></div>
-      <div style="flex:1;">
-        <div class="notif-title" id="shift-notif-title">Shift Ended!</div>
-        <div class="notif-sub">Time to log off. See you tomorrow!</div>
-      </div>
+    <!-- Shift End Popup — fixed at bottom -->
+    <div id="shift-end-notif" class="hidden" style="
+      position:fixed;bottom:20px;left:50%;transform:translateX(-50%);z-index:9998;
+      background:linear-gradient(135deg,#1e293b,#0f172a);
+      border:2px solid rgba(212,175,55,.4);border-radius:18px;
+      padding:20px 24px;min-width:340px;max-width:480px;
+      box-shadow:0 12px 40px rgba(0,0,0,.5);
+      display:none;flex-direction:column;align-items:center;gap:12px;text-align:center;
+      animation:slideUp .4s ease;
+    ">
+      <style>@keyframes slideUp{from{opacity:0;transform:translateX(-50%) translateY(40px);}to{opacity:1;transform:translateX(-50%) translateY(0);}}</style>
+      <div style="font-size:32px;">🚪</div>
+      <div id="shift-notif-title" style="font-family:'Syne',sans-serif;font-size:18px;font-weight:800;color:#e2e8f0;">Shift Ended!</div>
+      <div style="font-size:13px;color:#94a3b8;">Time to log off. See you tomorrow!</div>
       <a href="https://nos.notch-ncohub.com/Notchncohub/nos/Gateway/identity/Account/Login" target="_blank"
-        style="display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:10px;
-          background:linear-gradient(135deg,#25d366,#128c7e);color:white;font-size:12px;font-weight:800;
-          text-decoration:none;white-space:nowrap;box-shadow:0 2px 8px rgba(37,211,102,.3);
-          animation:pulse-btn 1.5s infinite;"
+        style="display:inline-flex;align-items:center;gap:8px;padding:12px 24px;border-radius:12px;
+          background:linear-gradient(135deg,#25d366,#128c7e);color:white;font-size:14px;font-weight:800;
+          text-decoration:none;white-space:nowrap;box-shadow:0 4px 16px rgba(37,211,102,.4);
+          animation:pulse-btn 1.5s infinite;margin-top:4px;"
         onclick="this.style.animation='none';">
-        <i class="fab fa-whatsapp"></i> Log out from Notchnco
+        <i class="fab fa-whatsapp" style="font-size:18px;"></i> Log out from Notchnco
       </a>
-      <button class="notif-close" onclick="stopNotifSound();this.closest('.notif-bar').classList.add('hidden')"><i class="fas fa-times"></i></button>
+      <button onclick="stopNotifSound();var el=document.getElementById('shift-end-notif');el.classList.add('hidden');el.style.display='none';"
+        style="background:none;border:none;color:#64748b;font-size:12px;cursor:pointer;font-family:inherit;margin-top:4px;">
+        Dismiss
+      </button>
     </div>
 
     <!-- TAB: DASHBOARD -->
