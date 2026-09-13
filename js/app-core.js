@@ -337,9 +337,7 @@ async function sendResetEmail() {
     }
 
     const base = window.location.href.split('?')[0].split('#')[0];
-    const redirectUrl = base.replace(/index\.html$/, '') + 'Set-password.html?mode=recovery';
-
-    const { error } = await sbClient.auth.resetPasswordForEmail(email, { redirectTo: redirectUrl });
+    const { error } = await sbClient.auth.resetPasswordForEmail(email);
 
     if (error) {
       msg.style.color = '#f87171';
