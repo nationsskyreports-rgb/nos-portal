@@ -578,6 +578,10 @@ function submitCallLogForm() {
   if (!isQ && !radioValues['f-budget'])    { showFormErr('Select Budget!'); return; }
   if (!isQ && !radioValues['f-unit'])      { showFormErr('Select Unit Type!'); return; }
 
+  // Require a comment before submitting (except Quick Log)
+  const commentVal = document.getElementById('f-extra').value.trim();
+  if (!isQ && !commentVal)                 { showFormErr('Please add a comment before submitting!'); document.getElementById('f-extra')?.focus(); return; }
+
   const table = getActiveTable();
   const label = (window._activeChannel === 'whatsapp') ? 'WhatsApp' : 'Call';
   const submissionId = ++_activeSubmission;
