@@ -533,7 +533,7 @@
     if (!localStorage.getItem(reminderKey)) {
       setTimeout(() => {
         if (typeof showToast === 'function') {
-          showToast('💬 متنساش تفتح Notchnco وتتأكد إنك Active!', 'warning');
+          showToast('💬 Don\'t forget to open Notchnco and set yourself as Active!', 'warning');
         }
         localStorage.setItem(reminderKey, '1');
       }, 5000);
