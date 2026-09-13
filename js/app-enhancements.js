@@ -517,7 +517,7 @@
     const btn = document.getElementById('notchnco-btn');
     if (!btn) return;
 
-    // Hover effect
+    // Hover effect only — no toast
     btn.onmouseover = function() {
       this.style.transform = 'translateY(-2px)';
       this.style.boxShadow = '0 6px 20px rgba(37,211,102,.45)';
@@ -526,18 +526,6 @@
       this.style.transform = 'none';
       this.style.boxShadow = '0 2px 10px rgba(37,211,102,.3)';
     };
-
-    // Show a one-time reminder toast after 5 seconds
-    const today = new Date().toLocaleDateString('en-CA');
-    const reminderKey = 'notchnco_reminder_' + today;
-    if (!localStorage.getItem(reminderKey)) {
-      setTimeout(() => {
-        if (typeof showToast === 'function') {
-          showToast('💬 Don\'t forget to open Notchnco and set yourself as Active!', 'warning');
-        }
-        localStorage.setItem(reminderKey, '1');
-      }, 5000);
-    }
   }
 
   // INIT ALL
