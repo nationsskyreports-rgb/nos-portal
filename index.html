@@ -3,8 +3,14 @@
 <head>
 <script>
 // Intercept Supabase recovery tokens BEFORE any library loads
-if(window.location.hash && window.location.hash.indexOf('type=recovery')!==-1){
-  window.location.replace('Set-password.html?mode=recovery'+window.location.hash);
+// PKCE flow: ?code=... in query string
+// Implicit flow: #type=recovery in hash
+var h=window.location.hash||'';
+var s=window.location.search||'';
+if(h.indexOf('type=recovery')!==-1){
+  window.location.replace('Set-password.html?mode=recovery'+h);
+}else if(s.indexOf('code=')!==-1 && document.referrer.indexOf('supabase')!==-1){
+  window.location.replace('Set-password.html?mode=recovery&'+s.substring(1)+h);
 }
 </script>
 <meta charset="UTF-8">
