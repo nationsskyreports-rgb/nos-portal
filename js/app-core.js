@@ -336,8 +336,9 @@ async function sendResetEmail() {
       return;
     }
 
-    const base = window.location.href.split('?')[0].split('#')[0];
-    const { error } = await sbClient.auth.resetPasswordForEmail(email);
+    // Redirect back to whichever domain the agent is currently on (GitHub or Cloudflare)
+    const base = window.location.origin + window.location.pathname.replace(/[^/]*$/, '');
+    const { error } = await sbClient.auth.resetPasswordForEmail(email, { redirectTo: base });
 
     if (error) {
       msg.style.color = '#f87171';
