@@ -193,8 +193,10 @@ function sbInsertCallLog(data, savedAt) {
       sales_call_requested:  isQ ? null : (data.salescall || null),
       budget:                isQ ? null : (data.budget    || null),
       unit_type:             isQ ? null : (data.unit      || null),
+      unit_code:             isQ ? null : (data.unitCode  || null),
       extra_notes:           data.extra || null,
       status:                status,
+      closed_at:              status === 'closed' ? new Date().toISOString() : null,
       logged_at:             savedAt || new Date().toISOString(),
     })
   })
