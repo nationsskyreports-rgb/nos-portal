@@ -16,13 +16,45 @@ function getChannelBadge(channel) {
     border:1px solid #93c5fd;border-radius:6px;padding:2px 8px;font-size:10px;font-weight:700;">📞 Call</span>`;
 }
 
+function getStatusBadge(status) {
+  if (status === 'open') {
+    return `<span style="display:inline-flex;align-items:center;gap:4px;background:rgba(245,158,11,0.12);color:#D97706;
+      border:1px solid rgba(245,158,11,0.3);border-radius:6px;padding:2px 8px;font-size:10px;font-weight:700;">🟡 Open</span>`;
+  }
+  return `<span style="display:inline-flex;align-items:center;gap:4px;background:rgba(16,185,129,0.12);color:#059669;
+    border:1px solid rgba(16,185,129,0.3);border-radius:6px;padding:2px 8px;font-size:10px;font-weight:700;">✅ Closed</span>`;
+}
+
+async function toggleLogStatus(id, table, newStatus) {
+  try {
+    const headers = { 'apikey': SB_KEY_SCH, 'Authorization': `Bearer ${window._authToken || SB_KEY_SCH}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' };
+    const res = await fetch(`${SB_URL_SCH}/rest/v1/${table}?id=eq.${id}`, { method: 'PATCH', headers, body: JSON.stringify({ status: newStatus }) });
+    if (!res.ok) throw new Error(await res.text());
+    showToast(newStatus === 'open' ? '🟡' : '✅', newStatus === 'open' ? 'Reopened' : 'Marked Closed', '', 'success', 2500);
+    const agent = document.getElementById('user-name')?.innerText?.trim();
+    if (agent && typeof fetchMyCallLog === 'function') fetchMyCallLog(agent);
+  } catch(e) {
+    showToast('⚠️', 'Update Failed', 'Could not update status. Try again.', 'danger', 3500);
+  }
+}
+
 /* ─── 16. CALL LOG FORM ─── */
 function onAgentSelect() {}
 
-function selectRadio(groupId, el, value) {
-  document.querySelectorAll('#' + groupId + ' .radio-opt').forEach(o => o.classList.remove('selected'));
-  el.classList.add('selected');
-  radioValues[groupId] = value;
+/* ─── STATUS / FOLLOW-UP TOGGLE ─── */
+function toggleFollowupSection() {
+  const status  = document.getElementById('f-status')?.value;
+  const section = document.getElementById('followup-section');
+  if (!section) return;
+  section.style.display = (status === 'open') ? 'block' : 'none';
+  if (status === 'open') {
+    const dateEl = document.getElementById('f-followup-date');
+    if (dateEl && !dateEl.value) {
+      const tomorrow = new Date();
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      dateEl.value = tomorrow.toLocaleDateString('en-CA');
+    }
+  }
 }
 
 /* ─── DYNAMIC CALL LOG OPTIONS FROM SUPABASE ─── */
@@ -224,6 +256,31 @@ async function lookupCustomer(mobile) {
       hist.style.display = '';
     }
   } catch(e) { /* silent */ }
+}
+
+/* ─── CREATE FOLLOW-UP LINKED TO A LOG ─── */
+async function createFollowupForLog(logId, sourceTable, customerName, customerMobile, date, time, note) {
+  if (!logId || !date) return;
+  const agent = document.getElementById('user-name')?.innerText?.trim() || '';
+  try {
+    const headers = { 'apikey': SB_KEY_SCH, 'Authorization': `Bearer ${window._authToken || SB_KEY_SCH}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' };
+    await fetch(`${SB_URL_SCH}/rest/v1/call_reminders`, {
+      method: 'POST', headers,
+      body: JSON.stringify({
+        agent_id: window.schMyAgentId || null,
+        agent_name: agent,
+        customer_name: customerName || null,
+        customer_mobile: customerMobile || null,
+        reminder_date: date,
+        reminder_time: time || null,
+        note: note || '',
+        call_log_id: logId,
+        source_table: sourceTable,
+        is_done: false,
+      })
+    });
+    if (typeof loadMyReminders === 'function') loadMyReminders();
+  } catch(e) { console.warn('createFollowupForLog failed:', e); }
 }
 
 /* ─── REMINDER SYSTEM ─── */
@@ -525,6 +582,7 @@ function quickLogCall(reason) {
       call_reason: reason, communication_channel: '', media_source: '',
       business_relativity: '', sales_call_requested: '',
       budget: '', unit_type: '', extra_notes: '',
+      status: 'closed',
       logged_at: new Date().toISOString(),
     })
   })
@@ -542,7 +600,7 @@ function quickLogCall(reason) {
     if (submissionId !== _activeSubmission) return;
     if (typeof addOfflineCall === 'function') {
       addOfflineCall({ agent, reason, project:'', category1:'', cname:'', mobile:'', bizrel:'', salescall:'',
-        channel:'', media:'', budget:'', unit:'', extra:'', _channel: window._activeChannel || 'call' });
+        channel:'', media:'', budget:'', unit:'', extra:'', status:'closed', _channel: window._activeChannel || 'call' });
       if (window.showToast) showToast('📥','Saved Offline!', reason + ' — Will sync when back online.', 'warn', 6000);
       if (typeof setStatusBar === 'function') setStatusBar('offline', `You're offline — ${getOfflineCalls().length} call(s) pending sync`);
     } else {
@@ -562,6 +620,11 @@ function submitCallLogForm() {
   const isQ     = (reason === 'Wrong Number' || reason === 'Call Dropped');
   const isProject = _chooseOptions.some(o => o.name === project && o.option_type === 'project');
 
+  const status   = document.getElementById('f-status')?.value || 'closed';
+  const fuDate   = document.getElementById('f-followup-date')?.value || '';
+  const fuTime   = document.getElementById('f-followup-time')?.value || '';
+  const fuNote   = document.getElementById('f-followup-note')?.value.trim() || '';
+
   if (!agent)                              { showFormErr('Please select Agent Name!'); return; }
   if (isProject && !reason)                { showFormErr('Please select Category 2!'); return; }
   if (!isQ && !project)                    { showFormErr('Please select Choose!'); return; }
@@ -571,12 +634,13 @@ function submitCallLogForm() {
   const cat1Name = isProject ? (_cat1Options.find(c => c.id === cat1)?.name || cat1) : '';
   if (!isQ && !cname)                      { showFormErr('Please enter Customer Name!'); return; }
   if (!isQ && !mobile)                     { showFormErr('Please enter Customer Mobile!'); return; }
-  if (!isQ && !radioValues['f-bizrel'])    { showFormErr('Select Business Relativity!'); return; }
-  if (!isQ && !radioValues['f-salescall']) { showFormErr('Select Sales Call Requested!'); return; }
-  if (!isQ && !radioValues['f-channel'])   { showFormErr('Select Communication Channel!'); return; }
-  if (!isQ && !radioValues['f-media'])     { showFormErr('Select Media Source!'); return; }
-  if (!isQ && !radioValues['f-budget'])    { showFormErr('Select Budget!'); return; }
-  if (!isQ && !radioValues['f-unit'])      { showFormErr('Select Unit Type!'); return; }
+  if (!isQ && !document.getElementById('f-bizrel').value)    { showFormErr('Select Business Relativity!'); return; }
+  if (!isQ && !document.getElementById('f-salescall').value) { showFormErr('Select Sales Call Requested!'); return; }
+  if (!isQ && !document.getElementById('f-channel').value)   { showFormErr('Select Communication Channel!'); return; }
+  if (!isQ && !document.getElementById('f-media').value)     { showFormErr('Select Media Source!'); return; }
+  if (!isQ && !document.getElementById('f-budget').value)    { showFormErr('Select Budget!'); return; }
+  if (!isQ && !document.getElementById('f-unit').value)      { showFormErr('Select Unit Type!'); return; }
+  if (status === 'open' && !fuDate)        { showFormErr('Please select a Follow-up Date!'); return; }
 
   // Require a comment before submitting (except Quick Log)
   const commentVal = document.getElementById('f-extra').value.trim();
@@ -600,15 +664,16 @@ function submitCallLogForm() {
     agent, reason,
     project:   isQ ? '' : project,
     category1: isQ || !isProject ? '' : cat1Name,
-    direction: radioValues['f-direction'] || 'inbound',
+    direction: document.getElementById('f-direction').value || 'inbound',
     cname:     isQ ? '' : cname,
     mobile:    isQ ? '' : mobile,
-    bizrel:    isQ ? '' : (radioValues['f-bizrel']    || ''),
-    salescall: isQ ? '' : (radioValues['f-salescall'] || ''),
-    channel:   isQ ? '' : (radioValues['f-channel']   || ''),
-    media:     isQ ? '' : (radioValues['f-media']      || ''),
-    budget:    isQ ? '' : (radioValues['f-budget']     || ''),
-    unit:      isQ ? '' : (radioValues['f-unit']       || ''),
+    bizrel:    isQ ? '' : (document.getElementById('f-bizrel').value    || ''),
+    salescall: isQ ? '' : (document.getElementById('f-salescall').value || ''),
+    channel:   isQ ? '' : (document.getElementById('f-channel').value   || ''),
+    media:     isQ ? '' : (document.getElementById('f-media').value     || ''),
+    budget:    isQ ? '' : (document.getElementById('f-budget').value    || ''),
+    unit:      isQ ? '' : (document.getElementById('f-unit').value      || ''),
+    status,
     extra: document.getElementById('f-extra').value.trim()
   };
 
@@ -618,7 +683,7 @@ function submitCallLogForm() {
       'apikey': SB_KEY_SCH,
       'Authorization': `Bearer ${window._authToken || SB_KEY_SCH}`,
       'Content-Type': 'application/json',
-      'Prefer': 'return=minimal'
+      'Prefer': status === 'open' ? 'return=representation' : 'return=minimal'
     },
     body: JSON.stringify({
       agent_name:            data.agent,
@@ -635,15 +700,23 @@ function submitCallLogForm() {
       budget:                data.budget,
       unit_type:             data.unit,
       extra_notes:           data.extra,
+      status:                data.status,
       logged_at:             new Date().toISOString(),
     })
   })
-  .then(res => {
+  .then(async res => {
     clearTimeout(slowTimer);
     if (submissionId !== _activeSubmission) return;
     const liveBtn = document.getElementById('formSubmitBtn');
     if (liveBtn) setButtonLoading(liveBtn, false, '📤 Submit to Database');
     if (res.ok) {
+      if (status === 'open') {
+        try {
+          const rows = await res.json();
+          const newId = rows && rows[0] && rows[0].id;
+          if (newId) createFollowupForLog(newId, table, cname, mobile, fuDate, fuTime, fuNote);
+        } catch(e) { /* silent — call still logged */ }
+      }
       const bar = document.getElementById('call-summary-bar');
       document.getElementById('cs-name').innerText   = cname  || '—';
       document.getElementById('cs-mobile').innerText = mobile || '—';
@@ -661,7 +734,7 @@ function submitCallLogForm() {
     const liveBtnErr = document.getElementById('formSubmitBtn');
     if (liveBtnErr) setButtonLoading(liveBtnErr, false, '📤 Submit to Database');
     if (typeof addOfflineCall === 'function') {
-      addOfflineCall({ ...data, _channel: window._activeChannel || 'call' });
+      addOfflineCall({ ...data, fuDate, fuTime, fuNote, _channel: window._activeChannel || 'call' });
       if (window.showResultPopup) {
         showResultPopup('success','Saved Offline 📥',
           "No internet. Call saved and will sync automatically when you're back online.",
@@ -678,15 +751,18 @@ function submitCallLogForm() {
 }
 
 function resetCallForm() {
-  ['f-project','f-category1','f-category2','f-mobile','f-extra'].forEach(id => {
+  ['f-project','f-category1','f-category2','f-mobile','f-extra',
+   'f-bizrel','f-salescall','f-channel','f-media','f-budget','f-unit',
+   'f-followup-date','f-followup-time','f-followup-note'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.value = '';
   });
   document.getElementById('f-cname').value = '';
-  radioValues = { 'f-direction': 'inbound' };
-  document.querySelectorAll('.radio-opt').forEach(o => o.classList.remove('selected'));
-  const inboundOpt = document.querySelector('#f-direction .radio-opt');
-  if (inboundOpt) inboundOpt.classList.add('selected');
+  const dirEl = document.getElementById('f-direction');
+  if (dirEl) dirEl.value = 'inbound';
+  const statusEl = document.getElementById('f-status');
+  if (statusEl) statusEl.value = 'closed';
+  toggleFollowupSection();
   // أعد إظهار التفاصيل، وأخفِ التصنيفات حتى يتم اختيار مشروع فعلي
   const fullSection = document.getElementById('full-details-section');
   if (fullSection) fullSection.style.display = '';
@@ -984,6 +1060,7 @@ async function fetchMyCallLog(agent) {
                 <div style="display:flex;align-items:center;gap:6px;margin-bottom:2px;">
                   <div style="font-weight:800;font-size:14px;color:var(--text);">${c.customer_name || '—'}</div>
                   ${getChannelBadge(c._source)}
+                  ${getStatusBadge(c.status)}
                 </div>
                 <div style="font-size:12px;color:var(--muted);font-family:monospace;">${c.customer_mobile || '—'}</div>
               </div>
@@ -1008,6 +1085,15 @@ async function fetchMyCallLog(agent) {
                   onmouseover="this.style.background='rgba(245,158,11,0.15)'" onmouseout="this.style.background='rgba(245,158,11,0.08)'">
                   ⏰ Remind
                 </button>` : ''}
+                ${!isQ ? (c.status === 'open'
+                  ? `<button onclick="toggleLogStatus('${c.id}','${c._source === 'whatsapp' ? 'whatsapp_logs' : 'call_logs'}','closed')"
+                      style="background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.25);border-radius:10px;padding:7px 13px;font-size:12px;font-weight:700;color:#059669;cursor:pointer;white-space:nowrap;">
+                      ✅ Mark Closed
+                    </button>`
+                  : `<button onclick="toggleLogStatus('${c.id}','${c._source === 'whatsapp' ? 'whatsapp_logs' : 'call_logs'}','open')"
+                      style="background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.25);border-radius:10px;padding:7px 13px;font-size:12px;font-weight:700;color:#F59E0B;cursor:pointer;white-space:nowrap;">
+                      🟡 Reopen
+                    </button>`) : ''}
               </div>
             </div>
           </div>
@@ -1143,6 +1229,23 @@ function openEditCallModal(callData) {
           <label style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;display:block;margin-bottom:6px;">Category 2</label>
           <select id="edit-reason" class="form-input" onchange="toggleEditSections()">${opts(reasonOptions, callData.call_reason)}</select>
         </div>
+        <div id="edit-status-fields" style="${isQ ? 'display:none' : ''}">
+          <div>
+            <label style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;display:block;margin-bottom:6px;">Status</label>
+            <select id="edit-status" class="form-input" onchange="toggleEditFollowupSection()">
+              <option value="closed" ${callData.status !== 'open' ? 'selected' : ''}>✅ Closed</option>
+              <option value="open" ${callData.status === 'open' ? 'selected' : ''}>🟡 Open — needs follow-up</option>
+            </select>
+          </div>
+          <div id="edit-followup-section" style="${callData.status === 'open' ? '' : 'display:none'};background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:12px;margin-top:10px;">
+            <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">⏰ New Follow-up (optional)</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:8px;">
+              <input type="date" id="edit-followup-date" class="form-input">
+              <input type="time" id="edit-followup-time" class="form-input">
+            </div>
+            <textarea id="edit-followup-note" class="form-input" rows="2" placeholder="Follow up about..."></textarea>
+          </div>
+        </div>
         <div id="edit-extra-fields" style="${isQ ? 'display:none' : ''}">
           <div style="display:flex;flex-direction:column;gap:12px;">
             <div>
@@ -1192,8 +1295,17 @@ function toggleEditSections() {
   const isQ = reason === 'Wrong Number' || reason === 'Call Dropped';
   const extra = document.getElementById('edit-extra-fields');
   const projFields = document.getElementById('edit-project-fields');
+  const statusFields = document.getElementById('edit-status-fields');
   if (extra) extra.style.display = isQ ? 'none' : '';
   if (projFields) projFields.style.display = isQ ? 'none' : '';
+  if (statusFields) statusFields.style.display = isQ ? 'none' : '';
+}
+
+function toggleEditFollowupSection() {
+  const status  = document.getElementById('edit-status')?.value;
+  const section = document.getElementById('edit-followup-section');
+  if (!section) return;
+  section.style.display = (status === 'open') ? 'block' : 'none';
 }
 
 async function saveEditCallLog() {
@@ -1215,6 +1327,10 @@ async function saveEditCallLog() {
   const bizrel    = isQ ? '' : document.getElementById('edit-bizrel').value;
   const salescall = isQ ? '' : document.getElementById('edit-salescall').value;
   const extra     = document.getElementById('edit-extra').value.trim();
+  const status    = isQ ? 'closed' : (document.getElementById('edit-status')?.value || 'closed');
+  const fuDate    = document.getElementById('edit-followup-date')?.value || '';
+  const fuTime    = document.getElementById('edit-followup-time')?.value || '';
+  const fuNote    = document.getElementById('edit-followup-note')?.value.trim() || '';
 
   if (!isQ && !project) { showEditError('Please select Project'); return; }
   if (!isQ && !cat1)    { showEditError('Please select Category 1'); return; }
@@ -1248,11 +1364,15 @@ async function saveEditCallLog() {
           business_relativity:   bizrel,
           sales_call_requested:  salescall,
           extra_notes:           extra,
+          status:                status,
         })
       }
     );
 
     if (res.ok) {
+      if (status === 'open' && fuDate) {
+        createFollowupForLog(id, sourceTable, cname, mobile, fuDate, fuTime, fuNote);
+      }
       document.getElementById('edit-call-modal').remove();
       if (window.showToast) showToast('✅', 'Updated!', 'Log updated successfully.', 'success', 3000);
       const agent = document.getElementById('user-name')?.innerText.trim();
