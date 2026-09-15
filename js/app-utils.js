@@ -375,8 +375,8 @@ function selectChannel(ch) {
     swCall.style.borderColor  = 'var(--primary)'; swCall.style.color       = 'var(--primary)';
     swWA.style.borderColor    = 'var(--border)';  swWA.style.color         = 'var(--muted)';
     setTimeout(function() {
-      var mobileOpt = document.querySelector('#f-channel .radio-opt:nth-child(2)');
-      if (mobileOpt) selectRadio('f-channel', mobileOpt, 'Mobile');
+      var chSel = document.getElementById('f-channel');
+      if (chSel) chSel.value = 'Mobile';
     }, 100);
   } else {
     icon.innerText  = '💬'; title.innerText = 'WhatsApp Log';
@@ -385,8 +385,8 @@ function selectChannel(ch) {
     swWA.style.borderColor    = '#25d366';         swWA.style.color         = '#25d366';
     swCall.style.borderColor  = 'var(--border)';  swCall.style.color       = 'var(--muted)';
     setTimeout(function() {
-      var waOpt = document.querySelector('#f-channel .radio-opt:first-child');
-      if (waOpt) selectRadio('f-channel', waOpt, 'Whatsapp');
+      var chSel = document.getElementById('f-channel');
+      if (chSel) chSel.value = 'Whatsapp';
     }, 100);
   }
 
