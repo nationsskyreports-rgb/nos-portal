@@ -28,7 +28,8 @@ function getStatusBadge(status) {
 async function toggleLogStatus(id, table, newStatus) {
   try {
     const headers = { 'apikey': SB_KEY_SCH, 'Authorization': `Bearer ${window._authToken || SB_KEY_SCH}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' };
-    const res = await fetch(`${SB_URL_SCH}/rest/v1/${table}?id=eq.${id}`, { method: 'PATCH', headers, body: JSON.stringify({ status: newStatus }) });
+    const body = { status: newStatus, closed_at: newStatus === 'closed' ? new Date().toISOString() : null };
+    const res = await fetch(`${SB_URL_SCH}/rest/v1/${table}?id=eq.${id}`, { method: 'PATCH', headers, body: JSON.stringify(body) });
     if (!res.ok) throw new Error(await res.text());
     showToast(newStatus === 'open' ? '🟡' : '✅', newStatus === 'open' ? 'Reopened' : 'Marked Closed', '', 'success', 2500);
     const agent = document.getElementById('user-name')?.innerText?.trim();
@@ -581,8 +582,8 @@ function quickLogCall(reason) {
       project: '', category_1: '',
       call_reason: reason, communication_channel: '', media_source: '',
       business_relativity: '', sales_call_requested: '',
-      budget: '', unit_type: '', extra_notes: '',
-      status: 'closed',
+      budget: '', unit_type: '', unit_code: '', extra_notes: '',
+      status: 'closed', closed_at: new Date().toISOString(),
       logged_at: new Date().toISOString(),
     })
   })
@@ -600,7 +601,7 @@ function quickLogCall(reason) {
     if (submissionId !== _activeSubmission) return;
     if (typeof addOfflineCall === 'function') {
       addOfflineCall({ agent, reason, project:'', category1:'', cname:'', mobile:'', bizrel:'', salescall:'',
-        channel:'', media:'', budget:'', unit:'', extra:'', status:'closed', _channel: window._activeChannel || 'call' });
+        channel:'', media:'', budget:'', unit:'', unitCode:'', extra:'', status:'closed', _channel: window._activeChannel || 'call' });
       if (window.showToast) showToast('📥','Saved Offline!', reason + ' — Will sync when back online.', 'warn', 6000);
       if (typeof setStatusBar === 'function') setStatusBar('offline', `You're offline — ${getOfflineCalls().length} call(s) pending sync`);
     } else {
@@ -673,6 +674,7 @@ function submitCallLogForm() {
     media:     isQ ? '' : (document.getElementById('f-media').value     || ''),
     budget:    isQ ? '' : (document.getElementById('f-budget').value    || ''),
     unit:      isQ ? '' : (document.getElementById('f-unit').value      || ''),
+    unitCode:  isQ ? '' : (document.getElementById('f-unit-code').value.trim() || ''),
     status,
     extra: document.getElementById('f-extra').value.trim()
   };
@@ -699,8 +701,10 @@ function submitCallLogForm() {
       sales_call_requested:  data.salescall,
       budget:                data.budget,
       unit_type:             data.unit,
+      unit_code:             data.unitCode,
       extra_notes:           data.extra,
       status:                data.status,
+      closed_at:             data.status === 'closed' ? new Date().toISOString() : null,
       logged_at:             new Date().toISOString(),
     })
   })
@@ -752,7 +756,7 @@ function submitCallLogForm() {
 
 function resetCallForm() {
   ['f-project','f-category1','f-category2','f-mobile','f-extra',
-   'f-bizrel','f-salescall','f-channel','f-media','f-budget','f-unit',
+   'f-bizrel','f-salescall','f-channel','f-media','f-budget','f-unit','f-unit-code',
    'f-followup-date','f-followup-time','f-followup-note'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.value = '';
@@ -1104,6 +1108,7 @@ async function fetchMyCallLog(agent) {
             <div><span style="color:var(--muted);">Media: </span><span style="font-weight:600;color:var(--text);">${c.media_source||'—'}</span></div>
             <div><span style="color:var(--muted);">Budget: </span><span style="font-weight:600;color:var(--text);">${c.budget||'—'}</span></div>
             <div><span style="color:var(--muted);">Sales: </span><span style="font-weight:600;color:var(--text);">${c.sales_call_requested||'—'}</span></div>
+            ${c.unit_code ? `<div><span style="color:var(--muted);">Unit Code: </span><span style="font-weight:600;color:var(--text);">${c.unit_code}</span></div>` : ''}
           </div>
           ${c.extra_notes&&c.extra_notes.trim()&&c.extra_notes!=='-' ? `
           <div style="margin-top:10px;padding:10px;background:var(--surface2);border-radius:10px;border:1px solid var(--border);font-size:12px;color:var(--muted);">
@@ -1203,6 +1208,7 @@ function openEditCallModal(callData) {
 
       <input type="hidden" id="edit-call-id"    value="${callData.id}">
       <input type="hidden" id="edit-call-table"  value="${sourceTable}">
+      <input type="hidden" id="edit-prev-status" value="${callData.status || 'closed'}">
 
       <div style="display:flex;flex-direction:column;gap:14px;">
         <div>
@@ -1272,6 +1278,10 @@ function openEditCallModal(callData) {
               <label style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;display:block;margin-bottom:6px;">Unit Type</label>
               <select id="edit-unit" class="form-input">${opts(unitOptions, callData.unit_type)}</select>
             </div>
+            <div>
+              <label style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;display:block;margin-bottom:6px;">Unit Code</label>
+              <input id="edit-unit-code" class="form-input" type="text" value="${callData.unit_code || ''}" placeholder="e.g. A-204">
+            </div>
           </div>
         </div>
         <div>
@@ -1324,10 +1334,12 @@ async function saveEditCallLog() {
   const media     = isQ ? '' : document.getElementById('edit-media').value;
   const budget    = isQ ? '' : document.getElementById('edit-budget').value;
   const unit      = isQ ? '' : document.getElementById('edit-unit').value;
+  const unitCode  = isQ ? '' : document.getElementById('edit-unit-code').value.trim();
   const bizrel    = isQ ? '' : document.getElementById('edit-bizrel').value;
   const salescall = isQ ? '' : document.getElementById('edit-salescall').value;
   const extra     = document.getElementById('edit-extra').value.trim();
   const status    = isQ ? 'closed' : (document.getElementById('edit-status')?.value || 'closed');
+  const prevStatus = document.getElementById('edit-prev-status')?.value || 'closed';
   const fuDate    = document.getElementById('edit-followup-date')?.value || '';
   const fuTime    = document.getElementById('edit-followup-time')?.value || '';
   const fuNote    = document.getElementById('edit-followup-note')?.value.trim() || '';
@@ -1361,10 +1373,14 @@ async function saveEditCallLog() {
           media_source:          media,
           budget,
           unit_type:             unit,
+          unit_code:             unitCode,
           business_relativity:   bizrel,
           sales_call_requested:  salescall,
           extra_notes:           extra,
           status:                status,
+          ...(status !== prevStatus
+            ? { closed_at: status === 'closed' ? new Date().toISOString() : null }
+            : {}),
         })
       }
     );
