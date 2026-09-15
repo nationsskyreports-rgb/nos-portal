@@ -166,15 +166,18 @@ function sbInsertCallLog(data, savedAt) {
   const SB_KEY = window.SB_KEY_SCH;
   if (!SB_URL || !SB_KEY) return Promise.resolve();
 
-  const isQ = (data.reason === 'Wrong Number' || data.reason === 'Call Dropped');
+  const isQ     = (data.reason === 'Wrong Number' || data.reason === 'Call Dropped');
+  const table   = (data._channel === 'whatsapp') ? 'whatsapp_logs' : 'call_logs';
+  const status  = data.status || 'closed';
+  const wantsRep = status === 'open' && !isQ;
 
-  return fetch(`${SB_URL}/rest/v1/call_logs`, {
+  return fetch(`${SB_URL}/rest/v1/${table}`, {
     method: 'POST',
     headers: {
       'apikey':        SB_KEY,
       'Authorization': `Bearer ${window._authToken || SB_KEY}`,
       'Content-Type':  'application/json',
-      'Prefer':        'return=minimal'
+      'Prefer':        wantsRep ? 'return=representation' : 'return=minimal'
     },
     body: JSON.stringify({
       agent_name:            data.agent,
@@ -191,9 +194,23 @@ function sbInsertCallLog(data, savedAt) {
       budget:                isQ ? null : (data.budget    || null),
       unit_type:             isQ ? null : (data.unit      || null),
       extra_notes:           data.extra || null,
+      status:                status,
       logged_at:             savedAt || new Date().toISOString(),
     })
-  }).catch(e => console.warn('SB insert failed:', e));
+  })
+  .then(async res => {
+    if (wantsRep && res.ok) {
+      try {
+        const rows = await res.json();
+        const newId = rows && rows[0] && rows[0].id;
+        if (newId && data.fuDate && typeof createFollowupForLog === 'function') {
+          createFollowupForLog(newId, table, data.cname, data.mobile, data.fuDate, data.fuTime, data.fuNote);
+        }
+      } catch(e) { /* silent — call still logged */ }
+    }
+    return res;
+  })
+  .catch(e => console.warn('SB insert failed:', e));
 }
 
 
@@ -212,7 +229,6 @@ async function syncOfflineCalls() {
   for (const call of calls) {
     try {
       const { _offlineId, _savedAt, ...data } = call;
-      delete data._channel;
 
       await sbInsertCallLog(data, _savedAt);
       removeOfflineCall(_offlineId);
