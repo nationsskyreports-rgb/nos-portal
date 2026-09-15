@@ -579,8 +579,8 @@ window.__recoveryMode = false;
 
     <div style="height:1px;background:var(--border);margin-bottom:20px;"></div>
 
-    <!-- ═══ ROW 1: Agent + Direction ═══ -->
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:4px;">
+    <!-- ═══ ROW 1: Agent + Direction + Status ═══ -->
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-bottom:4px;">
       <div class="form-group">
         <label class="form-label">Agent Name <span class="req">*</span></label>
         <select id="f-agent" class="form-input" onchange="onAgentSelect()">
@@ -589,14 +589,36 @@ window.__recoveryMode = false;
       </div>
       <div class="form-group">
         <label class="form-label">Call Direction <span class="req">*</span></label>
-        <div class="radio-group" id="f-direction" style="display:flex;gap:10px;">
-          <label class="radio-opt selected" onclick="selectRadio('f-direction',this,'inbound')" style="flex:1;justify-content:center;">
-            <input type="radio" checked> 📥 Inbound
-          </label>
-          <label class="radio-opt" onclick="selectRadio('f-direction',this,'outbound')" style="flex:1;justify-content:center;">
-            <input type="radio"> 📤 Outbound
-          </label>
+        <select id="f-direction" class="form-input">
+          <option value="inbound">📥 Inbound</option>
+          <option value="outbound">📤 Outbound</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Status <span class="req">*</span></label>
+        <select id="f-status" class="form-input" onchange="toggleFollowupSection()">
+          <option value="closed">✅ Closed</option>
+          <option value="open">🟡 Open — needs follow-up</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- ═══ FOLLOW-UP — shown only when Status = Open ═══ -->
+    <div id="followup-section" style="display:none;background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:14px;">
+      <div class="section-label" style="margin:0 0 10px;"><i class="fas fa-bell"></i> Follow-up</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:10px;">
+        <div class="form-group" style="margin-bottom:0;">
+          <label class="form-label">Follow-up Date <span class="req">*</span></label>
+          <input type="date" id="f-followup-date" class="form-input">
         </div>
+        <div class="form-group" style="margin-bottom:0;">
+          <label class="form-label">Follow-up Time (optional)</label>
+          <input type="time" id="f-followup-time" class="form-input">
+        </div>
+      </div>
+      <div class="form-group" style="margin-bottom:0;">
+        <label class="form-label">Follow-up Note</label>
+        <textarea id="f-followup-note" class="form-input" rows="2" placeholder="Follow up about..."></textarea>
       </div>
     </div>
 
@@ -662,18 +684,20 @@ window.__recoveryMode = false;
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:4px;">
         <div class="form-group">
           <label class="form-label">Business Relativity <span class="req">*</span></label>
-          <div class="radio-group" id="f-bizrel">
-            <label class="radio-opt" onclick="selectRadio('f-bizrel',this,'Business Related')"><input type="radio"> Business Related</label>
-            <label class="radio-opt" onclick="selectRadio('f-bizrel',this,'Non-Business Related')"><input type="radio"> Non-Business Related</label>
-          </div>
+          <select id="f-bizrel" class="form-input">
+            <option value="">Choose...</option>
+            <option value="Business Related">Business Related</option>
+            <option value="Non-Business Related">Non-Business Related</option>
+          </select>
         </div>
         <div class="form-group">
           <label class="form-label">Sales Call Requested <span class="req">*</span></label>
-          <div class="radio-group" id="f-salescall">
-            <label class="radio-opt" onclick="selectRadio('f-salescall',this,'Yes')"><input type="radio"> Yes</label>
-            <label class="radio-opt" onclick="selectRadio('f-salescall',this,'No')"><input type="radio"> No</label>
-            <label class="radio-opt" onclick="selectRadio('f-salescall',this,'N/A')"><input type="radio"> N/A</label>
-          </div>
+          <select id="f-salescall" class="form-input">
+            <option value="">Choose...</option>
+            <option value="Yes">Yes</option>
+            <option value="No">No</option>
+            <option value="N/A">N/A</option>
+          </select>
         </div>
       </div>
 
@@ -681,28 +705,30 @@ window.__recoveryMode = false;
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:4px;">
         <div class="form-group">
           <label class="form-label">Communication Channel <span class="req">*</span></label>
-          <div class="radio-group" id="f-channel">
-            <label class="radio-opt" onclick="selectRadio('f-channel',this,'Whatsapp')"><input type="radio"><i class="fab fa-whatsapp" style="color:#25d366;margin-right:4px"></i>WhatsApp</label>
-            <label class="radio-opt" onclick="selectRadio('f-channel',this,'Mobile')"><input type="radio"><i class="fas fa-mobile-alt" style="margin-right:4px"></i>Mobile</label>
-            <label class="radio-opt" onclick="selectRadio('f-channel',this,'Email')"><input type="radio"><i class="fas fa-envelope" style="margin-right:4px"></i>Email</label>
-            <label class="radio-opt" onclick="selectRadio('f-channel',this,'Alternative Mobile')"><input type="radio">Alt. Mobile</label>
-            <label class="radio-opt" onclick="selectRadio('f-channel',this,'SMS')"><input type="radio"> SMS</label>
-            <label class="radio-opt" onclick="selectRadio('f-channel',this,'N/A')"><input type="radio"> N/A</label>
-          </div>
+          <select id="f-channel" class="form-input">
+            <option value="">Choose...</option>
+            <option value="Whatsapp">💬 WhatsApp</option>
+            <option value="Mobile">📱 Mobile</option>
+            <option value="Email">✉️ Email</option>
+            <option value="Alternative Mobile">Alt. Mobile</option>
+            <option value="SMS">SMS</option>
+            <option value="N/A">N/A</option>
+          </select>
         </div>
         <div class="form-group">
           <label class="form-label">Media Source <span class="req">*</span></label>
-          <div class="radio-group" id="f-media">
-            <label class="radio-opt" onclick="selectRadio('f-media',this,'Billboards')"><input type="radio">Billboards</label>
-            <label class="radio-opt" onclick="selectRadio('f-media',this,'Saw site')"><input type="radio">Saw Site</label>
-            <label class="radio-opt" onclick="selectRadio('f-media',this,'Facebook')"><input type="radio"><i class="fab fa-facebook" style="color:#1877f2;margin-right:4px"></i>Facebook</label>
-            <label class="radio-opt" onclick="selectRadio('f-media',this,'Instagram')"><input type="radio"><i class="fab fa-instagram" style="color:#e1306c;margin-right:4px"></i>Instagram</label>
-            <label class="radio-opt" onclick="selectRadio('f-media',this,'Linkedin')"><input type="radio"><i class="fab fa-linkedin" style="color:#0077b5;margin-right:4px"></i>LinkedIn</label>
-            <label class="radio-opt" onclick="selectRadio('f-media',this,'Word of mouth')"><input type="radio">Word of Mouth</label>
-            <label class="radio-opt" onclick="selectRadio('f-media',this,'TV ad.')"><input type="radio">TV Ad.</label>
-            <label class="radio-opt" onclick="selectRadio('f-media',this,'Youtube')"><input type="radio"><i class="fab fa-youtube" style="color:#ff0000;margin-right:4px"></i>YouTube</label>
-            <label class="radio-opt" onclick="selectRadio('f-media',this,'N/A')"><input type="radio"> N/A</label>
-          </div>
+          <select id="f-media" class="form-input">
+            <option value="">Choose...</option>
+            <option value="Billboards">Billboards</option>
+            <option value="Saw site">Saw Site</option>
+            <option value="Facebook">Facebook</option>
+            <option value="Instagram">Instagram</option>
+            <option value="Linkedin">LinkedIn</option>
+            <option value="Word of mouth">Word of Mouth</option>
+            <option value="TV ad.">TV Ad.</option>
+            <option value="Youtube">YouTube</option>
+            <option value="N/A">N/A</option>
+          </select>
         </div>
       </div>
 
@@ -710,25 +736,27 @@ window.__recoveryMode = false;
       <div class="budget-unit-grid" style="margin-bottom:4px;">
         <div class="form-group">
           <label class="form-label">Budget (Millions) <span class="req">*</span></label>
-          <div class="radio-group" id="f-budget" style="flex-direction:column">
-            <label class="radio-opt" onclick="selectRadio('f-budget',this,'0 - 10')"><input type="radio"> 0 - 10M</label>
-            <label class="radio-opt" onclick="selectRadio('f-budget',this,'10 - 20')"><input type="radio"> 10 - 20M</label>
-            <label class="radio-opt" onclick="selectRadio('f-budget',this,'20 +')"><input type="radio"> 20M+</label>
-            <label class="radio-opt" onclick="selectRadio('f-budget',this,'N/A')"><input type="radio"> N/A</label>
-          </div>
+          <select id="f-budget" class="form-input">
+            <option value="">Choose...</option>
+            <option value="0 - 10">0 - 10M</option>
+            <option value="10 - 20">10 - 20M</option>
+            <option value="20 +">20M+</option>
+            <option value="N/A">N/A</option>
+          </select>
         </div>
         <div class="form-group">
           <label class="form-label">Unit Type <span class="req">*</span></label>
-          <div class="radio-group" id="f-unit" style="flex-direction:column">
-            <label class="radio-opt" onclick="selectRadio('f-unit',this,'Apartment')"><input type="radio"> Apartment</label>
-            <label class="radio-opt" onclick="selectRadio('f-unit',this,'Villa')"><input type="radio"> Villa</label>
-            <label class="radio-opt" onclick="selectRadio('f-unit',this,'Commercial')"><input type="radio"> Commercial</label>
-            <label class="radio-opt" onclick="selectRadio('f-unit',this,'Admin')"><input type="radio"> Admin</label>
-            <label class="radio-opt" onclick="selectRadio('f-unit',this,'Twin House')"><input type="radio"> Twin House</label>
-            <label class="radio-opt" onclick="selectRadio('f-unit',this,'Stand Alone House')"><input type="radio"> Stand Alone</label>
-            <label class="radio-opt" onclick="selectRadio('f-unit',this,'Town House')"><input type="radio"> Town House</label>
-            <label class="radio-opt" onclick="selectRadio('f-unit',this,'N/A')"><input type="radio"> N/A</label>
-          </div>
+          <select id="f-unit" class="form-input">
+            <option value="">Choose...</option>
+            <option value="Apartment">Apartment</option>
+            <option value="Villa">Villa</option>
+            <option value="Commercial">Commercial</option>
+            <option value="Admin">Admin</option>
+            <option value="Twin House">Twin House</option>
+            <option value="Stand Alone House">Stand Alone</option>
+            <option value="Town House">Town House</option>
+            <option value="N/A">N/A</option>
+          </select>
         </div>
       </div>
     </div><!-- end full-details-section -->
