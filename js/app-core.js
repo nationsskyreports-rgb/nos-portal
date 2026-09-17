@@ -431,6 +431,7 @@ async function refreshData() {
     if (schMyAgentId && window.isWorkingToday) {
       const breaks = await loadTodayBreaksFromSB(schMyAgentId);
       if (breaks) applyBreaksToUI(breaks);
+      if (typeof ltLoadToday === 'function') { await ltLoadToday(schMyAgentId); ltRender(); }
     }
 
     showToast('🔄', 'Data refreshed!', 'All info is up to date', 'success', 3000);
@@ -498,6 +499,8 @@ async function showDashboard(res) {
   if (isWorking) {
     statusBanner.style.display = 'block';
     breaksArea.style.display   = 'block';
+    const liveTrackerCard = document.getElementById('live-tracker-card');
+    if (liveTrackerCard) liveTrackerCard.style.display = 'block';
     document.getElementById('status-icon').innerText = '💼';
 
     const statusTextEl = document.getElementById('status-text');
@@ -532,6 +535,7 @@ async function showDashboard(res) {
         if (!agents || !agents.length) return;
         const agentId = agents[0].id;
         schMyAgentId  = agentId;
+        if (typeof initLiveTracker === 'function') initLiveTracker(agentId);
         const breaks  = await loadTodayBreaksFromSB(agentId);
         if (breaks) {
           applyBreaksToUI(breaks);
