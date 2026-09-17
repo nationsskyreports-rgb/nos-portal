@@ -261,6 +261,37 @@ window.__recoveryMode = false;
         </div>
       </div>
 
+      <div class="breaks-card" id="live-tracker-card" style="display:none;">
+        <div class="breaks-header">
+          <h3><i class="fas fa-stopwatch" style="color:var(--primary)"></i> Break & Bathroom Timer</h3>
+        </div>
+
+        <div class="lt-row">
+          <div class="lt-label"><i class="fas fa-coffee"></i> Break</div>
+          <div class="lt-bar-track"><div class="lt-bar-fill" id="lt-break-fill"></div></div>
+          <div class="lt-numbers" id="lt-break-numbers">0.0 / 60 min — 60.0 left</div>
+        </div>
+        <div class="lt-row">
+          <div class="lt-label"><i class="fas fa-restroom"></i> Bathroom</div>
+          <div class="lt-bar-track"><div class="lt-bar-fill" id="lt-bathroom-fill"></div></div>
+          <div class="lt-numbers" id="lt-bathroom-numbers">0.0 / 15 min — 15.0 left</div>
+        </div>
+
+        <div class="lt-active" id="lt-active-banner" style="display:none;">
+          <span id="lt-active-text">-</span>
+          <span id="lt-active-timer">00:00</span>
+        </div>
+
+        <div class="lt-btn-row">
+          <button class="action-btn" id="lt-break-btn" onclick="ltToggle('break')">
+            <i class="fas fa-coffee"></i> Start Break
+          </button>
+          <button class="action-btn c-accent" id="lt-bathroom-btn" onclick="ltToggle('bathroom')">
+            <i class="fas fa-restroom"></i> Start Bathroom
+          </button>
+        </div>
+      </div>
+
       <div class="section-label" style="margin-top:4px;"><i class="fas fa-users"></i> Team Availability</div>
       <div class="team-grid" id="team-grid"></div>
 
@@ -1043,6 +1074,7 @@ window.__recoveryMode = false;
 <script src="js/app-core.js"></script>
 <script src="js/app-schedule.js"></script>
 <script src="js/app-breaks.js"></script>
+<script src="js/app-live-tracker.js"></script>
 <script src="js/app-requests.js"></script>
 <script src="js/app-calllog.js"></script>
 <script src="js/app-kb.js"></script>
