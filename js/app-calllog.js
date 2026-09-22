@@ -962,6 +962,7 @@ let _mylogStatus       = 'all';   // all | open | closed
 let _mylogSource       = 'all';   // all | call | whatsapp
 let _mylogCategory     = 'all';   // all | <category_1 value>
 let _mylogSearch       = '';
+let _mylogDatePreset   = 'today';
 
 function _mylogTabBtn(group, mode, label, countKey) {
   const active = (group === 'status' ? _mylogStatus : _mylogSource) === mode;
@@ -994,7 +995,33 @@ function setMyLogSearch(val) {
   _mylogSearchDebounce = setTimeout(() => {
     _mylogSearch = (val || '').trim().toLowerCase();
     renderMyCallLogList();
-  }, 150);
+  }, 120);
+}
+
+function setMyLogRange(preset) {
+  const from = document.getElementById('mylog-from');
+  const to = document.getElementById('mylog-to');
+  if (!from || !to) return;
+  const today = new Date();
+  const iso = d => d.toLocaleDateString('en-CA');
+  const start = new Date(today);
+  if (preset === 'week') start.setDate(today.getDate() - 6);
+  if (preset === 'month') start.setDate(1);
+  if (preset === 'all') start.setFullYear(today.getFullYear() - 2);
+  from.value = iso(start);
+  to.value = iso(today);
+  _mylogDatePreset = preset;
+  document.querySelectorAll('[data-mylog-range]').forEach(btn => {
+    const active = btn.dataset.mylogRange === preset;
+    btn.classList.toggle('is-active', active);
+    btn.setAttribute('aria-pressed', active ? 'true' : 'false');
+  });
+  const agent = document.getElementById('user-name')?.innerText?.trim();
+  if (agent) fetchMyCallLog(agent);
+}
+
+function countActiveMyLogFilters() {
+  return [_mylogStatus !== 'all', _mylogSource !== 'all', _mylogCategory !== 'all', !!_mylogSearch].filter(Boolean).length;
 }
 
 function clearMyLogFilters() {
@@ -1036,36 +1063,36 @@ async function loadMyCallLog() {
         <div id="reminders-list"><div style="text-align:center;color:var(--muted);padding:12px;font-size:12px;">Loading...</div></div>
       </div>
 
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:10px;">
-        <div class="section-label" style="margin:0"><i class="fas fa-phone-alt"></i> My Log</div>
-        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
-          <input type="date" id="mylog-from" class="form-input" style="width:140px;font-size:13px;" value="${today}">
-          <input type="date" id="mylog-to"   class="form-input" style="width:140px;font-size:13px;" value="${today}">
-          <button class="action-btn c-accent" onclick="fetchMyCallLog(document.getElementById('user-name').innerText.trim())"><i class="fas fa-search"></i> Filter</button>
+      <div class="mylog-toolbar">
+        <div class="mylog-toolbar-title">
+          <div class="section-label" style="margin:0"><i class="fas fa-phone-alt"></i> My Call Log</div>
+          <span class="mylog-live-hint"><i class="fas fa-circle"></i> Live view</span>
+        </div>
+        <div class="mylog-date-controls">
+          <div class="mylog-range-chips" role="group" aria-label="Date range">
+            <button type="button" data-mylog-range="today" class="mylog-range is-active" onclick="setMyLogRange('today')">Today</button>
+            <button type="button" data-mylog-range="week" class="mylog-range" onclick="setMyLogRange('week')">7 days</button>
+            <button type="button" data-mylog-range="month" class="mylog-range" onclick="setMyLogRange('month')">This month</button>
+            <button type="button" data-mylog-range="all" class="mylog-range" onclick="setMyLogRange('all')">2 years</button>
+          </div>
+          <div class="mylog-date-inputs">
+            <input type="date" id="mylog-from" class="form-input" aria-label="From date" value="${today}">
+            <span>→</span>
+            <input type="date" id="mylog-to" class="form-input" aria-label="To date" value="${today}">
+            <button class="action-btn c-accent" onclick="fetchMyCallLog(document.getElementById('user-name').innerText.trim())"><i class="fas fa-sync-alt"></i><span>Apply</span></button>
+          </div>
         </div>
       </div>
 
       <!-- ═══ SMART FILTER BAR ═══ -->
-      <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:12px;margin-bottom:16px;display:flex;flex-direction:column;gap:8px;">
-        <div style="display:flex;gap:4px;padding:4px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;">
-          ${_mylogTabBtn('status','all',    '📋 All')}
-          ${_mylogTabBtn('status','open',   '🟡 Open')}
-          ${_mylogTabBtn('status','closed', '✅ Closed')}
-        </div>
-        <div style="display:flex;gap:4px;padding:4px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;">
-          ${_mylogTabBtn('source','all',      '📋 All')}
-          ${_mylogTabBtn('source','call',     '📞 Calls')}
-          ${_mylogTabBtn('source','whatsapp', '💬 WhatsApp')}
-        </div>
-        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
-          <input type="text" id="mylog-search" class="form-input" placeholder="🔎 Search name, mobile, unit, project..."
-            style="flex:1;min-width:180px;font-size:13px;" oninput="setMyLogSearch(this.value)">
-          <select id="mylog-cat-filter" class="form-input" style="width:170px;font-size:13px;" onchange="setMyLogCategory(this.value)">
-            <option value="all">All Categories</option>
-          </select>
-          <button class="action-btn" onclick="clearMyLogFilters()" style="font-size:12px;padding:8px 12px;white-space:nowrap;">
-            <i class="fas fa-times"></i> Reset
-          </button>
+      <div class="mylog-filter-card">
+        <div class="mylog-filter-head"><div><strong>Find a conversation</strong><span>Combine filters to narrow down instantly</span></div><span class="mylog-active-count" id="mylog-active-count">0 active</span></div>
+        <div class="mylog-filter-grid">
+          <div class="mylog-filter-group"><label>Status</label><div class="mylog-segmented">${_mylogTabBtn('status','all','All')} ${_mylogTabBtn('status','open','🟡 Open')} ${_mylogTabBtn('status','closed','✅ Closed')}</div></div>
+          <div class="mylog-filter-group"><label>Channel</label><div class="mylog-segmented">${_mylogTabBtn('source','all','All')} ${_mylogTabBtn('source','call','📞 Calls')} ${_mylogTabBtn('source','whatsapp','💬 WhatsApp')}</div></div>
+          <label class="mylog-search-wrap"><i class="fas fa-search"></i><input type="search" id="mylog-search" class="form-input" placeholder="Name, mobile, project, unit, reason..." oninput="setMyLogSearch(this.value)"><button type="button" onclick="document.getElementById('mylog-search').value='';setMyLogSearch('')" aria-label="Clear search">×</button></label>
+          <select id="mylog-cat-filter" class="form-input mylog-category-select" onchange="setMyLogCategory(this.value)" aria-label="Category"><option value="all">All Categories</option></select>
+          <button class="mylog-reset-btn" onclick="clearMyLogFilters()"><i class="fas fa-rotate-left"></i> Reset filters</button>
         </div>
       </div>
 
@@ -1098,16 +1125,9 @@ async function fetchMyCallLog(agent) {
 
     _mylogRaw = [...calls, ...wasps].sort((a,b) => new Date(b.logged_at) - new Date(a.logged_at));
 
-    // Reset filters that don't make sense to carry across a new date range
-    _mylogStatus = 'all'; _mylogSource = 'all'; _mylogCategory = 'all'; _mylogSearch = '';
+    // Keep smart filters while changing the date range; only discard a category that vanished.
     const searchEl = document.getElementById('mylog-search');
-    if (searchEl) searchEl.value = '';
-    document.querySelectorAll('[data-mylog-tab]').forEach(btn => {
-      const active = btn.dataset.mylogTab.endsWith(':all');
-      btn.style.background = active ? 'var(--surface)' : 'transparent';
-      btn.style.color      = active ? 'var(--text)'    : 'var(--muted)';
-      btn.style.boxShadow  = active ? '0 2px 8px rgba(0,0,0,0.15)' : 'none';
-    });
+    if (searchEl) searchEl.value = _mylogSearch;
 
     // Populate category dropdown from whatever's actually in this data
     const catEl = document.getElementById('mylog-cat-filter');
@@ -1115,7 +1135,8 @@ async function fetchMyCallLog(agent) {
       const cats = [...new Set(_mylogRaw.map(c => c.category_1).filter(Boolean))].sort();
       catEl.innerHTML = '<option value="all">All Categories</option>' +
         cats.map(cat => `<option value="${cat.replace(/"/g,'&quot;')}">${cat}</option>`).join('');
-      catEl.value = 'all';
+      if (_mylogCategory !== 'all' && !cats.includes(_mylogCategory)) _mylogCategory = 'all';
+      catEl.value = _mylogCategory;
     }
 
     renderMyCallLogList();
@@ -1148,19 +1169,22 @@ function renderMyCallLogList() {
     if (_mylogSource !== 'all'    && c._source !== _mylogSource) return false;
     if (_mylogCategory !== 'all' && c.category_1 !== _mylogCategory) return false;
     if (term) {
-      const hay = `${c.customer_name||''} ${c.customer_mobile||''} ${c.unit_code||''} ${c.project||''}`.toLowerCase();
-      if (!hay.includes(term)) return false;
+      const hay = `${c.customer_name||''} ${c.customer_mobile||''} ${c.unit_code||''} ${c.project||''} ${c.category_1||''} ${c.call_reason||''} ${c.communication_channel||''} ${c.media_source||''} ${c.budget||''} ${c.extra_notes||''}`.toLowerCase();
+      const terms = term.split(/\s+/).filter(Boolean);
+      if (!terms.every(token => hay.includes(token))) return false;
     }
     return true;
   });
 
+  const activeCountEl = document.getElementById('mylog-active-count');
+  if (activeCountEl) activeCountEl.textContent = `${countActiveMyLogFilters()} active`;
+
   if (!raw.length) {
-    container.innerHTML = '<div class="empty-state">No logs found for this period.</div>';
+    container.innerHTML = '<div class="empty-state"><i class="fas fa-inbox"></i><br>No conversations in this date range.<br><small>Try 7 days or This month.</small></div>';
     return;
   }
   if (!data.length) {
-    container.innerHTML = `<div class="empty-state">No logs match your filters.
-      <br><a onclick="clearMyLogFilters()" style="cursor:pointer;color:var(--primary);font-weight:700;">Reset filters</a></div>`;
+    container.innerHTML = `<div class="empty-state"><i class="fas fa-filter"></i><br>No conversations match these filters.<br><a onclick="clearMyLogFilters()" style="cursor:pointer;color:var(--primary);font-weight:700;">Clear filters</a></div>`;
     return;
   }
 
@@ -1171,6 +1195,7 @@ function renderMyCallLogList() {
   const sales      = data.filter(c => c.sales_call_requested === 'Yes').length;
 
   let html = `
+    <div class="mylog-results-summary"><span><strong>${total}</strong> conversations found</span><span>${countActiveMyLogFilters() ? 'Filtered view' : 'All results'} · ${document.getElementById('mylog-from')?.value || ''} → ${document.getElementById('mylog-to')?.value || ''}</span></div>
     <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px;">
       <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:14px;text-align:center;">
         <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;margin-bottom:4px;">Total</div>
