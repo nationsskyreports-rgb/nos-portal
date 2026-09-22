@@ -957,10 +957,67 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 /* ─── MY CALL LOG — من الجدولين ─── */
+let _mylogRaw          = [];   // آخر داتا اتجابت من السيرفر (الفترة المختارة)
+let _mylogStatus       = 'all';   // all | open | closed
+let _mylogSource       = 'all';   // all | call | whatsapp
+let _mylogCategory     = 'all';   // all | <category_1 value>
+let _mylogSearch       = '';
+
+function _mylogTabBtn(group, mode, label, countKey) {
+  const active = (group === 'status' ? _mylogStatus : _mylogSource) === mode;
+  return `<button data-mylog-tab="${group}:${mode}" onclick="setMyLogTab('${group}','${mode}')"
+    style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;padding:9px 10px;border-radius:8px;border:none;background:${active ? 'var(--surface)' : 'transparent'};color:${active ? 'var(--text)' : 'var(--muted)'};font-size:12px;font-weight:700;font-family:inherit;cursor:pointer;transition:all 0.2s;white-space:nowrap;${active ? 'box-shadow:0 2px 8px rgba(0,0,0,0.15);' : ''}">
+    <span>${label}</span>
+    <span class="mylog-count" data-mylog-count="${group}:${mode}" style="opacity:0.75;font-size:11px;background:var(--surface2);padding:1px 7px;border-radius:8px;min-width:20px;text-align:center;">·</span>
+  </button>`;
+}
+
+function setMyLogTab(group, mode) {
+  if (group === 'status') _mylogStatus = mode; else _mylogSource = mode;
+  document.querySelectorAll(`[data-mylog-tab^="${group}:"]`).forEach(btn => {
+    const active = btn.dataset.mylogTab === `${group}:${mode}`;
+    btn.style.background = active ? 'var(--surface)' : 'transparent';
+    btn.style.color      = active ? 'var(--text)'    : 'var(--muted)';
+    btn.style.boxShadow  = active ? '0 2px 8px rgba(0,0,0,0.15)' : 'none';
+  });
+  renderMyCallLogList();
+}
+
+function setMyLogCategory(val) {
+  _mylogCategory = val || 'all';
+  renderMyCallLogList();
+}
+
+let _mylogSearchDebounce = null;
+function setMyLogSearch(val) {
+  clearTimeout(_mylogSearchDebounce);
+  _mylogSearchDebounce = setTimeout(() => {
+    _mylogSearch = (val || '').trim().toLowerCase();
+    renderMyCallLogList();
+  }, 150);
+}
+
+function clearMyLogFilters() {
+  _mylogStatus = 'all'; _mylogSource = 'all'; _mylogCategory = 'all'; _mylogSearch = '';
+  const searchEl = document.getElementById('mylog-search');
+  if (searchEl) searchEl.value = '';
+  const catEl = document.getElementById('mylog-cat-filter');
+  if (catEl) catEl.value = 'all';
+  document.querySelectorAll('[data-mylog-tab]').forEach(btn => {
+    const active = btn.dataset.mylogTab.endsWith(':all');
+    btn.style.background = active ? 'var(--surface)' : 'transparent';
+    btn.style.color      = active ? 'var(--text)'    : 'var(--muted)';
+    btn.style.boxShadow  = active ? '0 2px 8px rgba(0,0,0,0.15)' : 'none';
+  });
+  renderMyCallLogList();
+}
+
 async function loadMyCallLog() {
   const agent     = document.getElementById('user-name').innerText.trim();
   const container = document.getElementById('tab-mylog');
   const today     = getLocalDateStr();
+
+  _mylogStatus = 'all'; _mylogSource = 'all'; _mylogCategory = 'all'; _mylogSearch = '';
 
   container.innerHTML = `
     <div style="padding:16px;">
@@ -979,7 +1036,7 @@ async function loadMyCallLog() {
         <div id="reminders-list"><div style="text-align:center;color:var(--muted);padding:12px;font-size:12px;">Loading...</div></div>
       </div>
 
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:10px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:10px;">
         <div class="section-label" style="margin:0"><i class="fas fa-phone-alt"></i> My Log</div>
         <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
           <input type="date" id="mylog-from" class="form-input" style="width:140px;font-size:13px;" value="${today}">
@@ -987,6 +1044,31 @@ async function loadMyCallLog() {
           <button class="action-btn c-accent" onclick="fetchMyCallLog(document.getElementById('user-name').innerText.trim())"><i class="fas fa-search"></i> Filter</button>
         </div>
       </div>
+
+      <!-- ═══ SMART FILTER BAR ═══ -->
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:12px;margin-bottom:16px;display:flex;flex-direction:column;gap:8px;">
+        <div style="display:flex;gap:4px;padding:4px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;">
+          ${_mylogTabBtn('status','all',    '📋 All')}
+          ${_mylogTabBtn('status','open',   '🟡 Open')}
+          ${_mylogTabBtn('status','closed', '✅ Closed')}
+        </div>
+        <div style="display:flex;gap:4px;padding:4px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;">
+          ${_mylogTabBtn('source','all',      '📋 All')}
+          ${_mylogTabBtn('source','call',     '📞 Calls')}
+          ${_mylogTabBtn('source','whatsapp', '💬 WhatsApp')}
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+          <input type="text" id="mylog-search" class="form-input" placeholder="🔎 Search name, mobile, unit, project..."
+            style="flex:1;min-width:180px;font-size:13px;" oninput="setMyLogSearch(this.value)">
+          <select id="mylog-cat-filter" class="form-input" style="width:170px;font-size:13px;" onchange="setMyLogCategory(this.value)">
+            <option value="all">All Categories</option>
+          </select>
+          <button class="action-btn" onclick="clearMyLogFilters()" style="font-size:12px;padding:8px 12px;white-space:nowrap;">
+            <i class="fas fa-times"></i> Reset
+          </button>
+        </div>
+      </div>
+
       <div id="mylog-content"><div class="empty-state"><i class="fas fa-spinner spinner"></i> Loading...</div></div>
     </div>`;
 
@@ -1014,116 +1096,177 @@ async function fetchMyCallLog(agent) {
       fetch(`${SB_URL_SCH}/rest/v1/whatsapp_logs?${q}`, { headers }).then(r => r.json()).then(d => (d||[]).map(r => ({...r, _source:'whatsapp'}))),
     ]);
 
-    const data = [...calls, ...wasps].sort((a,b) => new Date(b.logged_at) - new Date(a.logged_at));
+    _mylogRaw = [...calls, ...wasps].sort((a,b) => new Date(b.logged_at) - new Date(a.logged_at));
 
-    if (!data.length) {
-      container.innerHTML = '<div class="empty-state">No logs found for this period.</div>';
-      return;
-    }
-
-    const total      = data.length;
-    const totalCalls = calls.length;
-    const totalWasps = wasps.length;
-    const business   = data.filter(c => c.business_relativity === 'Business Related').length;
-    const sales      = data.filter(c => c.sales_call_requested === 'Yes').length;
-
-    let html = `
-      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px;">
-        <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:14px;text-align:center;">
-          <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;margin-bottom:4px;">Total</div>
-          <div style="font-size:24px;font-weight:800;color:var(--primary);">${total}</div>
-        </div>
-        <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:14px;text-align:center;">
-          <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;margin-bottom:4px;">📞 Calls</div>
-          <div style="font-size:24px;font-weight:800;color:#2563eb;">${totalCalls}</div>
-        </div>
-        <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:14px;text-align:center;">
-          <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;margin-bottom:4px;">💬 WhatsApp</div>
-          <div style="font-size:24px;font-weight:800;color:#16a34a;">${totalWasps}</div>
-        </div>
-        <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:14px;text-align:center;">
-          <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;margin-bottom:4px;">Sales Req.</div>
-          <div style="font-size:24px;font-weight:800;color:#7c3aed;">${sales}</div>
-        </div>
-      </div>
-      <div style="display:flex;flex-direction:column;gap:10px;">`;
-
-    data.forEach(c => {
-      const time = c.logged_at ? new Date(c.logged_at).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'}) : '';
-      const date = c.logged_at ? new Date(c.logged_at).toLocaleDateString('en-GB') : '';
-      const isQ  = c.call_reason === 'Wrong Number' || c.call_reason === 'Call Dropped';
-      const reasonColor = isQ ? 'var(--muted)' : 'var(--primary)';
-      const icon = c._source === 'whatsapp' ? '💬' : '📞';
-
-      html += `
-        <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:16px;">
-          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
-            <div style="display:flex;align-items:center;gap:10px;">
-              <div style="width:38px;height:38px;background:var(--primary-gradient);border-radius:10px;display:flex;align-items:center;justify-content:center;color:white;font-size:16px;">${icon}</div>
-              <div>
-                <div style="display:flex;align-items:center;gap:6px;margin-bottom:2px;">
-                  <div style="font-weight:800;font-size:14px;color:var(--text);">${c.customer_name || '—'}</div>
-                  ${getChannelBadge(c._source)}
-                  ${getStatusBadge(c.status)}
-                </div>
-                <div style="font-size:12px;color:var(--muted);font-family:monospace;">${c.customer_mobile || '—'}</div>
-              </div>
-            </div>
-            <div style="display:flex;align-items:center;gap:10px;">
-              <div style="text-align:right;">
-                <div style="font-size:13px;font-weight:700;color:var(--primary);">${time}</div>
-                <div style="font-size:11px;color:var(--muted);">${date}</div>
-              </div>
-              <div style="display:flex;gap:6px;align-items:center;">
-                <button onclick="openEditCallModal(${JSON.stringify({...c, _sourceTable: c._source === 'whatsapp' ? 'whatsapp_logs' : 'call_logs'}).replace(/"/g,'&quot;')})"
-                  style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:7px 13px;font-size:12px;font-weight:700;color:var(--primary);cursor:pointer;display:flex;align-items:center;gap:5px;white-space:nowrap;">
-                  ✏️ Edit
-                </button>
-                <button onclick="confirmDeleteCallLog('${c.id}','${c._source === 'whatsapp' ? 'whatsapp_logs' : 'call_logs'}','${(c.customer_name||'—').replace(/'/g,"\\'")}','${c.call_reason||'—'}')"
-                  style="background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.25);border-radius:10px;padding:7px 13px;font-size:12px;font-weight:700;color:var(--danger);cursor:pointer;display:flex;align-items:center;gap:5px;white-space:nowrap;transition:all 0.2s;"
-                  onmouseover="this.style.background='rgba(239,68,68,0.15)'" onmouseout="this.style.background='rgba(239,68,68,0.08)'">
-                  🗑️ Delete
-                </button>
-                ${!isQ ? `<button onclick="openReminderModal('${(c.customer_name||'').replace(/'/g,"\\'")}','${(c.customer_mobile||'').replace(/'/g,"\\'")}','${c.id}')"
-                  style="background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.25);border-radius:10px;padding:7px 13px;font-size:12px;font-weight:700;color:#F59E0B;cursor:pointer;display:flex;align-items:center;gap:5px;white-space:nowrap;transition:all 0.2s;"
-                  onmouseover="this.style.background='rgba(245,158,11,0.15)'" onmouseout="this.style.background='rgba(245,158,11,0.08)'">
-                  ⏰ Remind
-                </button>` : ''}
-                ${!isQ ? (c.status === 'open'
-                  ? `<button onclick="toggleLogStatus('${c.id}','${c._source === 'whatsapp' ? 'whatsapp_logs' : 'call_logs'}','closed')"
-                      style="background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.25);border-radius:10px;padding:7px 13px;font-size:12px;font-weight:700;color:#059669;cursor:pointer;white-space:nowrap;">
-                      ✅ Mark Closed
-                    </button>`
-                  : `<button onclick="toggleLogStatus('${c.id}','${c._source === 'whatsapp' ? 'whatsapp_logs' : 'call_logs'}','open')"
-                      style="background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.25);border-radius:10px;padding:7px 13px;font-size:12px;font-weight:700;color:#F59E0B;cursor:pointer;white-space:nowrap;">
-                      🟡 Reopen
-                    </button>`) : ''}
-              </div>
-            </div>
-          </div>
-          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;font-size:12px;">
-            <div><span style="color:var(--muted);">Project: </span><span style="font-weight:700;color:var(--accent,var(--primary));">${c.project||'—'}</span></div>
-            <div><span style="color:var(--muted);">Category: </span><span style="font-weight:700;color:${reasonColor};">${c.category_1 ? c.category_1 + ' → ' : ''}${c.call_reason||'—'}</span></div>
-            <div><span style="color:var(--muted);">Channel: </span><span style="font-weight:600;color:var(--text);">${c.communication_channel||'—'}</span></div>
-            <div><span style="color:var(--muted);">Media: </span><span style="font-weight:600;color:var(--text);">${c.media_source||'—'}</span></div>
-            <div><span style="color:var(--muted);">Budget: </span><span style="font-weight:600;color:var(--text);">${c.budget||'—'}</span></div>
-            <div><span style="color:var(--muted);">Sales: </span><span style="font-weight:600;color:var(--text);">${c.sales_call_requested||'—'}</span></div>
-            ${c.unit_code ? `<div><span style="color:var(--muted);">Unit Code: </span><span style="font-weight:600;color:var(--text);">${c.unit_code}</span></div>` : ''}
-          </div>
-          ${c.extra_notes&&c.extra_notes.trim()&&c.extra_notes!=='-' ? `
-          <div style="margin-top:10px;padding:10px;background:var(--surface2);border-radius:10px;border:1px solid var(--border);font-size:12px;color:var(--muted);">
-            <i class="fas fa-sticky-note" style="margin-right:6px;color:var(--warn);"></i>${c.extra_notes}
-          </div>` : ''}
-        </div>`;
+    // Reset filters that don't make sense to carry across a new date range
+    _mylogStatus = 'all'; _mylogSource = 'all'; _mylogCategory = 'all'; _mylogSearch = '';
+    const searchEl = document.getElementById('mylog-search');
+    if (searchEl) searchEl.value = '';
+    document.querySelectorAll('[data-mylog-tab]').forEach(btn => {
+      const active = btn.dataset.mylogTab.endsWith(':all');
+      btn.style.background = active ? 'var(--surface)' : 'transparent';
+      btn.style.color      = active ? 'var(--text)'    : 'var(--muted)';
+      btn.style.boxShadow  = active ? '0 2px 8px rgba(0,0,0,0.15)' : 'none';
     });
 
-    html += '</div>';
-    container.innerHTML = html;
+    // Populate category dropdown from whatever's actually in this data
+    const catEl = document.getElementById('mylog-cat-filter');
+    if (catEl) {
+      const cats = [...new Set(_mylogRaw.map(c => c.category_1).filter(Boolean))].sort();
+      catEl.innerHTML = '<option value="all">All Categories</option>' +
+        cats.map(cat => `<option value="${cat.replace(/"/g,'&quot;')}">${cat}</option>`).join('');
+      catEl.value = 'all';
+    }
+
+    renderMyCallLogList();
 
   } catch(e) {
     container.innerHTML = '<div class="empty-state">Connection error. Try again.</div>';
     console.error('fetchMyCallLog error:', e);
   }
+}
+
+function renderMyCallLogList() {
+  const container = document.getElementById('mylog-content');
+  if (!container) return;
+
+  const raw = _mylogRaw;
+
+  // ─── counts for the tab badges (computed from the FULL date-range data, not the filtered subset) ───
+  _setMylogCount('status:all',    raw.length);
+  _setMylogCount('status:open',   raw.filter(c => c.status === 'open').length);
+  _setMylogCount('status:closed', raw.filter(c => c.status !== 'open').length);
+  _setMylogCount('source:all',      raw.length);
+  _setMylogCount('source:call',     raw.filter(c => c._source === 'call').length);
+  _setMylogCount('source:whatsapp', raw.filter(c => c._source === 'whatsapp').length);
+
+  // ─── apply the smart filter ───
+  const term = _mylogSearch;
+  const data = raw.filter(c => {
+    if (_mylogStatus === 'open'   && c.status !== 'open')  return false;
+    if (_mylogStatus === 'closed' && c.status === 'open')  return false;
+    if (_mylogSource !== 'all'    && c._source !== _mylogSource) return false;
+    if (_mylogCategory !== 'all' && c.category_1 !== _mylogCategory) return false;
+    if (term) {
+      const hay = `${c.customer_name||''} ${c.customer_mobile||''} ${c.unit_code||''} ${c.project||''}`.toLowerCase();
+      if (!hay.includes(term)) return false;
+    }
+    return true;
+  });
+
+  if (!raw.length) {
+    container.innerHTML = '<div class="empty-state">No logs found for this period.</div>';
+    return;
+  }
+  if (!data.length) {
+    container.innerHTML = `<div class="empty-state">No logs match your filters.
+      <br><a onclick="clearMyLogFilters()" style="cursor:pointer;color:var(--primary);font-weight:700;">Reset filters</a></div>`;
+    return;
+  }
+
+  const total      = data.length;
+  const totalCalls = data.filter(c => c._source === 'call').length;
+  const totalWasps = data.filter(c => c._source === 'whatsapp').length;
+  const business   = data.filter(c => c.business_relativity === 'Business Related').length;
+  const sales      = data.filter(c => c.sales_call_requested === 'Yes').length;
+
+  let html = `
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px;">
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:14px;text-align:center;">
+        <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;margin-bottom:4px;">Total</div>
+        <div style="font-size:24px;font-weight:800;color:var(--primary);">${total}</div>
+      </div>
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:14px;text-align:center;">
+        <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;margin-bottom:4px;">📞 Calls</div>
+        <div style="font-size:24px;font-weight:800;color:#2563eb;">${totalCalls}</div>
+      </div>
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:14px;text-align:center;">
+        <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;margin-bottom:4px;">💬 WhatsApp</div>
+        <div style="font-size:24px;font-weight:800;color:#16a34a;">${totalWasps}</div>
+      </div>
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:14px;text-align:center;">
+        <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;margin-bottom:4px;">Sales Req.</div>
+        <div style="font-size:24px;font-weight:800;color:#7c3aed;">${sales}</div>
+      </div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:10px;">`;
+
+  data.forEach(c => {
+    const time = c.logged_at ? new Date(c.logged_at).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'}) : '';
+    const date = c.logged_at ? new Date(c.logged_at).toLocaleDateString('en-GB') : '';
+    const isQ  = c.call_reason === 'Wrong Number' || c.call_reason === 'Call Dropped';
+    const reasonColor = isQ ? 'var(--muted)' : 'var(--primary)';
+    const icon = c._source === 'whatsapp' ? '💬' : '📞';
+
+    html += `
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:16px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+          <div style="display:flex;align-items:center;gap:10px;">
+            <div style="width:38px;height:38px;background:var(--primary-gradient);border-radius:10px;display:flex;align-items:center;justify-content:center;color:white;font-size:16px;">${icon}</div>
+            <div>
+              <div style="display:flex;align-items:center;gap:6px;margin-bottom:2px;">
+                <div style="font-weight:800;font-size:14px;color:var(--text);">${c.customer_name || '—'}</div>
+                ${getChannelBadge(c._source)}
+                ${getStatusBadge(c.status)}
+              </div>
+              <div style="font-size:12px;color:var(--muted);font-family:monospace;">${c.customer_mobile || '—'}</div>
+            </div>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;">
+            <div style="text-align:right;">
+              <div style="font-size:13px;font-weight:700;color:var(--primary);">${time}</div>
+              <div style="font-size:11px;color:var(--muted);">${date}</div>
+            </div>
+            <div style="display:flex;gap:6px;align-items:center;">
+              <button onclick="openEditCallModal(${JSON.stringify({...c, _sourceTable: c._source === 'whatsapp' ? 'whatsapp_logs' : 'call_logs'}).replace(/"/g,'&quot;')})"
+                style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:7px 13px;font-size:12px;font-weight:700;color:var(--primary);cursor:pointer;display:flex;align-items:center;gap:5px;white-space:nowrap;">
+                ✏️ Edit
+              </button>
+              <button onclick="confirmDeleteCallLog('${c.id}','${c._source === 'whatsapp' ? 'whatsapp_logs' : 'call_logs'}','${(c.customer_name||'—').replace(/'/g,"\\'")}','${c.call_reason||'—'}')"
+                style="background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.25);border-radius:10px;padding:7px 13px;font-size:12px;font-weight:700;color:var(--danger);cursor:pointer;display:flex;align-items:center;gap:5px;white-space:nowrap;transition:all 0.2s;"
+                onmouseover="this.style.background='rgba(239,68,68,0.15)'" onmouseout="this.style.background='rgba(239,68,68,0.08)'">
+                🗑️ Delete
+              </button>
+              ${!isQ ? `<button onclick="openReminderModal('${(c.customer_name||'').replace(/'/g,"\\'")}','${(c.customer_mobile||'').replace(/'/g,"\\'")}','${c.id}')"
+                style="background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.25);border-radius:10px;padding:7px 13px;font-size:12px;font-weight:700;color:#F59E0B;cursor:pointer;display:flex;align-items:center;gap:5px;white-space:nowrap;transition:all 0.2s;"
+                onmouseover="this.style.background='rgba(245,158,11,0.15)'" onmouseout="this.style.background='rgba(245,158,11,0.08)'">
+                ⏰ Remind
+              </button>` : ''}
+              ${!isQ ? (c.status === 'open'
+                ? `<button onclick="toggleLogStatus('${c.id}','${c._source === 'whatsapp' ? 'whatsapp_logs' : 'call_logs'}','closed')"
+                    style="background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.25);border-radius:10px;padding:7px 13px;font-size:12px;font-weight:700;color:#059669;cursor:pointer;white-space:nowrap;">
+                    ✅ Mark Closed
+                  </button>`
+                : `<button onclick="toggleLogStatus('${c.id}','${c._source === 'whatsapp' ? 'whatsapp_logs' : 'call_logs'}','open')"
+                    style="background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.25);border-radius:10px;padding:7px 13px;font-size:12px;font-weight:700;color:#F59E0B;cursor:pointer;white-space:nowrap;">
+                    🟡 Reopen
+                  </button>`) : ''}
+            </div>
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;font-size:12px;">
+          <div><span style="color:var(--muted);">Project: </span><span style="font-weight:700;color:var(--accent,var(--primary));">${c.project||'—'}</span></div>
+          <div><span style="color:var(--muted);">Category: </span><span style="font-weight:700;color:${reasonColor};">${c.category_1 ? c.category_1 + ' → ' : ''}${c.call_reason||'—'}</span></div>
+          <div><span style="color:var(--muted);">Channel: </span><span style="font-weight:600;color:var(--text);">${c.communication_channel||'—'}</span></div>
+          <div><span style="color:var(--muted);">Media: </span><span style="font-weight:600;color:var(--text);">${c.media_source||'—'}</span></div>
+          <div><span style="color:var(--muted);">Budget: </span><span style="font-weight:600;color:var(--text);">${c.budget||'—'}</span></div>
+          <div><span style="color:var(--muted);">Sales: </span><span style="font-weight:600;color:var(--text);">${c.sales_call_requested||'—'}</span></div>
+          ${c.unit_code ? `<div><span style="color:var(--muted);">Unit Code: </span><span style="font-weight:600;color:var(--text);">${c.unit_code}</span></div>` : ''}
+        </div>
+        ${c.extra_notes&&c.extra_notes.trim()&&c.extra_notes!=='-' ? `
+        <div style="margin-top:10px;padding:10px;background:var(--surface2);border-radius:10px;border:1px solid var(--border);font-size:12px;color:var(--muted);">
+          <i class="fas fa-sticky-note" style="margin-right:6px;color:var(--warn);"></i>${c.extra_notes}
+        </div>` : ''}
+      </div>`;
+  });
+
+  html += '</div>';
+  container.innerHTML = html;
+}
+
+function _setMylogCount(key, n) {
+  const el = document.querySelector(`[data-mylog-count="${key}"]`);
+  if (el) el.innerText = n;
 }
 
 /* ─── DELETE CALL LOG ─── */
