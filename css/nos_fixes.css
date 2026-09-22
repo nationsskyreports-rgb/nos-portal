@@ -367,3 +367,44 @@ html.light .sch-pill.sick { background: rgba(239,68,68,0.08); color: #dc2626 !im
 
   .sch-pill { font-size: 11px; padding: 4px 8px; min-width: 70px; }
 }
+
+
+/* ─── MY CALL LOG — SMART FILTER UX ───────────────────────── */
+.mylog-toolbar { background:linear-gradient(135deg,rgba(212,175,55,.10),rgba(15,118,110,.08)); border:1px solid var(--border); border-radius:18px; padding:16px; margin-bottom:12px; }
+.mylog-toolbar-title { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:14px; }
+.mylog-live-hint { color:#10b981; font-size:10px; font-weight:800; text-transform:uppercase; letter-spacing:.7px; }
+.mylog-live-hint i { font-size:7px; vertical-align:middle; margin-right:4px; }
+.mylog-date-controls { display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; }
+.mylog-range-chips, .mylog-segmented { display:flex; gap:3px; padding:3px; background:var(--surface2); border:1px solid var(--border); border-radius:10px; }
+.mylog-range, .mylog-range-chips button { border:0; background:transparent; color:var(--muted); padding:8px 11px; border-radius:7px; font-size:11px; font-weight:700; font-family:inherit; cursor:pointer; transition:.2s; }
+.mylog-range.is-active, .mylog-range:hover { background:var(--surface); color:var(--text); box-shadow:0 2px 7px rgba(0,0,0,.12); }
+.mylog-date-inputs { display:flex; align-items:center; gap:6px; color:var(--muted); }
+.mylog-date-inputs .form-input { width:132px; font-size:12px; padding:9px 10px; }
+.mylog-filter-card { background:var(--surface); border:1px solid var(--border); border-radius:16px; padding:14px; margin-bottom:16px; }
+.mylog-filter-head { display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; gap:8px; }
+.mylog-filter-head strong { display:block; color:var(--text); font-size:13px; }
+.mylog-filter-head span:not(.mylog-active-count) { display:block; margin-top:3px; color:var(--muted); font-size:11px; }
+.mylog-active-count { background:rgba(212,175,55,.12); color:var(--primary); border:1px solid rgba(212,175,55,.25); border-radius:20px; padding:5px 9px; font-size:10px; font-weight:800; white-space:nowrap; }
+.mylog-filter-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; align-items:end; }
+.mylog-filter-group label { display:block; color:var(--muted); font-size:10px; font-weight:800; text-transform:uppercase; letter-spacing:.7px; margin:0 0 5px 2px; }
+.mylog-segmented button { min-width:0; padding:8px 9px !important; font-size:11px !important; }
+.mylog-search-wrap { display:flex; align-items:center; gap:7px; min-height:42px; padding:0 9px; background:var(--surface2); border:1px solid var(--border); border-radius:10px; color:var(--primary); }
+.mylog-search-wrap .form-input { min-width:0; flex:1; border:0; background:transparent; padding:9px 0; box-shadow:none; }
+.mylog-search-wrap button { border:0; background:none; color:var(--muted); font-size:20px; cursor:pointer; line-height:1; }
+.mylog-category-select { min-height:42px; }
+.mylog-reset-btn { min-height:42px; border:1px solid var(--border); background:transparent; color:var(--muted); border-radius:10px; font-size:12px; font-weight:700; font-family:inherit; cursor:pointer; }
+.mylog-reset-btn:hover { color:var(--primary); border-color:var(--primary); }
+.mylog-results-summary { display:flex; justify-content:space-between; align-items:center; gap:10px; color:var(--muted); font-size:11px; margin:0 2px 10px; }
+.mylog-results-summary strong { color:var(--primary); font-size:16px; }
+@media (max-width:640px) {
+  .mylog-toolbar { padding:12px; border-radius:14px; }
+  .mylog-date-controls, .mylog-date-inputs { align-items:stretch; width:100%; }
+  .mylog-range-chips { width:100%; }
+  .mylog-range { flex:1; padding:8px 4px; font-size:10px; }
+  .mylog-date-inputs .form-input { flex:1; width:auto; min-width:0; }
+  .mylog-date-inputs .action-btn { padding:8px 10px; }
+  .mylog-filter-grid { grid-template-columns:1fr; }
+  .mylog-filter-group .mylog-segmented { width:100%; }
+  .mylog-filter-group .mylog-segmented button { flex:1; }
+  .mylog-results-summary { align-items:flex-start; flex-direction:column; gap:2px; }
+}
