@@ -115,15 +115,17 @@ function toggleProjectCategoryFields() {
 }
 
 async function onCategory1Change() {
-  const cat1Sel = document.getElementById('f-category1');
-  const cat2    = document.getElementById('f-category2');
-  const cat1Id  = cat1Sel.value;
+  const cat1Sel   = document.getElementById('f-category1');
+  const cat2      = document.getElementById('f-category2');
+  const cat2Group = cat2.closest('.form-group');
+  const cat1Id    = cat1Sel.value;
 
   resetCategory3Field();
 
   if (!cat1Id) {
     cat2.innerHTML = '<option value="">Select Category 1 first...</option>';
     cat2.disabled = true;
+    if (cat2Group) cat2Group.style.display = '';
     return;
   }
 
@@ -137,6 +139,17 @@ async function onCategory1Change() {
   }
 
   const items = _cat2Cache[cat1Id];
+
+  if (!items.length) {
+    // This Category 1 has no sub-categories at all — nothing more to pick, hide the field entirely.
+    cat2.disabled = true;
+    cat2.innerHTML = '<option value="">Choose...</option>';
+    cat2.value = '';
+    if (cat2Group) cat2Group.style.display = 'none';
+    return;
+  }
+
+  if (cat2Group) cat2Group.style.display = '';
   cat2.disabled = false;
   // value stays the category name (backward compat with call_reason / Wrong Number / Call Dropped checks) —
   // data-id carries the row id so we can cascade into Category 3.
@@ -600,7 +613,52 @@ async function markReminderDone(id) {
 function quickLogCall(reason) {
   const agent = document.getElementById('f-agent').value;
   if (!agent) { customAlert('Error', 'Please select Agent Name first!'); return; }
+  showQuickLogNoteModal(reason, agent);
+}
 
+function showQuickLogNoteModal(reason, agent) {
+  const existing = document.getElementById('quick-log-note-modal');
+  if (existing) existing.remove();
+  const existingOv = document.getElementById('quick-log-note-overlay');
+  if (existingOv) existingOv.remove();
+
+  const ov = document.createElement('div');
+  ov.id = 'quick-log-note-overlay';
+  ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9998;backdrop-filter:blur(4px);';
+
+  const box = document.createElement('div');
+  box.id = 'quick-log-note-modal';
+  box.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:24px;min-width:300px;max-width:420px;width:90%;z-index:9999;box-shadow:0 20px 60px rgba(0,0,0,.4);';
+  box.innerHTML = `
+    <div style="font-family:Syne,sans-serif;font-size:17px;font-weight:800;color:var(--text);margin-bottom:4px;">${reason}</div>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:14px;">Please add a short note before logging this.</div>
+    <textarea id="ql-note" class="form-input" rows="3" placeholder="Note..." style="width:100%;resize:vertical;margin-bottom:8px;"></textarea>
+    <div id="ql-note-err" style="display:none;color:var(--danger);font-size:12px;margin-bottom:10px;">Please write a note before logging.</div>
+    <div style="display:flex;gap:10px;">
+      <button id="ql-cancel" style="flex:1;padding:12px;background:var(--surface2);border:1px solid var(--border);border-radius:11px;color:var(--muted);cursor:pointer;font-weight:600;font-family:'Plus Jakarta Sans',sans-serif;">Cancel</button>
+      <button id="ql-confirm" style="flex:1;padding:12px;background:var(--primary-gradient);color:#fff;border:none;border-radius:11px;cursor:pointer;font-weight:700;font-family:'Plus Jakarta Sans',sans-serif;">Log ${reason}</button>
+    </div>`;
+  document.body.appendChild(ov);
+  document.body.appendChild(box);
+
+  const close = () => {
+    if (ov.parentElement) document.body.removeChild(ov);
+    if (box.parentElement) document.body.removeChild(box);
+  };
+  document.getElementById('ql-cancel').onclick = close;
+  ov.onclick = close;
+
+  document.getElementById('ql-confirm').onclick = () => {
+    const note = document.getElementById('ql-note').value.trim();
+    if (!note) { document.getElementById('ql-note-err').style.display = 'block'; return; }
+    close();
+    submitQuickLog(reason, agent, note);
+  };
+
+  setTimeout(() => document.getElementById('ql-note')?.focus(), 100);
+}
+
+function submitQuickLog(reason, agent, note) {
   const table = getActiveTable();
   const label = (window._activeChannel === 'whatsapp') ? 'WhatsApp' : 'Call';
   showToast('⏳', 'Logging...', reason + ' — Please wait...', 'info', 4000);
@@ -618,10 +676,10 @@ function quickLogCall(reason) {
     body: JSON.stringify({
       agent_name: agent, call_direction: 'inbound',
       customer_name: '', customer_mobile: '',
-      project: '', category_1: '',
+      project: '', category_1: '', category_3: '',
       call_reason: reason, communication_channel: '', media_source: '',
       business_relativity: '', sales_call_requested: '',
-      budget: '', unit_type: '', unit_code: '', extra_notes: '',
+      budget: '', unit_type: '', unit_code: '', extra_notes: note,
       status: 'closed', closed_at: new Date().toISOString(),
       logged_at: new Date().toISOString(),
     })
@@ -639,8 +697,8 @@ function quickLogCall(reason) {
   .catch(() => {
     if (submissionId !== _activeSubmission) return;
     if (typeof addOfflineCall === 'function') {
-      addOfflineCall({ agent, reason, project:'', category1:'', cname:'', mobile:'', bizrel:'', salescall:'',
-        channel:'', media:'', budget:'', unit:'', unitCode:'', extra:'', status:'closed', _channel: window._activeChannel || 'call' });
+      addOfflineCall({ agent, reason, project:'', category1:'', category3:'', cname:'', mobile:'', bizrel:'', salescall:'',
+        channel:'', media:'', budget:'', unit:'', unitCode:'', extra: note, status:'closed', _channel: window._activeChannel || 'call' });
       if (window.showToast) showToast('📥','Saved Offline!', reason + ' — Will sync when back online.', 'warn', 6000);
       if (typeof setStatusBar === 'function') setStatusBar('offline', `You're offline — ${getOfflineCalls().length} call(s) pending sync`);
     } else {
@@ -654,13 +712,15 @@ function submitCallLogForm() {
   const agent   = document.getElementById('f-agent').value;
   const project = document.getElementById('f-project').value;
   const cat1    = document.getElementById('f-category1').value;
-  const reason  = document.getElementById('f-category2').value;
+  let   reason  = document.getElementById('f-category2').value;
   const cat3Row = document.getElementById('category3-row');
   const cat3    = (cat3Row && cat3Row.style.display !== 'none') ? document.getElementById('f-category3').value : '';
   const mobile  = document.getElementById('f-mobile').value.trim();
   const cname   = document.getElementById('f-cname').value.trim();
   const isQ     = (reason === 'Wrong Number' || reason === 'Call Dropped');
   const isProject = _chooseOptions.some(o => o.name === project && o.option_type === 'project');
+  const cat2Group   = document.getElementById('f-category2')?.closest('.form-group');
+  const cat2Visible = !!(cat2Group && cat2Group.style.display !== 'none');
 
   const status   = document.getElementById('f-status')?.value || 'closed';
   const fuDate   = document.getElementById('f-followup-date')?.value || '';
@@ -668,13 +728,15 @@ function submitCallLogForm() {
   const fuNote   = document.getElementById('f-followup-note')?.value.trim() || '';
 
   if (!agent)                              { showFormErr('Please select Agent Name!'); return; }
-  if (isProject && !reason)                { showFormErr('Please select Category 2!'); return; }
+  if (isProject && cat2Visible && !reason) { showFormErr('Please select Category 2!'); return; }
   if (!isQ && !project)                    { showFormErr('Please select Choose!'); return; }
   if (isProject && !cat1)                  { showFormErr('Please select Category 1!'); return; }
   if (isProject && cat3Row && cat3Row.style.display !== 'none' && !cat3) { showFormErr('Please select Category 3!'); return; }
 
   // Resolve Category 1 name from the ID for storage
   const cat1Name = isProject ? (_cat1Options.find(c => c.id === cat1)?.name || cat1) : '';
+  // Category 1 has no sub-categories — its own name is the most specific choice we have
+  if (isProject && !cat2Visible) reason = cat1Name;
   if (!isQ && !cname)                      { showFormErr('Please enter Customer Name!'); return; }
   if (!isQ && !mobile)                     { showFormErr('Please enter Customer Mobile!'); return; }
   if (!isQ && !document.getElementById('f-salescall').value) { showFormErr('Select Sales Call Requested!'); return; }
