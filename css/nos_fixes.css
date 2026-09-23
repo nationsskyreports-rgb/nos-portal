@@ -408,3 +408,9 @@ html.light .sch-pill.sick { background: rgba(239,68,68,0.08); color: #dc2626 !im
   .mylog-filter-group .mylog-segmented button { flex:1; }
   .mylog-results-summary { align-items:flex-start; flex-direction:column; gap:2px; }
 }
+
+/* ─── CALL LOG — sectioned form cards ─────────────────────────────────── */
+.cl-card-body { padding: 16px 20px; }
+@media (max-width: 640px) {
+  .cl-card-body { padding: 12px 14px; }
+}
