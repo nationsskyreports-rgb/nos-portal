@@ -158,10 +158,12 @@ async function onCategory1Change() {
 }
 
 function resetCategory3Field() {
-  const row = document.getElementById('category3-row');
+  const row  = document.getElementById('category3-row');
   const cat3 = document.getElementById('f-category3');
+  const classRow = document.getElementById('classification-row');
   if (row) row.style.display = 'none';
   if (cat3) { cat3.disabled = true; cat3.innerHTML = '<option value="">Choose...</option>'; cat3.value = ''; }
+  if (classRow) classRow.style.gridTemplateColumns = '1fr 1fr 1fr';
 }
 
 async function onCategory2Change() {
@@ -179,8 +181,9 @@ async function onCategory2Change() {
   }
 
   const items = _cat3Cache[cat2Id];
-  const row  = document.getElementById('category3-row');
-  const cat3 = document.getElementById('f-category3');
+  const row      = document.getElementById('category3-row');
+  const cat3     = document.getElementById('f-category3');
+  const classRow = document.getElementById('classification-row');
 
   if (!items.length) { resetCategory3Field(); return; }
 
@@ -188,6 +191,7 @@ async function onCategory2Change() {
   cat3.innerHTML = '<option value="">Choose...</option>' +
     items.map(o => `<option value="${o.name}">${o.name}</option>`).join('');
   if (row) row.style.display = '';
+  if (classRow) classRow.style.gridTemplateColumns = '1fr 1fr 1fr 1fr';
 }
 
 function toggleFormSections() { /* no-op — Wrong Number/Call Dropped are Quick Log only */ }
