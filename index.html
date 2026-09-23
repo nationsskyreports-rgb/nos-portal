@@ -611,208 +611,181 @@ window.__recoveryMode = false;
     <div style="height:1px;background:var(--border);margin-bottom:20px;"></div>
 
     <!-- ═══ QUICK LOG — one-click submit (skips classification & details) ═══ -->
-    <div class="breaks-card">
-      <div class="breaks-header"><h3><i class="fas fa-bolt" style="color:var(--primary)"></i> Quick Log</h3></div>
-      <div class="cl-card-body">
-        <div class="quick-log-grid">
-          <button type="button" class="quick-log-btn" onclick="quickLogCall('Wrong Number')">
-            <i class="fas fa-exchange-alt"></i> Wrong Number
-          </button>
-          <button type="button" class="quick-log-btn" onclick="quickLogCall('Call Dropped')">
-            <i class="fas fa-phone-slash"></i> Call Dropped
-          </button>
-        </div>
-      </div>
+    <div class="quick-log-grid" style="margin-bottom:16px;">
+      <button type="button" class="quick-log-btn" onclick="quickLogCall('Wrong Number')">
+        <i class="fas fa-exchange-alt"></i> Wrong Number
+      </button>
+      <button type="button" class="quick-log-btn" onclick="quickLogCall('Call Dropped')">
+        <i class="fas fa-phone-slash"></i> Call Dropped
+      </button>
     </div>
 
     <!-- ═══ AGENT & DIRECTION ═══ -->
-    <div class="breaks-card">
-      <div class="breaks-header"><h3><i class="fas fa-user-circle" style="color:var(--primary)"></i> Agent & Call Direction</h3></div>
-      <div class="cl-card-body">
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
-          <div class="form-group" style="margin-bottom:0;">
-            <label class="form-label">Agent Name <span class="req">*</span></label>
-            <select id="f-agent" class="form-input" onchange="onAgentSelect()">
-              <option value="">Select agent...</option>
-            </select>
-          </div>
-          <div class="form-group" style="margin-bottom:0;">
-            <label class="form-label">Call Direction <span class="req">*</span></label>
-            <select id="f-direction" class="form-input">
-              <option value="inbound">📥 Inbound</option>
-              <option value="outbound">📤 Outbound</option>
-            </select>
-          </div>
-        </div>
+    <div class="cl-section-label">Agent</div>
+    <div class="cl-row" style="grid-template-columns:1fr 1fr;">
+      <div class="form-group">
+        <label class="form-label">Agent Name <span class="req">*</span></label>
+        <select id="f-agent" class="form-input" onchange="onAgentSelect()">
+          <option value="">Select agent...</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Call Direction <span class="req">*</span></label>
+        <select id="f-direction" class="form-input">
+          <option value="inbound">📥 Inbound</option>
+          <option value="outbound">📤 Outbound</option>
+        </select>
       </div>
     </div>
 
     <!-- ═══ CLASSIFICATION ═══ -->
-    <div class="breaks-card">
-      <div class="breaks-header"><h3><i class="fas fa-tags" style="color:var(--primary)"></i> Classification</h3></div>
-      <div class="cl-card-body">
-        <div id="classification-row" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-bottom:4px;">
-          <div class="form-group">
-            <label class="form-label">Choose <span class="req">*</span></label>
-            <select id="f-project" class="form-input" onchange="toggleProjectCategoryFields()">
-              <option value="">Loading...</option>
-            </select>
-          </div>
-          <div class="form-group">
-            <label class="form-label">Category 1 <span class="req">*</span></label>
-            <select id="f-category1" class="form-input" onchange="onCategory1Change()">
-              <option value="">Choose...</option>
-            </select>
-          </div>
-          <div class="form-group">
-            <label class="form-label">Category 2 <span class="req">*</span></label>
-            <select id="f-category2" class="form-input" onchange="onCategory2Change()" disabled>
-              <option value="">Select Category 1 first...</option>
-            </select>
-          </div>
-        </div>
-
-        <!-- Category 3 — only shown when the chosen Category 2 has sub-categories -->
-        <div class="form-group" id="category3-row" style="display:none;margin-bottom:0;">
-          <label class="form-label">Category 3</label>
-          <select id="f-category3" class="form-input" disabled>
-            <option value="">Choose...</option>
-          </select>
-        </div>
+    <div class="cl-section-label">Classification</div>
+    <div id="classification-row" class="cl-row" style="grid-template-columns:1fr 1fr 1fr;">
+      <div class="form-group">
+        <label class="form-label">Choose <span class="req">*</span></label>
+        <select id="f-project" class="form-input" onchange="toggleProjectCategoryFields()">
+          <option value="">Loading...</option>
+        </select>
       </div>
+      <div class="form-group">
+        <label class="form-label">Category 1 <span class="req">*</span></label>
+        <select id="f-category1" class="form-input" onchange="onCategory1Change()">
+          <option value="">Choose...</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Category 2 <span class="req">*</span></label>
+        <select id="f-category2" class="form-input" onchange="onCategory2Change()" disabled>
+          <option value="">Select Category 1 first...</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Category 3 — only shown when the chosen Category 2 has sub-categories -->
+    <div class="form-group" id="category3-row" style="display:none;margin-top:10px;margin-bottom:0;">
+      <label class="form-label">Category 3</label>
+      <select id="f-category3" class="form-input" disabled>
+        <option value="">Choose...</option>
+      </select>
     </div>
 
     <!-- ═══ FULL DETAILS SECTION — hidden for Wrong Number / Call Dropped ═══ -->
     <div id="full-details-section">
 
       <!-- ═══ CUSTOMER ═══ -->
-      <div class="breaks-card">
-        <div class="breaks-header"><h3><i class="fas fa-address-book" style="color:var(--primary)"></i> Customer</h3></div>
-        <div class="cl-card-body">
-          <div id="mobile-section" style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:0;">
-            <div class="form-group" style="margin-bottom:0;">
-              <label class="form-label">Customer Name <span class="req">*</span></label>
-              <input type="text" id="f-cname" class="form-input" placeholder="Enter customer name...">
-            </div>
-            <div class="form-group" style="margin-bottom:0;">
-              <label class="form-label">Customer Mobile <span class="req">*</span></label>
-              <input type="tel" id="f-mobile" class="form-input" placeholder="01xxxxxxxxx" oninput="onMobileInput(this.value)">
-              <div id="mobile-autofill-hint" style="display:none;font-size:11px;color:#10B981;margin-top:4px;font-weight:700;"></div>
-            </div>
-          </div>
-
-          <!-- Customer History — appears when mobile matches -->
-          <div id="customer-history" style="display:none;margin-top:14px;background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:14px;">
-            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
-              <div style="font-size:12px;font-weight:800;color:var(--primary);"><i class="fas fa-history" style="margin-right:6px;"></i> Customer History</div>
-              <span id="history-count" style="font-size:10px;color:var(--muted);"></span>
-            </div>
-            <div id="history-list"></div>
-          </div>
+      <div class="cl-section-label">Customer</div>
+      <div id="mobile-section" class="cl-row" style="grid-template-columns:1fr 1fr;">
+        <div class="form-group">
+          <label class="form-label">Customer Name <span class="req">*</span></label>
+          <input type="text" id="f-cname" class="form-input" placeholder="Enter customer name...">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Customer Mobile <span class="req">*</span></label>
+          <input type="tel" id="f-mobile" class="form-input" placeholder="01xxxxxxxxx" oninput="onMobileInput(this.value)">
+          <div id="mobile-autofill-hint" style="display:none;font-size:11px;color:#10B981;margin-top:4px;font-weight:700;"></div>
         </div>
       </div>
 
-      <!-- ═══ CALL DETAILS ═══ -->
-      <div class="breaks-card">
-        <div class="breaks-header"><h3><i class="fas fa-list-alt" style="color:var(--primary)"></i> Call Details</h3></div>
-        <div class="cl-card-body">
-          <div class="form-group">
-            <label class="form-label">Sales Call Requested <span class="req">*</span></label>
-            <select id="f-salescall" class="form-input">
-              <option value="">Choose...</option>
-              <option value="Yes">Yes</option>
-              <option value="No">No</option>
-              <option value="N/A">N/A</option>
-            </select>
-          </div>
-
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:4px;">
-            <div class="form-group" style="margin-bottom:0;">
-              <label class="form-label">Communication Channel <span class="req">*</span></label>
-              <select id="f-channel" class="form-input">
-                <option value="">Choose...</option>
-                <option value="Whatsapp">💬 WhatsApp</option>
-                <option value="Mobile">📱 Mobile</option>
-                <option value="Email">✉️ Email</option>
-                <option value="Alternative Mobile">Alt. Mobile</option>
-                <option value="SMS">SMS</option>
-                <option value="N/A">N/A</option>
-              </select>
-            </div>
-            <div class="form-group" style="margin-bottom:0;">
-              <label class="form-label">Media Source <span class="req">*</span></label>
-              <select id="f-media" class="form-input">
-                <option value="">Choose...</option>
-                <option value="Billboards">Billboards</option>
-                <option value="Saw site">Saw Site</option>
-                <option value="Facebook">Facebook</option>
-                <option value="Instagram">Instagram</option>
-                <option value="Linkedin">LinkedIn</option>
-                <option value="Word of mouth">Word of Mouth</option>
-                <option value="TV ad.">TV Ad.</option>
-                <option value="Youtube">YouTube</option>
-                <option value="N/A">N/A</option>
-              </select>
-            </div>
-          </div>
-
-          <div class="form-group" style="margin-bottom:0;margin-top:14px;">
-            <label class="form-label">Unit Code</label>
-            <input type="text" id="f-unit-code" class="form-input" placeholder="e.g. A-204 (optional)">
-          </div>
+      <!-- Customer History — appears when mobile matches -->
+      <div id="customer-history" style="display:none;margin-top:10px;background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:14px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+          <div style="font-size:12px;font-weight:800;color:var(--primary);"><i class="fas fa-history" style="margin-right:6px;"></i> Customer History</div>
+          <span id="history-count" style="font-size:10px;color:var(--muted);"></span>
         </div>
+        <div id="history-list"></div>
+      </div>
+
+      <!-- ═══ CALL DETAILS ═══ -->
+      <div class="cl-section-label">Call Details</div>
+      <div class="cl-row" style="grid-template-columns:1fr 1fr 1fr;">
+        <div class="form-group">
+          <label class="form-label">Sales Call Requested <span class="req">*</span></label>
+          <select id="f-salescall" class="form-input">
+            <option value="">Choose...</option>
+            <option value="Yes">Yes</option>
+            <option value="No">No</option>
+            <option value="N/A">N/A</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Communication Channel <span class="req">*</span></label>
+          <select id="f-channel" class="form-input">
+            <option value="">Choose...</option>
+            <option value="Whatsapp">💬 WhatsApp</option>
+            <option value="Mobile">📱 Mobile</option>
+            <option value="Email">✉️ Email</option>
+            <option value="Alternative Mobile">Alt. Mobile</option>
+            <option value="SMS">SMS</option>
+            <option value="N/A">N/A</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Media Source <span class="req">*</span></label>
+          <select id="f-media" class="form-input">
+            <option value="">Choose...</option>
+            <option value="Billboards">Billboards</option>
+            <option value="Saw site">Saw Site</option>
+            <option value="Facebook">Facebook</option>
+            <option value="Instagram">Instagram</option>
+            <option value="Linkedin">LinkedIn</option>
+            <option value="Word of mouth">Word of Mouth</option>
+            <option value="TV ad.">TV Ad.</option>
+            <option value="Youtube">YouTube</option>
+            <option value="N/A">N/A</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-group" style="margin-top:10px;">
+        <label class="form-label">Unit Code</label>
+        <input type="text" id="f-unit-code" class="form-input" placeholder="e.g. A-204 (optional)">
       </div>
 
     </div><!-- end full-details-section -->
 
     <!-- ═══ FINISH & SUBMIT — status, follow-up, notes ═══ -->
-    <div class="breaks-card">
-      <div class="breaks-header"><h3><i class="fas fa-flag-checkered" style="color:var(--primary)"></i> Finish & Submit</h3></div>
-      <div class="cl-card-body">
+    <div class="cl-section-label">Wrap Up</div>
 
-        <div class="form-group">
-          <label class="form-label">Status <span class="req">*</span></label>
-          <select id="f-status" class="form-input" onchange="toggleFollowupSection()">
-            <option value="closed">✅ Closed</option>
-            <option value="open">🟡 Open — needs follow-up</option>
-          </select>
-        </div>
+    <div class="form-group">
+      <label class="form-label">Status <span class="req">*</span></label>
+      <select id="f-status" class="form-input" onchange="toggleFollowupSection()">
+        <option value="closed">✅ Closed</option>
+        <option value="open">🟡 Open — needs follow-up</option>
+      </select>
+    </div>
 
-        <!-- FOLLOW-UP — shown only when Status = Open -->
-        <div id="followup-section" style="display:none;background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:14px;">
-          <div class="section-label" style="margin:0 0 10px;"><i class="fas fa-bell"></i> Follow-up</div>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:10px;">
-            <div class="form-group" style="margin-bottom:0;">
-              <label class="form-label">Follow-up Date <span class="req">*</span></label>
-              <input type="date" id="f-followup-date" class="form-input">
-            </div>
-            <div class="form-group" style="margin-bottom:0;">
-              <label class="form-label">Follow-up Time (optional)</label>
-              <input type="time" id="f-followup-time" class="form-input">
-            </div>
-          </div>
-          <div class="form-group" style="margin-bottom:0;">
-            <label class="form-label">Follow-up Note</label>
-            <textarea id="f-followup-note" class="form-input" rows="2" placeholder="Follow up about..."></textarea>
-          </div>
-        </div>
-
+    <!-- FOLLOW-UP — shown only when Status = Open -->
+    <div id="followup-section" style="display:none;background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:10px;">
+      <div class="section-label" style="margin:0 0 10px;"><i class="fas fa-bell"></i> Follow-up</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">
         <div class="form-group" style="margin-bottom:0;">
-          <label class="form-label">Comment <span class="req">*</span></label>
-          <!-- Quick comment templates -->
-          <div id="comment-templates-bar" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px;align-items:center;">
-            <span id="ct-chips"></span>
-            <button type="button" onclick="openCommentTemplatesManager()"
-              style="display:inline-flex;align-items:center;gap:4px;padding:5px 10px;border-radius:8px;border:1px dashed var(--border);background:transparent;color:var(--muted);cursor:pointer;font-size:11px;font-weight:700;font-family:inherit;transition:all .15s;"
-              onmouseover="this.style.borderColor='var(--primary)';this.style.color='var(--primary)';"
-              onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--muted)';">
-              <i class="fas fa-cog"></i> Manage
-            </button>
-          </div>
-          <textarea id="f-extra" class="form-input" placeholder="Type a comment or tap a template above..." rows="3"></textarea>
+          <label class="form-label">Follow-up Date <span class="req">*</span></label>
+          <input type="date" id="f-followup-date" class="form-input">
         </div>
-
+        <div class="form-group" style="margin-bottom:0;">
+          <label class="form-label">Follow-up Time (optional)</label>
+          <input type="time" id="f-followup-time" class="form-input">
+        </div>
       </div>
+      <div class="form-group" style="margin-bottom:0;">
+        <label class="form-label">Follow-up Note</label>
+        <textarea id="f-followup-note" class="form-input" rows="2" placeholder="Follow up about..."></textarea>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Comment <span class="req">*</span></label>
+      <!-- Quick comment templates -->
+      <div id="comment-templates-bar" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px;align-items:center;">
+        <span id="ct-chips"></span>
+        <button type="button" onclick="openCommentTemplatesManager()"
+          style="display:inline-flex;align-items:center;gap:4px;padding:5px 10px;border-radius:8px;border:1px dashed var(--border);background:transparent;color:var(--muted);cursor:pointer;font-size:11px;font-weight:700;font-family:inherit;transition:all .15s;"
+          onmouseover="this.style.borderColor='var(--primary)';this.style.color='var(--primary)';"
+          onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--muted)';">
+          <i class="fas fa-cog"></i> Manage
+        </button>
+      </div>
+      <textarea id="f-extra" class="form-input" placeholder="Type a comment or tap a template above..." rows="3"></textarea>
     </div>
 
     <button class="submit-btn" id="formSubmitBtn" onclick="submitCallLogForm()" style="margin-top:8px;">
