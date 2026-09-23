@@ -660,14 +660,13 @@ window.__recoveryMode = false;
           <option value="">Select Category 1 first...</option>
         </select>
       </div>
-    </div>
-
-    <!-- Category 3 — only shown when the chosen Category 2 has sub-categories -->
-    <div class="form-group" id="category3-row" style="display:none;margin-top:10px;margin-bottom:0;">
-      <label class="form-label">Category 3</label>
-      <select id="f-category3" class="form-input" disabled>
-        <option value="">Choose...</option>
-      </select>
+      <!-- Category 3 — only shown when the chosen Category 2 has sub-categories; JS grows this row to 4 columns -->
+      <div class="form-group" id="category3-row" style="display:none;">
+        <label class="form-label">Category 3</label>
+        <select id="f-category3" class="form-input" disabled>
+          <option value="">Choose...</option>
+        </select>
+      </div>
     </div>
 
     <!-- ═══ FULL DETAILS SECTION — hidden for Wrong Number / Call Dropped ═══ -->
@@ -1050,7 +1049,7 @@ window.__recoveryMode = false;
 <script src="js/app-breaks.js"></script>
 <script src="js/app-live-tracker.js"></script>
 <script src="js/app-requests.js"></script>
-<script src="js/app-calllog.js"></script>
+<script src="js/app-calllog.js?v=2"></script>
 <script src="js/app-kb.js"></script>
 <script src="js/app-sch-table.js"></script>
 <script src="js/offline-calllog.js?v=2"></script>
