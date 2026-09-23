@@ -1201,6 +1201,7 @@ async function loadMyCallLog() {
           <label class="mylog-search-wrap"><i class="fas fa-search"></i><input type="search" id="mylog-search" class="form-input" placeholder="Name, mobile, project, unit, reason..." oninput="setMyLogSearch(this.value)"><button type="button" onclick="document.getElementById('mylog-search').value='';setMyLogSearch('')" aria-label="Clear search">×</button></label>
           <select id="mylog-cat-filter" class="form-input mylog-category-select" onchange="setMyLogCategory(this.value)" aria-label="Category"><option value="all">All Categories</option></select>
           <button class="mylog-reset-btn" onclick="clearMyLogFilters()"><i class="fas fa-rotate-left"></i> Reset filters</button>
+          <button class="mylog-reset-btn" onclick="exportMyCallLogCSV()" style="color:var(--primary);border-color:var(--primary);"><i class="fas fa-download"></i> Export CSV</button>
         </div>
       </div>
 
@@ -1255,6 +1256,22 @@ async function fetchMyCallLog(agent) {
   }
 }
 
+function getFilteredMyLogData() {
+  const term = _mylogSearch;
+  return _mylogRaw.filter(c => {
+    if (_mylogStatus === 'open'   && c.status !== 'open')  return false;
+    if (_mylogStatus === 'closed' && c.status === 'open')  return false;
+    if (_mylogSource !== 'all'    && c._source !== _mylogSource) return false;
+    if (_mylogCategory !== 'all' && c.category_1 !== _mylogCategory) return false;
+    if (term) {
+      const hay = `${c.customer_name||''} ${c.customer_mobile||''} ${c.unit_code||''} ${c.project||''} ${c.category_1||''} ${c.call_reason||''} ${c.communication_channel||''} ${c.media_source||''} ${c.budget||''} ${c.extra_notes||''}`.toLowerCase();
+      const terms = term.split(/\s+/).filter(Boolean);
+      if (!terms.every(token => hay.includes(token))) return false;
+    }
+    return true;
+  });
+}
+
 function renderMyCallLogList() {
   const container = document.getElementById('mylog-content');
   if (!container) return;
@@ -1270,19 +1287,7 @@ function renderMyCallLogList() {
   _setMylogCount('source:whatsapp', raw.filter(c => c._source === 'whatsapp').length);
 
   // ─── apply the smart filter ───
-  const term = _mylogSearch;
-  const data = raw.filter(c => {
-    if (_mylogStatus === 'open'   && c.status !== 'open')  return false;
-    if (_mylogStatus === 'closed' && c.status === 'open')  return false;
-    if (_mylogSource !== 'all'    && c._source !== _mylogSource) return false;
-    if (_mylogCategory !== 'all' && c.category_1 !== _mylogCategory) return false;
-    if (term) {
-      const hay = `${c.customer_name||''} ${c.customer_mobile||''} ${c.unit_code||''} ${c.project||''} ${c.category_1||''} ${c.call_reason||''} ${c.communication_channel||''} ${c.media_source||''} ${c.budget||''} ${c.extra_notes||''}`.toLowerCase();
-      const terms = term.split(/\s+/).filter(Boolean);
-      if (!terms.every(token => hay.includes(token))) return false;
-    }
-    return true;
-  });
+  const data = getFilteredMyLogData();
 
   const activeCountEl = document.getElementById('mylog-active-count');
   if (activeCountEl) activeCountEl.textContent = `${countActiveMyLogFilters()} active`;
@@ -1395,6 +1400,67 @@ function renderMyCallLogList() {
 
   html += '</div>';
   container.innerHTML = html;
+}
+
+/* ─── EXPORT MY CALL LOG — downloads the currently filtered list as CSV ─── */
+function _csvEscape(val) {
+  const s = (val === null || val === undefined) ? '' : String(val);
+  if (/[",\n]/.test(s)) return '"' + s.replace(/"/g, '""') + '"';
+  return s;
+}
+
+function exportMyCallLogCSV() {
+  const data = getFilteredMyLogData();
+  if (!data.length) { showToast('⚠️', 'Nothing to export', 'No conversations match the current filters.', 'warn', 4000); return; }
+
+  const headers = [
+    'Date', 'Time', 'Type', 'Status', 'Customer Name', 'Customer Mobile',
+    'Choose', 'Category 1', 'Category 2', 'Category 3',
+    'Communication Channel', 'Media Source', 'Sales Call Requested',
+    'Unit Code', 'Notes'
+  ];
+
+  const rows = data.map(c => {
+    const dt = c.logged_at ? new Date(c.logged_at) : null;
+    return [
+      dt ? dt.toLocaleDateString('en-GB') : '',
+      dt ? dt.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) : '',
+      c._source === 'whatsapp' ? 'WhatsApp' : 'Call',
+      c.status === 'open' ? 'Open' : 'Closed',
+      c.customer_name || '',
+      c.customer_mobile || '',
+      c.project || '',
+      c.category_1 || '',
+      c.call_reason || '',
+      c.category_3 || '',
+      c.communication_channel || '',
+      c.media_source || '',
+      c.sales_call_requested || '',
+      c.unit_code || '',
+      c.extra_notes || '',
+    ];
+  });
+
+  const csv = [headers, ...rows]
+    .map(row => row.map(_csvEscape).join(','))
+    .join('\r\n');
+
+  // Prefix with a UTF-8 BOM so Excel opens Arabic/special characters correctly
+  const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+  const url  = URL.createObjectURL(blob);
+  const agentName = (document.getElementById('user-name')?.innerText || 'agent').trim().replace(/\s+/g, '-');
+  const fromDate = document.getElementById('mylog-from')?.value || '';
+  const toDate   = document.getElementById('mylog-to')?.value || '';
+
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `call-log-${agentName}-${fromDate}_to_${toDate}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+
+  showToast('📥', 'Exported!', `${data.length} conversation(s) downloaded.`, 'success', 4000);
 }
 
 function _setMylogCount(key, n) {
