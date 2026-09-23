@@ -1510,11 +1510,18 @@ function openEditCallModal(callData) {
 
   // Dynamic options from loaded Supabase data
   const projectOptions = _chooseOptions.map(o => o.name);
-  const cat1Options    = _cat1Options.map(c => c.name);
-  // For edit modal, include all possible cat2 values (from all cat1s + old values for backward compat)
+
+  // Category 1 — keep the row's own id so we can cascade; always include the
+  // record's current value even if it's since been renamed/removed (backward compat).
+  let cat1List = _cat1Options.map(c => ({ id: c.id, name: c.name }));
+  if (callData.category_1 && !cat1List.some(c => c.name === callData.category_1)) {
+    cat1List.push({ id: '', name: callData.category_1 });
+  }
+
+  // Category 2 — same pooled fallback as before, used only until the real cascade loads
+  // (or forever, for legacy/quick-log entries with no matching Category 1).
   let reasonOptions = [];
   Object.values(_cat2Cache).forEach(items => items.forEach(i => { if (!reasonOptions.includes(i.name)) reasonOptions.push(i.name); }));
-  // Also add the current call_reason if not in list (backward compat with old records)
   if (callData.call_reason && !reasonOptions.includes(callData.call_reason)) reasonOptions.push(callData.call_reason);
   if (!reasonOptions.length) reasonOptions = ['Wrong Number','Call Dropped','Sales Lead','Events','Other'];
 
@@ -1527,6 +1534,9 @@ function openEditCallModal(callData) {
 
   function opts(list, current) {
     return list.map(o => `<option value="${o}" ${current === o ? 'selected' : ''}>${o}</option>`).join('');
+  }
+  function optsWithId(list, current) {
+    return list.map(o => `<option value="${o.name}" data-id="${o.id}" ${current === o.name ? 'selected' : ''}>${o.name}</option>`).join('');
   }
 
   const isQ          = callData.call_reason === 'Wrong Number' || callData.call_reason === 'Call Dropped';
@@ -1569,13 +1579,21 @@ function openEditCallModal(callData) {
             </div>
             <div>
               <label style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;display:block;margin-bottom:6px;">Category 1</label>
-              <select id="edit-cat1" class="form-input"><option value="">—</option>${opts(cat1Options, callData.category_1)}</select>
+              <select id="edit-cat1" class="form-input" onchange="onEditCategory1Change()"><option value="">—</option>${optsWithId(cat1List, callData.category_1)}</select>
             </div>
           </div>
         </div>
-        <div>
-          <label style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;display:block;margin-bottom:6px;">Category 2</label>
-          <select id="edit-reason" class="form-input" onchange="toggleEditSections()">${opts(reasonOptions, callData.call_reason)}</select>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+          <div>
+            <label style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;display:block;margin-bottom:6px;">Category 2</label>
+            <select id="edit-reason" class="form-input" onchange="onEditCategory2Change()">${opts(reasonOptions, callData.call_reason)}</select>
+          </div>
+          <div id="edit-cat3-field" style="${callData.category_3 ? '' : 'display:none'}">
+            <label style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;display:block;margin-bottom:6px;">Category 3</label>
+            <select id="edit-cat3" class="form-input">
+              ${callData.category_3 ? `<option value="${callData.category_3}" selected>${callData.category_3}</option>` : '<option value="">—</option>'}
+            </select>
+          </div>
         </div>
         <div id="edit-status-fields" style="${isQ ? 'display:none' : ''}">
           <div>
@@ -1640,6 +1658,92 @@ function openEditCallModal(callData) {
 
   document.body.appendChild(modal);
   modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
+
+  // Upgrade Category 2 / Category 3 to the real cascading lists now that the modal exists,
+  // preserving whatever is currently selected.
+  initEditCategoryCascade(callData);
+}
+
+/* ─── EDIT MODAL — Category cascade (upgrades the flat fallback lists to real cascades) ─── */
+async function initEditCategoryCascade(callData) {
+  const cat1Sel = document.getElementById('edit-cat1');
+  const cat1Id  = cat1Sel?.selectedOptions[0]?.dataset.id || '';
+  if (!cat1Id) return; // legacy/quick-log entry with no matching Category 1 — keep the flat fallback list
+  await loadEditCategory2(cat1Id, callData.call_reason, callData.category_3);
+}
+
+async function loadEditCategory2(cat1Id, currentReason, currentCat3) {
+  const cat2Sel = document.getElementById('edit-reason');
+  if (!cat2Sel) return;
+
+  if (!_cat2Cache[cat1Id]) {
+    try {
+      const headers = { 'apikey': SB_KEY_SCH, 'Authorization': `Bearer ${window._authToken || SB_KEY_SCH}` };
+      const res = await fetch(`${SB_URL_SCH}/rest/v1/call_log_category2?category1_id=eq.${cat1Id}&is_active=eq.true&order=sort_order,name`, { headers });
+      _cat2Cache[cat1Id] = await res.json() || [];
+    } catch(e) { _cat2Cache[cat1Id] = []; }
+  }
+
+  const items = _cat2Cache[cat1Id];
+  if (!items.length) return; // this Category 1 has no sub-categories — leave the flat fallback list as-is
+
+  let list = items.map(o => ({ id: o.id, name: o.name }));
+  if (currentReason && !list.some(o => o.name === currentReason)) list.push({ id: '', name: currentReason });
+
+  cat2Sel.innerHTML = list.map(o =>
+    `<option value="${o.name}" data-id="${o.id}" ${currentReason === o.name ? 'selected' : ''}>${o.name}</option>`
+  ).join('');
+
+  const selectedId = cat2Sel.selectedOptions[0]?.dataset.id || '';
+  if (selectedId) await loadEditCategory3(selectedId, currentCat3);
+  else resetEditCategory3Field();
+}
+
+async function loadEditCategory3(cat2Id, currentCat3) {
+  const field = document.getElementById('edit-cat3-field');
+  const cat3Sel = document.getElementById('edit-cat3');
+  if (!field || !cat3Sel) return;
+
+  if (!_cat3Cache[cat2Id]) {
+    try {
+      const headers = { 'apikey': SB_KEY_SCH, 'Authorization': `Bearer ${window._authToken || SB_KEY_SCH}` };
+      const res = await fetch(`${SB_URL_SCH}/rest/v1/call_log_category3?category2_id=eq.${cat2Id}&is_active=eq.true&order=sort_order,name`, { headers });
+      _cat3Cache[cat2Id] = await res.json() || [];
+    } catch(e) { _cat3Cache[cat2Id] = []; }
+  }
+
+  const items = _cat3Cache[cat2Id];
+  if (!items.length) { resetEditCategory3Field(); return; }
+
+  let list = items.map(o => o.name);
+  if (currentCat3 && !list.includes(currentCat3)) list.push(currentCat3);
+
+  cat3Sel.innerHTML = '<option value="">Choose...</option>' +
+    list.map(name => `<option value="${name}" ${currentCat3 === name ? 'selected' : ''}>${name}</option>`).join('');
+  field.style.display = '';
+}
+
+function resetEditCategory3Field() {
+  const field = document.getElementById('edit-cat3-field');
+  const cat3Sel = document.getElementById('edit-cat3');
+  if (field) field.style.display = 'none';
+  if (cat3Sel) { cat3Sel.innerHTML = '<option value="">—</option>'; cat3Sel.value = ''; }
+}
+
+async function onEditCategory1Change() {
+  const cat1Sel = document.getElementById('edit-cat1');
+  const cat1Id  = cat1Sel?.selectedOptions[0]?.dataset.id || '';
+  resetEditCategory3Field();
+  if (!cat1Id) return;
+  await loadEditCategory2(cat1Id, '', '');
+}
+
+async function onEditCategory2Change() {
+  toggleEditSections();
+  const cat2Sel = document.getElementById('edit-reason');
+  const cat2Id  = cat2Sel?.selectedOptions[0]?.dataset.id || '';
+  if (!cat2Id) { resetEditCategory3Field(); return; }
+  await loadEditCategory3(cat2Id, '');
 }
 
 function toggleEditSections() {
@@ -1670,6 +1774,7 @@ async function saveEditCallLog() {
 
   const project   = isQ ? '' : (document.getElementById('edit-project')?.value || '');
   const cat1      = isQ ? '' : (document.getElementById('edit-cat1')?.value || '');
+  const cat3      = isQ ? '' : (document.getElementById('edit-cat3')?.value || '');
   const cname     = document.getElementById('edit-cname').value.trim();
   const mobile    = document.getElementById('edit-mobile').value.trim();
   const channel   = isQ ? '' : document.getElementById('edit-channel').value;
@@ -1710,6 +1815,7 @@ async function saveEditCallLog() {
           customer_mobile:       isQ ? '' : mobile,
           project:               project,
           category_1:            cat1,
+          category_3:            cat3,
           call_reason:           reason,
           communication_channel: channel,
           media_source:          media,
