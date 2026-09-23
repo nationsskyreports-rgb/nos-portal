@@ -654,10 +654,18 @@ window.__recoveryMode = false;
       </div>
       <div class="form-group">
         <label class="form-label">Category 2 <span class="req">*</span></label>
-        <select id="f-category2" class="form-input" disabled>
+        <select id="f-category2" class="form-input" onchange="onCategory2Change()" disabled>
           <option value="">Select Category 1 first...</option>
         </select>
       </div>
+    </div>
+
+    <!-- ═══ ROW 2b: Category 3 — only shown when the chosen Category 2 has sub-categories ═══ -->
+    <div class="form-group" id="category3-row" style="display:none;margin-bottom:4px;">
+      <label class="form-label">Category 3</label>
+      <select id="f-category3" class="form-input" disabled>
+        <option value="">Choose...</option>
+      </select>
     </div>
 
     <!-- ═══ FULL DETAILS SECTION — hidden for Wrong Number / Call Dropped ═══ -->
