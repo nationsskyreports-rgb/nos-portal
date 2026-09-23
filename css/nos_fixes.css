@@ -409,8 +409,15 @@ html.light .sch-pill.sick { background: rgba(239,68,68,0.08); color: #dc2626 !im
   .mylog-results-summary { align-items:flex-start; flex-direction:column; gap:2px; }
 }
 
-/* ─── CALL LOG — sectioned form cards ─────────────────────────────────── */
-.cl-card-body { padding: 16px 20px; }
+/* ─── CALL LOG — compact form layout ─────────────────────────────────── */
+.cl-section-label {
+  font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase;
+  letter-spacing: 0.6px; border-bottom: 1px solid var(--border);
+  padding-bottom: 4px; margin: 16px 0 8px;
+}
+.cl-section-label:first-child { margin-top: 0; }
+.cl-row { display: grid; gap: 10px; margin-bottom: 0; }
+.cl-row .form-group { margin-bottom: 0; }
 @media (max-width: 640px) {
-  .cl-card-body { padding: 12px 14px; }
+  .cl-row { grid-template-columns: 1fr !important; }
 }
