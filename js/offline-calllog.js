@@ -186,6 +186,7 @@ function sbInsertCallLog(data, savedAt) {
       customer_mobile:       isQ ? null : (data.mobile || null),
       project:               isQ ? null : (data.project   || null),
       category_1:            isQ ? null : (data.category1  || null),
+      category_3:            isQ ? null : (data.category3  || null),
       call_reason:           data.reason,
       communication_channel: isQ ? null : (data.channel   || null),
       media_source:          isQ ? null : (data.media     || null),
