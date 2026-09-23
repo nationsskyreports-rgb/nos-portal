@@ -677,12 +677,9 @@ function submitCallLogForm() {
   const cat1Name = isProject ? (_cat1Options.find(c => c.id === cat1)?.name || cat1) : '';
   if (!isQ && !cname)                      { showFormErr('Please enter Customer Name!'); return; }
   if (!isQ && !mobile)                     { showFormErr('Please enter Customer Mobile!'); return; }
-  if (!isQ && !document.getElementById('f-bizrel').value)    { showFormErr('Select Business Relativity!'); return; }
   if (!isQ && !document.getElementById('f-salescall').value) { showFormErr('Select Sales Call Requested!'); return; }
   if (!isQ && !document.getElementById('f-channel').value)   { showFormErr('Select Communication Channel!'); return; }
   if (!isQ && !document.getElementById('f-media').value)     { showFormErr('Select Media Source!'); return; }
-  if (!isQ && !document.getElementById('f-budget').value)    { showFormErr('Select Budget!'); return; }
-  if (!isQ && !document.getElementById('f-unit').value)      { showFormErr('Select Unit Type!'); return; }
   if (status === 'open' && !fuDate)        { showFormErr('Please select a Follow-up Date!'); return; }
 
   // Require a comment before submitting (except Quick Log)
@@ -711,12 +708,12 @@ function submitCallLogForm() {
     direction: document.getElementById('f-direction').value || 'inbound',
     cname:     isQ ? '' : cname,
     mobile:    isQ ? '' : mobile,
-    bizrel:    isQ ? '' : (document.getElementById('f-bizrel').value    || ''),
+    bizrel:    '',
     salescall: isQ ? '' : (document.getElementById('f-salescall').value || ''),
     channel:   isQ ? '' : (document.getElementById('f-channel').value   || ''),
     media:     isQ ? '' : (document.getElementById('f-media').value     || ''),
-    budget:    isQ ? '' : (document.getElementById('f-budget').value    || ''),
-    unit:      isQ ? '' : (document.getElementById('f-unit').value      || ''),
+    budget:    '',
+    unit:      '',
     unitCode:  isQ ? '' : (document.getElementById('f-unit-code').value.trim() || ''),
     status,
     extra: document.getElementById('f-extra').value.trim()
@@ -800,7 +797,7 @@ function submitCallLogForm() {
 
 function resetCallForm() {
   ['f-project','f-category1','f-category2','f-mobile','f-extra',
-   'f-bizrel','f-salescall','f-channel','f-media','f-budget','f-unit','f-unit-code',
+   'f-salescall','f-channel','f-media','f-unit-code',
    'f-followup-date','f-followup-time','f-followup-note'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.value = '';
