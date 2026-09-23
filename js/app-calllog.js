@@ -62,6 +62,7 @@ function toggleFollowupSection() {
 let _chooseOptions = [];  // from call_log_choose_options
 let _cat1Options   = [];  // from call_log_categories
 let _cat2Cache     = {};  // cat1_id -> [items] from call_log_category2
+let _cat3Cache     = {};  // cat2_id -> [items] from call_log_category3
 
 async function loadCallLogOptions() {
   const headers = { 'apikey': SB_KEY_SCH, 'Authorization': `Bearer ${window._authToken || SB_KEY_SCH}` };
@@ -109,6 +110,7 @@ function toggleProjectCategoryFields() {
     const cat2 = document.getElementById('f-category2');
     if (cat1) cat1.value = '';
     if (cat2) { cat2.innerHTML = '<option value="">Select Category 1 first...</option>'; cat2.disabled = true; }
+    resetCategory3Field();
   }
 }
 
@@ -116,6 +118,8 @@ async function onCategory1Change() {
   const cat1Sel = document.getElementById('f-category1');
   const cat2    = document.getElementById('f-category2');
   const cat1Id  = cat1Sel.value;
+
+  resetCategory3Field();
 
   if (!cat1Id) {
     cat2.innerHTML = '<option value="">Select Category 1 first...</option>';
@@ -134,8 +138,43 @@ async function onCategory1Change() {
 
   const items = _cat2Cache[cat1Id];
   cat2.disabled = false;
+  // value stays the category name (backward compat with call_reason / Wrong Number / Call Dropped checks) —
+  // data-id carries the row id so we can cascade into Category 3.
   cat2.innerHTML = '<option value="">Choose...</option>' +
-    items.map(o => `<option>${o.name}</option>`).join('');
+    items.map(o => `<option value="${o.name}" data-id="${o.id}">${o.name}</option>`).join('');
+}
+
+function resetCategory3Field() {
+  const row = document.getElementById('category3-row');
+  const cat3 = document.getElementById('f-category3');
+  if (row) row.style.display = 'none';
+  if (cat3) { cat3.disabled = true; cat3.innerHTML = '<option value="">Choose...</option>'; cat3.value = ''; }
+}
+
+async function onCategory2Change() {
+  const cat2Sel = document.getElementById('f-category2');
+  const cat2Id  = cat2Sel.selectedOptions[0]?.dataset.id || '';
+
+  if (!cat2Id) { resetCategory3Field(); return; }
+
+  if (!_cat3Cache[cat2Id]) {
+    try {
+      const headers = { 'apikey': SB_KEY_SCH, 'Authorization': `Bearer ${window._authToken || SB_KEY_SCH}` };
+      const res = await fetch(`${SB_URL_SCH}/rest/v1/call_log_category3?category2_id=eq.${cat2Id}&is_active=eq.true&order=sort_order,name`, { headers });
+      _cat3Cache[cat2Id] = await res.json() || [];
+    } catch(e) { _cat3Cache[cat2Id] = []; }
+  }
+
+  const items = _cat3Cache[cat2Id];
+  const row  = document.getElementById('category3-row');
+  const cat3 = document.getElementById('f-category3');
+
+  if (!items.length) { resetCategory3Field(); return; }
+
+  cat3.disabled = false;
+  cat3.innerHTML = '<option value="">Choose...</option>' +
+    items.map(o => `<option value="${o.name}">${o.name}</option>`).join('');
+  if (row) row.style.display = '';
 }
 
 function toggleFormSections() { /* no-op — Wrong Number/Call Dropped are Quick Log only */ }
@@ -616,6 +655,8 @@ function submitCallLogForm() {
   const project = document.getElementById('f-project').value;
   const cat1    = document.getElementById('f-category1').value;
   const reason  = document.getElementById('f-category2').value;
+  const cat3Row = document.getElementById('category3-row');
+  const cat3    = (cat3Row && cat3Row.style.display !== 'none') ? document.getElementById('f-category3').value : '';
   const mobile  = document.getElementById('f-mobile').value.trim();
   const cname   = document.getElementById('f-cname').value.trim();
   const isQ     = (reason === 'Wrong Number' || reason === 'Call Dropped');
@@ -630,6 +671,7 @@ function submitCallLogForm() {
   if (isProject && !reason)                { showFormErr('Please select Category 2!'); return; }
   if (!isQ && !project)                    { showFormErr('Please select Choose!'); return; }
   if (isProject && !cat1)                  { showFormErr('Please select Category 1!'); return; }
+  if (isProject && cat3Row && cat3Row.style.display !== 'none' && !cat3) { showFormErr('Please select Category 3!'); return; }
 
   // Resolve Category 1 name from the ID for storage
   const cat1Name = isProject ? (_cat1Options.find(c => c.id === cat1)?.name || cat1) : '';
@@ -665,6 +707,7 @@ function submitCallLogForm() {
     agent, reason,
     project:   isQ ? '' : project,
     category1: isQ || !isProject ? '' : cat1Name,
+    category3: isQ || !isProject ? '' : cat3,
     direction: document.getElementById('f-direction').value || 'inbound',
     cname:     isQ ? '' : cname,
     mobile:    isQ ? '' : mobile,
@@ -694,6 +737,7 @@ function submitCallLogForm() {
       customer_mobile:       data.mobile,
       project:               data.project,
       category_1:            data.category1,
+      category_3:            data.category3,
       call_reason:           data.reason,
       communication_channel: data.channel,
       media_source:          data.media,
@@ -775,6 +819,7 @@ function resetCallForm() {
     category2.disabled = true;
     category2.innerHTML = '<option value="">Select sub-category...</option>';
   }
+  resetCategory3Field();
   toggleProjectCategoryFields();
   document.getElementById('form-success').style.display = 'none';
   document.getElementById('form-error').style.display   = 'none';
