@@ -693,16 +693,8 @@ window.__recoveryMode = false;
         <div id="history-list"></div>
       </div>
 
-      <!-- ROW 4: Business Relativity + Sales Call -->
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:4px;">
-        <div class="form-group">
-          <label class="form-label">Business Relativity <span class="req">*</span></label>
-          <select id="f-bizrel" class="form-input">
-            <option value="">Choose...</option>
-            <option value="Business Related">Business Related</option>
-            <option value="Non-Business Related">Non-Business Related</option>
-          </select>
-        </div>
+      <!-- ROW 4: Sales Call -->
+      <div style="margin-bottom:4px;">
         <div class="form-group">
           <label class="form-label">Sales Call Requested <span class="req">*</span></label>
           <select id="f-salescall" class="form-input">
@@ -745,35 +737,7 @@ window.__recoveryMode = false;
         </div>
       </div>
 
-      <!-- ROW 6: Budget + Unit Type -->
-      <div class="budget-unit-grid" style="margin-bottom:4px;">
-        <div class="form-group">
-          <label class="form-label">Budget (Millions) <span class="req">*</span></label>
-          <select id="f-budget" class="form-input">
-            <option value="">Choose...</option>
-            <option value="0 - 10">0 - 10M</option>
-            <option value="10 - 20">10 - 20M</option>
-            <option value="20 +">20M+</option>
-            <option value="N/A">N/A</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label class="form-label">Unit Type <span class="req">*</span></label>
-          <select id="f-unit" class="form-input">
-            <option value="">Choose...</option>
-            <option value="Apartment">Apartment</option>
-            <option value="Villa">Villa</option>
-            <option value="Commercial">Commercial</option>
-            <option value="Admin">Admin</option>
-            <option value="Twin House">Twin House</option>
-            <option value="Stand Alone House">Stand Alone</option>
-            <option value="Town House">Town House</option>
-            <option value="N/A">N/A</option>
-          </select>
-        </div>
-      </div>
-
-      <!-- ROW 7: Unit Code (optional, distinct from Unit Type) -->
+      <!-- ROW 7: Unit Code (optional) -->
       <div class="form-group">
         <label class="form-label">Unit Code</label>
         <input type="text" id="f-unit-code" class="form-input" placeholder="e.g. A-204 (optional)">
