@@ -380,12 +380,20 @@ html.light .sch-pill.sick { background: rgba(239,68,68,0.08); color: #dc2626 !im
 .mylog-range.is-active, .mylog-range:hover { background:var(--surface); color:var(--text); box-shadow:0 2px 7px rgba(0,0,0,.12); }
 .mylog-date-inputs { display:flex; align-items:center; gap:6px; color:var(--muted); }
 .mylog-date-inputs .form-input { width:132px; font-size:12px; padding:9px 10px; }
-.mylog-filter-card { background:var(--surface); border:1px solid var(--border); border-radius:16px; padding:14px; margin-bottom:16px; }
-.mylog-filter-head { display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; gap:8px; }
+.mylog-filter-card { background:var(--surface); border:1px solid var(--border); border-radius:16px; padding:12px; margin-bottom:16px; box-shadow:0 6px 20px rgba(15,118,110,.05); }
+.mylog-filter-head { display:flex; align-items:center; justify-content:space-between; margin-bottom:10px; gap:8px; }
 .mylog-filter-head strong { display:block; color:var(--text); font-size:13px; }
 .mylog-filter-head span:not(.mylog-active-count) { display:block; margin-top:3px; color:var(--muted); font-size:11px; }
 .mylog-active-count { background:rgba(212,175,55,.12); color:var(--primary); border:1px solid rgba(212,175,55,.25); border-radius:20px; padding:5px 9px; font-size:10px; font-weight:800; white-space:nowrap; }
-.mylog-filter-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; align-items:end; }
+.mylog-filter-actions { display:flex; align-items:center; gap:8px; }
+.mylog-filter-toggle { display:inline-flex; align-items:center; gap:7px; border:1px solid var(--border); background:var(--surface2); color:var(--text); border-radius:10px; padding:8px 11px; font-size:11px; font-weight:800; font-family:inherit; cursor:pointer; transition:all .18s ease; }
+.mylog-filter-toggle:hover, .mylog-filter-toggle.is-open { color:var(--primary); border-color:var(--primary); background:rgba(15,118,110,.06); }
+.mylog-filter-toggle > i:last-child { font-size:9px; transition:transform .18s ease; }
+.mylog-filter-toggle.is-open > i:last-child { transform:rotate(180deg); }
+.mylog-filter-main { display:grid; grid-template-columns:minmax(0,1fr) auto; gap:10px; align-items:center; }
+.mylog-filter-advanced { display:grid; grid-template-columns:1fr 1fr 1fr auto; gap:10px; align-items:end; margin-top:10px; padding-top:10px; border-top:1px solid var(--border); animation:mylogFilterIn .18s ease-out; }
+.mylog-filter-advanced[hidden] { display:none; }
+@keyframes mylogFilterIn { from { opacity:0; transform:translateY(-4px); } to { opacity:1; transform:translateY(0); } }
 .mylog-filter-group label { display:block; color:var(--muted); font-size:10px; font-weight:800; text-transform:uppercase; letter-spacing:.7px; margin:0 0 5px 2px; }
 .mylog-segmented button { min-width:0; padding:8px 9px !important; font-size:11px !important; }
 .mylog-search-wrap { display:flex; align-items:center; gap:7px; min-height:42px; padding:0 9px; background:var(--surface2); border:1px solid var(--border); border-radius:10px; color:var(--primary); }
@@ -394,6 +402,8 @@ html.light .sch-pill.sick { background: rgba(239,68,68,0.08); color: #dc2626 !im
 .mylog-category-select { min-height:42px; }
 .mylog-reset-btn { min-height:42px; border:1px solid var(--border); background:transparent; color:var(--muted); border-radius:10px; font-size:12px; font-weight:700; font-family:inherit; cursor:pointer; }
 .mylog-reset-btn:hover { color:var(--primary); border-color:var(--primary); }
+.mylog-export-btn { color:#16a34a; border-color:#16a34a; padding:0 16px; white-space:nowrap; }
+.mylog-export-btn:hover { color:#15803d; border-color:#15803d; background:rgba(22,163,74,.06); }
 .mylog-results-summary { display:flex; justify-content:space-between; align-items:center; gap:10px; color:var(--muted); font-size:11px; margin:0 2px 10px; }
 .mylog-results-summary strong { color:var(--primary); font-size:16px; }
 @media (max-width:640px) {
@@ -403,7 +413,9 @@ html.light .sch-pill.sick { background: rgba(239,68,68,0.08); color: #dc2626 !im
   .mylog-range { flex:1; padding:8px 4px; font-size:10px; }
   .mylog-date-inputs .form-input { flex:1; width:auto; min-width:0; }
   .mylog-date-inputs .action-btn { padding:8px 10px; }
-  .mylog-filter-grid { grid-template-columns:1fr; }
+  .mylog-filter-main { grid-template-columns:1fr; }
+  .mylog-export-btn { width:100%; }
+  .mylog-filter-advanced { grid-template-columns:1fr; }
   .mylog-filter-group .mylog-segmented { width:100%; }
   .mylog-filter-group .mylog-segmented button { flex:1; }
   .mylog-results-summary { align-items:flex-start; flex-direction:column; gap:2px; }
