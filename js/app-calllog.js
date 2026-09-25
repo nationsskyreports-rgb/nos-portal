@@ -1205,7 +1205,7 @@ async function loadMyCallLog() {
           <label class="mylog-search-wrap"><i class="fas fa-search"></i><input type="search" id="mylog-search" class="form-input" placeholder="Name, mobile, project, unit, reason..." oninput="setMyLogSearch(this.value)"><button type="button" onclick="document.getElementById('mylog-search').value='';setMyLogSearch('')" aria-label="Clear search">×</button></label>
           <select id="mylog-cat-filter" class="form-input mylog-category-select" onchange="setMyLogCategory(this.value)" aria-label="Category"><option value="all">All Categories</option></select>
           <button class="mylog-reset-btn" onclick="clearMyLogFilters()"><i class="fas fa-rotate-left"></i> Reset filters</button>
-          <button class="mylog-reset-btn" onclick="exportMyCallLogCSV()" style="color:var(--primary);border-color:var(--primary);"><i class="fas fa-download"></i> Export CSV</button>
+          <button class="mylog-reset-btn" onclick="exportMyCallLogCSV()" style="color:#16a34a;border-color:#16a34a;"><i class="fas fa-download"></i> Export CSV</button>
         </div>
       </div>
 
