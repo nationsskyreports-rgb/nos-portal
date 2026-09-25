@@ -360,17 +360,14 @@ function selectChannel(ch) {
   _activeSubmission++;
 
   if (_activeChannel === ch) {
-    _activeChannel = null;
-    formArea.style.display = 'none';
-    paneCall.classList.remove('is-active');
-    paneWA.classList.remove('is-active');
-    btnCall.style.borderColor = 'var(--border)'; btnCall.style.background = 'var(--surface)';
-    btnWA.style.borderColor   = 'var(--border)'; btnWA.style.background   = 'var(--surface)';
+    formArea.style.display = 'block';
+    if (typeof activateCallLogFormScope === 'function') activateCallLogFormScope(ch);
     return;
   }
 
   _activeChannel = ch;
   formArea.style.display = 'block';
+  if (typeof activateCallLogFormScope === 'function') activateCallLogFormScope(ch);
   paneCall.classList.toggle('is-active', ch === 'call');
   paneWA.classList.toggle('is-active', ch === 'whatsapp');
 
