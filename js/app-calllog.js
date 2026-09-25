@@ -1136,6 +1136,16 @@ function countActiveMyLogFilters() {
   return [_mylogStatus !== 'all', _mylogSource !== 'all', _mylogCategory !== 'all', !!_mylogSearch].filter(Boolean).length;
 }
 
+function toggleMyLogFilters() {
+  const panel = document.getElementById('mylog-filter-advanced');
+  const button = document.querySelector('.mylog-filter-toggle');
+  if (!panel || !button) return;
+  const willOpen = panel.hidden;
+  panel.hidden = !willOpen;
+  button.setAttribute('aria-expanded', String(willOpen));
+  button.classList.toggle('is-open', willOpen);
+}
+
 function clearMyLogFilters() {
   _mylogStatus = 'all'; _mylogSource = 'all'; _mylogCategory = 'all'; _mylogSearch = '';
   const searchEl = document.getElementById('mylog-search');
@@ -1198,14 +1208,22 @@ async function loadMyCallLog() {
 
       <!-- ═══ SMART FILTER BAR ═══ -->
       <div class="mylog-filter-card">
-        <div class="mylog-filter-head"><div><strong>Find a conversation</strong><span>Combine filters to narrow down instantly</span></div><span class="mylog-active-count" id="mylog-active-count">0 active</span></div>
-        <div class="mylog-filter-grid">
+        <div class="mylog-filter-head">
+          <div><strong>Find a conversation</strong><span>Search instantly or refine with filters</span></div>
+          <div class="mylog-filter-actions">
+            <span class="mylog-active-count" id="mylog-active-count">0 active</span>
+            <button type="button" class="mylog-filter-toggle" onclick="toggleMyLogFilters()" aria-expanded="false" aria-controls="mylog-filter-advanced"><i class="fas fa-sliders"></i><span>Filters</span><i class="fas fa-chevron-down"></i></button>
+          </div>
+        </div>
+        <div class="mylog-filter-main">
+          <label class="mylog-search-wrap"><i class="fas fa-search"></i><input type="search" id="mylog-search" class="form-input" placeholder="Name, mobile, project, unit, reason..." oninput="setMyLogSearch(this.value)"><button type="button" onclick="document.getElementById('mylog-search').value='';setMyLogSearch('')" aria-label="Clear search">×</button></label>
+          <button class="mylog-reset-btn mylog-export-btn" onclick="exportMyCallLogCSV()"><i class="fas fa-download"></i> Export CSV</button>
+        </div>
+        <div class="mylog-filter-advanced" id="mylog-filter-advanced" hidden>
           <div class="mylog-filter-group"><label>Status</label><div class="mylog-segmented">${_mylogTabBtn('status','all','All')} ${_mylogTabBtn('status','open','🟡 Open')} ${_mylogTabBtn('status','closed','✅ Closed')}</div></div>
           <div class="mylog-filter-group"><label>Channel</label><div class="mylog-segmented">${_mylogTabBtn('source','all','All')} ${_mylogTabBtn('source','call','📞 Calls')} ${_mylogTabBtn('source','whatsapp','💬 WhatsApp')}</div></div>
-          <label class="mylog-search-wrap"><i class="fas fa-search"></i><input type="search" id="mylog-search" class="form-input" placeholder="Name, mobile, project, unit, reason..." oninput="setMyLogSearch(this.value)"><button type="button" onclick="document.getElementById('mylog-search').value='';setMyLogSearch('')" aria-label="Clear search">×</button></label>
           <select id="mylog-cat-filter" class="form-input mylog-category-select" onchange="setMyLogCategory(this.value)" aria-label="Category"><option value="all">All Categories</option></select>
           <button class="mylog-reset-btn" onclick="clearMyLogFilters()"><i class="fas fa-rotate-left"></i> Reset filters</button>
-          <button class="mylog-reset-btn" onclick="exportMyCallLogCSV()" style="color:#16a34a;border-color:#16a34a;"><i class="fas fa-download"></i> Export CSV</button>
         </div>
       </div>
 
