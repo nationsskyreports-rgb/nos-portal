@@ -523,24 +523,34 @@ window.__recoveryMode = false;
           <div class="channel-selector-subtitle">Select the channel to start logging</div>
         </div>
         <div class="channel-split-grid">
-          <div id="btn-channel-call" class="channel-pane channel-pane-call" onclick="selectChannel('call')" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' ')selectChannel('call')">
+          <section id="btn-channel-call" class="channel-pane channel-pane-call" aria-labelledby="call-workspace-title">
             <div class="channel-pane-bar"><span class="channel-pane-status"></span><span>CALL LOG</span><span class="channel-pane-bar-icon">↗</span></div>
             <div class="channel-pane-body">
-              <div class="channel-pane-icon">📞</div>
-              <div class="channel-pane-name">Call</div>
-              <div class="channel-pane-description">Phone conversation log</div>
-              <div class="channel-pane-cta">Start call log <i class="fas fa-arrow-right"></i></div>
+              <button class="channel-pane-heading channel-pane-select" type="button" onclick="selectChannel('call')" aria-label="Open Call Log">
+                <span class="channel-pane-icon">📞</span>
+                <span><span id="call-workspace-title" class="channel-pane-name">Calls</span><span class="channel-pane-description">Phone conversation log</span></span>
+              </button>
+              <div class="channel-pane-metrics"><span><strong id="channel-call-total">—</strong> total</span><span id="channel-call-today">— today</span></div>
+              <div class="channel-classification"><div class="channel-subtitle"><i class="fas fa-tags"></i> All classifications</div><div class="classification-path"><span>Choose</span><i class="fas fa-chevron-right"></i><span>Category 1</span><i class="fas fa-chevron-right"></i><span>Category 2</span><i class="fas fa-chevron-right"></i><span>Category 3</span></div></div>
+              <div class="channel-pane-search"><i class="fas fa-search"></i><input id="channel-call-search" type="search" placeholder="Search call logs..." onkeydown="if(event.key==='Enter')searchChannelWorkspace('call')"><button type="button" onclick="searchChannelWorkspace('call')">Search</button></div>
+              <div id="channel-call-list" class="channel-pane-list"><div class="channel-pane-empty">Loading call logs...</div></div>
+              <button class="channel-pane-cta" type="button" onclick="selectChannel('call')">Start call log <i class="fas fa-arrow-right"></i></button>
             </div>
-          </div>
-          <div id="btn-channel-whatsapp" class="channel-pane channel-pane-whatsapp" onclick="selectChannel('whatsapp')" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' ')selectChannel('whatsapp')">
+          </section>
+          <section id="btn-channel-whatsapp" class="channel-pane channel-pane-whatsapp" aria-labelledby="whatsapp-workspace-title">
             <div class="channel-pane-bar"><span class="channel-pane-status"></span><span>WHATSAPP LOG</span><span class="channel-pane-bar-icon">↗</span></div>
             <div class="channel-pane-body">
-              <div class="channel-pane-icon"><i class="fab fa-whatsapp"></i></div>
-              <div class="channel-pane-name">WhatsApp</div>
-              <div class="channel-pane-description">WhatsApp message log</div>
-              <div class="channel-pane-cta">Start WhatsApp log <i class="fas fa-arrow-right"></i></div>
+              <button class="channel-pane-heading channel-pane-select" type="button" onclick="selectChannel('whatsapp')" aria-label="Open WhatsApp Log">
+                <span class="channel-pane-icon"><i class="fab fa-whatsapp"></i></span>
+                <span><span id="whatsapp-workspace-title" class="channel-pane-name">WhatsApp</span><span class="channel-pane-description">WhatsApp message log</span></span>
+              </button>
+              <div class="channel-pane-metrics"><span><strong id="channel-whatsapp-total">—</strong> total</span><span id="channel-whatsapp-today">— today</span></div>
+              <div class="channel-classification"><div class="channel-subtitle"><i class="fas fa-tags"></i> All classifications</div><div class="classification-path"><span>Choose</span><i class="fas fa-chevron-right"></i><span>Category 1</span><i class="fas fa-chevron-right"></i><span>Category 2</span><i class="fas fa-chevron-right"></i><span>Category 3</span></div></div>
+              <div class="channel-pane-search"><i class="fas fa-search"></i><input id="channel-whatsapp-search" type="search" placeholder="Search WhatsApp logs..." onkeydown="if(event.key==='Enter')searchChannelWorkspace('whatsapp')"><button type="button" onclick="searchChannelWorkspace('whatsapp')">Search</button></div>
+              <div id="channel-whatsapp-list" class="channel-pane-list"><div class="channel-pane-empty">Loading WhatsApp logs...</div></div>
+              <button class="channel-pane-cta" type="button" onclick="selectChannel('whatsapp')">Start WhatsApp log <i class="fas fa-arrow-right"></i></button>
             </div>
-          </div>
+          </section>
         </div>
       </div>
 
