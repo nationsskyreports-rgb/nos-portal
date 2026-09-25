@@ -791,26 +791,26 @@ function submitCallLogForm() {
   const fuTime   = document.getElementById('f-followup-time')?.value || '';
   const fuNote   = document.getElementById('f-followup-note')?.value.trim() || '';
 
-  if (!agent)                              { showFormErr('Please select Agent Name!'); return; }
-  if (isProject && cat2Visible && !reason) { showFormErr('Please select Category 2!'); return; }
-  if (!isQ && !project)                    { showFormErr('Please select Choose!'); return; }
-  if (isProject && !cat1)                  { showFormErr('Please select Category 1!'); return; }
-  if (isProject && cat3Row && cat3Row.style.display !== 'none' && !cat3) { showFormErr('Please select Category 3!'); return; }
+  if (!agent)                              { showFormErr('Please select Agent Name!', 'f-agent'); return; }
+  if (isProject && cat2Visible && !reason) { showFormErr('Please select Category 2!', 'f-category2'); return; }
+  if (!isQ && !project)                    { showFormErr('Please select Choose!', 'f-project'); return; }
+  if (isProject && !cat1)                  { showFormErr('Please select Category 1!', 'f-category1'); return; }
+  if (isProject && cat3Row && cat3Row.style.display !== 'none' && !cat3) { showFormErr('Please select Category 3!', 'f-category3'); return; }
 
   // Resolve Category 1 name from the ID for storage
   const cat1Name = isProject ? (_cat1Options.find(c => c.id === cat1)?.name || cat1) : '';
   // Category 1 has no sub-categories — its own name is the most specific choice we have
   if (isProject && !cat2Visible) reason = cat1Name;
-  if (!isQ && !cname)                      { showFormErr('Please enter Customer Name!'); return; }
-  if (!isQ && !mobile)                     { showFormErr('Please enter Customer Mobile!'); return; }
-  if (!isQ && !document.getElementById('f-salescall').value) { showFormErr('Select Sales Call Requested!'); return; }
-  if (!isQ && !document.getElementById('f-channel').value)   { showFormErr('Select Communication Channel!'); return; }
-  if (!isQ && !document.getElementById('f-media').value)     { showFormErr('Select Media Source!'); return; }
-  if (status === 'open' && !fuDate)        { showFormErr('Please select a Follow-up Date!'); return; }
+  if (!isQ && !cname)                      { showFormErr('Please enter Customer Name!', 'f-cname'); return; }
+  if (!isQ && !mobile)                     { showFormErr('Please enter Customer Mobile!', 'f-mobile'); return; }
+  if (!isQ && !document.getElementById('f-salescall').value) { showFormErr('Select Sales Call Requested!', 'f-salescall'); return; }
+  if (!isQ && !document.getElementById('f-channel').value)   { showFormErr('Select Communication Channel!', 'f-channel'); return; }
+  if (!isQ && !document.getElementById('f-media').value)     { showFormErr('Select Media Source!', 'f-media'); return; }
+  if (status === 'open' && !fuDate)        { showFormErr('Please select a Follow-up Date!', 'f-followup-date'); return; }
 
   // Require a comment before submitting (except Quick Log)
   const commentVal = document.getElementById('f-extra').value.trim();
-  if (!isQ && !commentVal)                 { showFormErr('Please add a comment before submitting!'); document.getElementById('f-extra')?.focus(); return; }
+  if (!isQ && !commentVal)                 { showFormErr('Please add a comment before submitting!', 'f-extra'); return; }
 
   const table = getActiveTable();
   const label = (window._activeChannel === 'whatsapp') ? 'WhatsApp' : 'Call';
@@ -961,7 +961,15 @@ function resetCallForm() {
 let _currentStep = 1;
 function goStep(n) { /* no-op — single page form */ }
 
-function showFormErr(msg) {
+function showFormErr(msg, fieldId) {
+  const field = fieldId ? document.getElementById(fieldId) : null;
+  document.querySelectorAll('#calllog-form-area .form-input.is-error').forEach(el => el.classList.remove('is-error'));
+  if (field) {
+    field.classList.add('is-error');
+    field.focus({ preventScroll: true });
+    field.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    setTimeout(() => field.classList.remove('is-error'), 3500);
+  }
   showResultPopup('error', 'Check Your Data', msg, 'Got it');
 }
 
