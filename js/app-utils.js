@@ -346,6 +346,8 @@ function selectChannel(ch) {
   var formArea  = document.getElementById('calllog-form-area');
   var btnCall   = document.getElementById('btn-channel-call');
   var btnWA     = document.getElementById('btn-channel-whatsapp');
+  var paneCall  = document.getElementById('btn-channel-call');
+  var paneWA    = document.getElementById('btn-channel-whatsapp');
   var swCall    = document.getElementById('switch-call-btn');
   var swWA      = document.getElementById('switch-wa-btn');
   var icon      = document.getElementById('calllog-channel-icon');
@@ -360,6 +362,8 @@ function selectChannel(ch) {
   if (_activeChannel === ch) {
     _activeChannel = null;
     formArea.style.display = 'none';
+    paneCall.classList.remove('is-active');
+    paneWA.classList.remove('is-active');
     btnCall.style.borderColor = 'var(--border)'; btnCall.style.background = 'var(--surface)';
     btnWA.style.borderColor   = 'var(--border)'; btnWA.style.background   = 'var(--surface)';
     return;
@@ -367,6 +371,8 @@ function selectChannel(ch) {
 
   _activeChannel = ch;
   formArea.style.display = 'block';
+  paneCall.classList.toggle('is-active', ch === 'call');
+  paneWA.classList.toggle('is-active', ch === 'whatsapp');
 
   if (ch === 'call') {
     icon.innerText  = '📞'; title.innerText = 'Call Log';
