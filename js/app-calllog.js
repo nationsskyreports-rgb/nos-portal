@@ -973,6 +973,66 @@ function showFormErr(msg, fieldId) {
   showResultPopup('error', 'Check Your Data', msg, 'Got it');
 }
 
+/* ─── DUAL CHANNEL FORMS ─── */
+let _callLogFormPairs = [];
+let _callLogScopeReady = false;
+
+function _callLogBanner(channel) {
+  const wa = channel === 'whatsapp';
+  return `<div class="calllog-column-banner ${wa ? 'wa-banner' : 'call-banner'}">
+    <div class="banner-icon">${wa ? '<i class="fab fa-whatsapp"></i>' : '📞'}</div>
+    <div><strong>${wa ? 'WhatsApp Log' : 'Call Log'}</strong><span>${wa ? 'Log every WhatsApp conversation' : 'Log every phone conversation'}</span></div>
+  </div>`;
+}
+
+function activateCallLogFormScope(channel) {
+  if (!_callLogScopeReady) return;
+  const active = channel === 'whatsapp' ? 'whatsapp' : 'call';
+  _callLogFormPairs.forEach(pair => {
+    pair.call.id = active === 'call' ? pair.base : `${pair.base}--call`;
+    pair.whatsapp.id = active === 'whatsapp' ? pair.base : `${pair.base}--wa`;
+  });
+  document.querySelectorAll('.calllog-channel-column').forEach(el => el.classList.toggle('is-active', el.classList.contains(active === 'whatsapp' ? 'wa-column' : 'call-column')));
+}
+window.activateCallLogFormScope = activateCallLogFormScope;
+
+function initDualCallLogForms() {
+  if (_callLogScopeReady) return;
+  const area = document.getElementById('calllog-form-area');
+  const original = area?.querySelector(':scope > .form-card');
+  if (!area || !original) return;
+
+  const clone = original.cloneNode(true);
+  const originalIds = [...original.querySelectorAll('[id]')];
+  const cloneIds = [...clone.querySelectorAll('[id]')];
+  const cloneByBase = new Map();
+  cloneIds.forEach(el => { const base = el.id; el.id = `${base}--wa`; cloneByBase.set(base, el); });
+  originalIds.forEach(el => { const other = cloneByBase.get(el.id); if (other) _callLogFormPairs.push({ base: el.id, call: el, whatsapp: other }); });
+
+  const layout = document.createElement('div');
+  layout.className = 'calllog-dual-forms';
+  const callColumn = document.createElement('section');
+  callColumn.className = 'calllog-channel-column call-column';
+  callColumn.innerHTML = _callLogBanner('call') + '<div class="channel-scope-hint"><i class="fas fa-info-circle"></i> Complete all required call classifications below.</div>';
+  callColumn.appendChild(original);
+  const waColumn = document.createElement('section');
+  waColumn.className = 'calllog-channel-column wa-column';
+  waColumn.innerHTML = _callLogBanner('whatsapp') + '<div class="channel-scope-hint"><i class="fas fa-info-circle"></i> Complete all required WhatsApp classifications below.</div>';
+  waColumn.appendChild(clone);
+  layout.append(callColumn, waColumn);
+  area.replaceChildren(layout);
+  _callLogScopeReady = true;
+  activateCallLogFormScope('call');
+
+  layout.addEventListener('focusin', e => {
+    activateCallLogFormScope(e.target.closest('.wa-column') ? 'whatsapp' : 'call');
+  }, true);
+  layout.addEventListener('click', e => {
+    activateCallLogFormScope(e.target.closest('.wa-column') ? 'whatsapp' : 'call');
+  }, true);
+}
+window.addEventListener('load', initDualCallLogForms);
+
 /* ─── 17. CUSTOMER SEARCH — يبحث في الجدولين ─── */
 function searchCustomer() {
   const query      = document.getElementById('search-query').value.trim();
