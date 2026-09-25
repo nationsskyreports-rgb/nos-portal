@@ -580,3 +580,17 @@ html.light .sch-pill.sick { background: rgba(239,68,68,0.08); color: #dc2626 !im
 @media (max-width: 640px) {
   .channel-pane-list { min-height: 90px; }
 }
+
+/* Keep both channel workspaces equal and make their classification flow easy to scan. */
+.channel-pane-select { display:flex; width:100%; padding:0; border:0; background:transparent; color:inherit; cursor:pointer; text-align:left; font:inherit; }
+.channel-pane-select:focus-visible { outline:2px solid currentColor; outline-offset:4px; border-radius:10px; }
+.channel-pane-select > span:last-child { display:flex; flex-direction:column; min-width:0; }
+.channel-classification { padding:10px; border:1px solid var(--border); border-radius:11px; background:linear-gradient(135deg,rgba(212,175,55,.07),rgba(15,118,110,.06)); }
+.channel-pane-whatsapp .channel-classification { background:rgba(37,211,102,.06); }
+.channel-subtitle { display:flex; align-items:center; gap:6px; margin-bottom:8px; color:var(--text); font-size:10px; font-weight:800; text-transform:uppercase; letter-spacing:.55px; }
+.channel-pane-whatsapp .channel-subtitle { color:#159447; }
+.classification-path { display:flex; align-items:center; flex-wrap:wrap; gap:5px; color:var(--muted); font-size:10px; font-weight:700; }
+.classification-path span { padding:4px 7px; border-radius:6px; background:var(--surface); border:1px solid var(--border); }
+.classification-path i { color:var(--primary); font-size:8px; }
+.channel-pane-whatsapp .classification-path i { color:#159447; }
+@media (max-width:640px) { .classification-path { gap:4px; } .classification-path span { padding:4px 5px; font-size:9px; } }
