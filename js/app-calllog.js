@@ -267,8 +267,8 @@ async function lookupCustomer(mobile) {
     const encoded = encodeURIComponent(mobile);
 
     const [calls, wasps] = await Promise.all([
-      fetch(`${SB_URL_SCH}/rest/v1/call_logs?customer_mobile=eq.${encoded}&select=id,customer_name,customer_mobile,project,category_1,call_reason,logged_at,agent_name&order=logged_at.desc&limit=10`, { headers }).then(r => r.json()),
-      fetch(`${SB_URL_SCH}/rest/v1/whatsapp_logs?customer_mobile=eq.${encoded}&select=id,customer_name,customer_mobile,project,category_1,call_reason,logged_at,agent_name&order=logged_at.desc&limit=10`, { headers }).then(r => r.json()),
+      fetch(`${SB_URL_SCH}/rest/v1/call_logs?customer_mobile=eq.${encoded}&select=id,customer_name,customer_mobile,customer_mobile2,project,category_1,call_reason,logged_at,agent_name&order=logged_at.desc&limit=10`, { headers }).then(r => r.json()),
+      fetch(`${SB_URL_SCH}/rest/v1/whatsapp_logs?customer_mobile=eq.${encoded}&select=id,customer_name,customer_mobile,customer_mobile2,project,category_1,call_reason,logged_at,agent_name&order=logged_at.desc&limit=10`, { headers }).then(r => r.json()),
     ]);
 
     const all = [...(calls||[]), ...(wasps||[])].sort((a,b) => new Date(b.logged_at) - new Date(a.logged_at));
@@ -304,6 +304,7 @@ async function lookupCustomer(mobile) {
             <div style="flex:1;">
               <span style="font-weight:700;color:var(--accent,var(--primary));">${c.project || '—'}</span>
               ${c.category_1 ? '<span style="color:var(--muted);"> → </span><span style="color:var(--text);">' + c.category_1 + '</span>' : ''}
+              ${c.customer_mobile2 ? '<div style="color:var(--muted);font-family:monospace;margin-top:3px;">☎ ' + c.customer_mobile2 + '</div>' : ''}
               ${c.call_reason ? '<span style="color:var(--muted);"> → </span><span style="color:var(--text);">' + c.call_reason + '</span>' : ''}
             </div>
             <div style="color:var(--muted);font-size:11px;">${c.agent_name || ''}</div>
@@ -679,7 +680,7 @@ function submitQuickLog(reason, agent, note) {
     },
     body: JSON.stringify({
       agent_name: agent, call_direction: 'inbound',
-      customer_name: '', customer_mobile: '',
+      customer_name: '', customer_mobile: '', customer_mobile2: '',
       project: '', category_1: '', category_3: '',
       call_reason: reason, communication_channel: '', media_source: '',
       business_relativity: '', sales_call_requested: '',
@@ -720,6 +721,7 @@ function submitCallLogForm() {
   const cat3Row = document.getElementById('category3-row');
   const cat3    = (cat3Row && cat3Row.style.display !== 'none') ? document.getElementById('f-category3').value : '';
   const mobile  = document.getElementById('f-mobile').value.trim();
+  const mobile2 = document.getElementById('f-mobile2')?.value.trim() || '';
   const cname   = document.getElementById('f-cname').value.trim();
   const isQ     = (reason === 'Wrong Number' || reason === 'Call Dropped');
   const isProject = _chooseOptions.some(o => o.name === project && o.option_type === 'project');
@@ -774,6 +776,7 @@ function submitCallLogForm() {
     direction: document.getElementById('f-direction').value || 'inbound',
     cname:     isQ ? '' : cname,
     mobile:    isQ ? '' : mobile,
+    mobile2:   isQ ? '' : mobile2,
     bizrel:    '',
     salescall: isQ ? '' : (document.getElementById('f-salescall').value || ''),
     channel:   isQ ? '' : (document.getElementById('f-channel').value   || ''),
@@ -798,6 +801,7 @@ function submitCallLogForm() {
       call_direction:        data.direction,
       customer_name:         data.cname,
       customer_mobile:       data.mobile,
+      customer_mobile2:      data.mobile2,
       project:               data.project,
       category_1:            data.category1,
       category_3:            data.category3,
@@ -830,7 +834,7 @@ function submitCallLogForm() {
       }
       const bar = document.getElementById('call-summary-bar');
       document.getElementById('cs-name').innerText   = cname  || '—';
-      document.getElementById('cs-mobile').innerText = mobile || '—';
+      document.getElementById('cs-mobile').innerText = [mobile, mobile2].filter(Boolean).join(' / ') || '—';
       document.getElementById('cs-reason').innerText = reason || '—';
       if (bar) { bar.style.display = 'flex'; setTimeout(() => bar.style.display = 'none', 30000); }
       resetCallForm();
@@ -862,7 +866,7 @@ function submitCallLogForm() {
 }
 
 function resetCallForm() {
-  ['f-project','f-category1','f-category2','f-mobile','f-extra',
+  ['f-project','f-category1','f-category2','f-mobile','f-mobile2','f-extra',
    'f-salescall','f-channel','f-media','f-unit-code',
    'f-followup-date','f-followup-time','f-followup-note'].forEach(id => {
     const el = document.getElementById(id);
@@ -914,7 +918,7 @@ function searchCustomer() {
   if (searchBtn) setButtonLoading(searchBtn, true, 'Searching...');
 
   const normalizedQuery = query.replace(/^0+/, '');
-  const qFilter = `or=(customer_name.ilike.%25${encodeURIComponent(query)}%25,customer_mobile.ilike.%25${encodeURIComponent(query)}%25,customer_mobile.ilike.%25${encodeURIComponent(normalizedQuery)}%25)&order=logged_at.desc&limit=20`;
+  const qFilter = `or=(customer_name.ilike.%25${encodeURIComponent(query)}%25,customer_mobile.ilike.%25${encodeURIComponent(query)}%25,customer_mobile2.ilike.%25${encodeURIComponent(query)}%25,customer_mobile.ilike.%25${encodeURIComponent(normalizedQuery)}%25,customer_mobile2.ilike.%25${encodeURIComponent(normalizedQuery)}%25)&order=logged_at.desc&limit=20`;
   const headers = { 'apikey': SB_KEY_SCH, 'Authorization': `Bearer ${window._authToken || SB_KEY_SCH}` };
 
   Promise.all([
@@ -1017,7 +1021,7 @@ async function step1SearchCustomer() {
   setButtonLoading(btn, true, 'Searching...');
   resultsEl.innerHTML = '<div style="font-size:12px;color:var(--muted);padding:8px 0;"><i class="fas fa-spinner fa-spin"></i> Searching...</div>';
   const normalizedQuery = query.replace(/^0+/, '');
-  const qFilter = `or=(customer_name.ilike.%25${encodeURIComponent(query)}%25,customer_mobile.ilike.%25${encodeURIComponent(query)}%25,customer_mobile.ilike.%25${encodeURIComponent(normalizedQuery)}%25)&order=logged_at.desc&limit=5`;
+  const qFilter = `or=(customer_name.ilike.%25${encodeURIComponent(query)}%25,customer_mobile.ilike.%25${encodeURIComponent(query)}%25,customer_mobile2.ilike.%25${encodeURIComponent(query)}%25,customer_mobile.ilike.%25${encodeURIComponent(normalizedQuery)}%25,customer_mobile2.ilike.%25${encodeURIComponent(normalizedQuery)}%25)&order=logged_at.desc&limit=5`;
   const headers = { 'apikey': SB_KEY_SCH, 'Authorization': `Bearer ${window._authToken || SB_KEY_SCH}` };
 
   try {
@@ -1264,7 +1268,7 @@ function getFilteredMyLogData() {
     if (_mylogSource !== 'all'    && c._source !== _mylogSource) return false;
     if (_mylogCategory !== 'all' && c.category_1 !== _mylogCategory) return false;
     if (term) {
-      const hay = `${c.customer_name||''} ${c.customer_mobile||''} ${c.unit_code||''} ${c.project||''} ${c.category_1||''} ${c.call_reason||''} ${c.communication_channel||''} ${c.media_source||''} ${c.budget||''} ${c.extra_notes||''}`.toLowerCase();
+      const hay = `${c.customer_name||''} ${c.customer_mobile||''} ${c.customer_mobile2||''} ${c.unit_code||''} ${c.project||''} ${c.category_1||''} ${c.call_reason||''} ${c.communication_channel||''} ${c.media_source||''} ${c.budget||''} ${c.extra_notes||''}`.toLowerCase();
       const terms = term.split(/\s+/).filter(Boolean);
       if (!terms.every(token => hay.includes(token))) return false;
     }
@@ -1347,7 +1351,7 @@ function renderMyCallLogList() {
                 ${getChannelBadge(c._source)}
                 ${getStatusBadge(c.status)}
               </div>
-              <div style="font-size:12px;color:var(--muted);font-family:monospace;">${c.customer_mobile || '—'}</div>
+              <div style="font-size:12px;color:var(--muted);font-family:monospace;">${c.customer_mobile || '—'}${c.customer_mobile2 ? ' / ' + c.customer_mobile2 : ''}</div>
             </div>
           </div>
           <div style="display:flex;align-items:center;gap:10px;">
@@ -1414,7 +1418,7 @@ function exportMyCallLogCSV() {
   if (!data.length) { showToast('⚠️', 'Nothing to export', 'No conversations match the current filters.', 'warn', 4000); return; }
 
   const headers = [
-    'Date', 'Time', 'Type', 'Status', 'Customer Name', 'Customer Mobile',
+    'Date', 'Time', 'Type', 'Status', 'Customer Name', 'Customer Mobile', 'Additional Mobile',
     'Choose', 'Category 1', 'Category 2', 'Category 3',
     'Communication Channel', 'Media Source', 'Sales Call Requested',
     'Unit Code', 'Notes'
@@ -1429,6 +1433,7 @@ function exportMyCallLogCSV() {
       c.status === 'open' ? 'Open' : 'Closed',
       c.customer_name || '',
       c.customer_mobile || '',
+      c.customer_mobile2 || '',
       c.project || '',
       c.category_1 || '',
       c.call_reason || '',
@@ -1570,6 +1575,10 @@ function openEditCallModal(callData) {
         <div>
           <label style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;display:block;margin-bottom:6px;">Customer Mobile</label>
           <input id="edit-mobile" class="form-input" type="text" value="${callData.customer_mobile || ''}" placeholder="Customer Mobile">
+        </div>
+        <div>
+          <label style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;display:block;margin-bottom:6px;">Additional Mobile</label>
+          <input id="edit-mobile2" class="form-input" type="text" value="${callData.customer_mobile2 || ''}" placeholder="Optional second number">
         </div>
         <div id="edit-project-fields" style="${isQ ? 'display:none' : ''}">
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px;">
@@ -1777,6 +1786,7 @@ async function saveEditCallLog() {
   const cat3      = isQ ? '' : (document.getElementById('edit-cat3')?.value || '');
   const cname     = document.getElementById('edit-cname').value.trim();
   const mobile    = document.getElementById('edit-mobile').value.trim();
+  const mobile2   = document.getElementById('edit-mobile2')?.value.trim() || '';
   const channel   = isQ ? '' : document.getElementById('edit-channel').value;
   const media     = isQ ? '' : document.getElementById('edit-media').value;
   const budget    = isQ ? '' : document.getElementById('edit-budget').value;
@@ -1813,6 +1823,7 @@ async function saveEditCallLog() {
         body: JSON.stringify({
           customer_name:         isQ ? '' : cname,
           customer_mobile:       isQ ? '' : mobile,
+          customer_mobile2:      isQ ? '' : mobile2,
           project:               project,
           category_1:            cat1,
           category_3:            cat3,

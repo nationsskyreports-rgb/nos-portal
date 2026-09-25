@@ -184,6 +184,7 @@ function sbInsertCallLog(data, savedAt) {
       call_direction:        data.direction || 'inbound',
       customer_name:         isQ ? null : (data.cname  || null),
       customer_mobile:       isQ ? null : (data.mobile || null),
+      customer_mobile2:      isQ ? null : (data.mobile2 || null),
       project:               isQ ? null : (data.project   || null),
       category_1:            isQ ? null : (data.category1  || null),
       category_3:            isQ ? null : (data.category3  || null),
