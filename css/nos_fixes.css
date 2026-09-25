@@ -545,3 +545,38 @@ html.light .sch-pill.sick { background: rgba(239,68,68,0.08); color: #dc2626 !im
   .channel-split-grid { grid-template-columns: 1fr; }
   .channel-pane { min-height: 132px; }
 }
+
+/* ─── DUAL LOG WORKSPACE — independent channel panels ─────────────── */
+.channel-split-grid { align-items: stretch; }
+.channel-pane { min-width: 0; }
+.channel-pane-body { display: flex; flex-direction: column; align-items: stretch; gap: 12px; padding: 16px; }
+.channel-pane-heading { display: flex; align-items: center; gap: 11px; }
+.channel-pane-heading .channel-pane-icon { flex: 0 0 auto; }
+.channel-pane-description { margin-top: 3px; }
+.channel-pane-metrics { display: flex; align-items: center; justify-content: space-between; gap: 8px; color: var(--muted); font-size: 10px; font-weight: 700; }
+.channel-pane-metrics strong { color: var(--text); font-size: 16px; margin-right: 3px; }
+.channel-pane-search { display: flex; align-items: center; gap: 7px; min-width: 0; padding: 5px 6px 5px 10px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface2); color: var(--muted); }
+.channel-pane-search input { min-width: 0; flex: 1; border: 0; outline: 0; background: transparent; color: var(--text); font-size: 11px; font-family: inherit; }
+.channel-pane-search button { border: 0; border-radius: 7px; padding: 7px 9px; background: var(--text); color: var(--surface); cursor: pointer; font-size: 10px; font-weight: 700; font-family: inherit; }
+.channel-pane-whatsapp .channel-pane-search button { background: #16a34a; color: white; }
+.channel-pane-list { display: flex; flex-direction: column; gap: 6px; min-height: 132px; }
+.channel-pane-empty { display: flex; align-items: center; justify-content: center; min-height: 100px; color: var(--muted); font-size: 11px; text-align: center; }
+.channel-log-row { display: flex; align-items: center; gap: 8px; min-width: 0; padding: 8px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface2); }
+.channel-log-avatar { display: flex; align-items: center; justify-content: center; width: 28px; height: 28px; flex: 0 0 28px; border-radius: 8px; background: var(--surface); font-size: 13px; }
+.channel-log-main { display: flex; flex-direction: column; min-width: 0; flex: 1; gap: 2px; }
+.channel-log-main strong { overflow: hidden; color: var(--text); font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
+.channel-log-main span, .channel-log-meta span { overflow: hidden; color: var(--muted); font-family: monospace; font-size: 9px; text-overflow: ellipsis; white-space: nowrap; }
+.channel-log-meta { display: flex; flex-direction: column; align-items: flex-end; max-width: 34%; min-width: 0; gap: 2px; text-align: right; }
+.channel-log-meta b { overflow: hidden; max-width: 100%; color: var(--primary); font-size: 9px; text-overflow: ellipsis; white-space: nowrap; }
+.channel-log-meta span { font-family: inherit; }
+.channel-pane-cta { align-self: stretch; width: 100%; border: 1px solid currentColor; border-radius: 9px; padding: 9px 10px; background: transparent; color: var(--primary); cursor: pointer; font-size: 11px; font-weight: 800; font-family: inherit; text-align: center; transition: background .18s ease, color .18s ease; }
+.channel-pane-cta:hover { background: var(--primary); color: white; }
+.channel-pane-whatsapp .channel-pane-cta { color: #159447; }
+.channel-pane-whatsapp .channel-pane-cta:hover { background: #159447; color: white; }
+@media (max-width: 900px) and (min-width: 641px) {
+  .channel-pane-body { padding: 12px; }
+  .channel-log-meta { display: none; }
+}
+@media (max-width: 640px) {
+  .channel-pane-list { min-height: 90px; }
+}
