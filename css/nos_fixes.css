@@ -594,3 +594,25 @@ html.light .sch-pill.sick { background: rgba(239,68,68,0.08); color: #dc2626 !im
 .classification-path i { color:var(--primary); font-size:8px; }
 .channel-pane-whatsapp .classification-path i { color:#159447; }
 @media (max-width:640px) { .classification-path { gap:4px; } .classification-path span { padding:4px 5px; font-size:9px; } }
+
+/* ─── CALL LOG — two complete channel forms ─── */
+#channel-selector { display:none !important; }
+#calllog-channel-header, #calllog-fixed-search { display:none !important; }
+#calllog-form-area { display:block !important; }
+.calllog-dual-forms { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:16px; align-items:start; padding:16px; }
+.calllog-channel-column { min-width:0; border-radius:18px; overflow:hidden; background:var(--surface2); border:1px solid var(--border); box-shadow:0 8px 26px rgba(15,23,42,.08); }
+.calllog-channel-column.call-column { border-color:rgba(212,175,55,.42); }
+.calllog-channel-column.wa-column { border-color:rgba(37,211,102,.38); }
+.calllog-column-banner { display:flex; align-items:center; gap:12px; padding:15px 18px; color:#fff; }
+.calllog-column-banner.call-banner { background:linear-gradient(135deg,#a78310,#d4af37); }
+.calllog-column-banner.wa-banner { background:linear-gradient(135deg,#128c7e,#25d366); }
+.calllog-column-banner .banner-icon { width:36px; height:36px; display:flex; align-items:center; justify-content:center; border-radius:11px; background:rgba(255,255,255,.17); font-size:19px; }
+.calllog-column-banner strong { display:block; font:800 16px 'Syne',sans-serif; }
+.calllog-column-banner span { display:block; margin-top:2px; font-size:10px; opacity:.86; }
+.calllog-channel-column > .form-card { margin:0; border:0; border-radius:0; box-shadow:none; background:transparent; }
+.calllog-channel-column .form-card { padding:18px !important; }
+.calllog-channel-column .agent-dashboard, .calllog-channel-column #agent-dashboard { margin-bottom:12px; }
+.calllog-channel-column .channel-scope-hint { display:flex; align-items:center; gap:7px; padding:9px 11px; margin-bottom:10px; border-radius:10px; background:var(--surface); border:1px solid var(--border); color:var(--muted); font-size:10px; font-weight:700; }
+.calllog-channel-column .channel-scope-hint i { color:var(--primary); }
+.wa-column .channel-scope-hint i { color:#16a34a; }
+@media (max-width:900px) { .calllog-dual-forms { grid-template-columns:1fr; } }
