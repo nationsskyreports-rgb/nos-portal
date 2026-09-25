@@ -202,7 +202,64 @@ function filterCategory2ByCat1() { onCategory1Change(); }
 window.addEventListener('load', () => {
   loadCallLogOptions().then(() => toggleProjectCategoryFields());
   setTimeout(loadAgentDashboard, 1500);
+  setTimeout(loadChannelWorkspaces, 2500);
 });
+
+function _channelWorkspaceHeaders() {
+  return { 'apikey': SB_KEY_SCH, 'Authorization': `Bearer ${window._authToken || SB_KEY_SCH}` };
+}
+
+function _renderChannelWorkspaceList(channel, rows, emptyText) {
+  const el = document.getElementById(`channel-${channel}-list`);
+  if (!el) return;
+  if (!rows.length) { el.innerHTML = `<div class="channel-pane-empty">${emptyText}</div>`; return; }
+  el.innerHTML = rows.slice(0, 4).map(r => `
+    <div class="channel-log-row">
+      <div class="channel-log-avatar">${channel === 'whatsapp' ? '💬' : '📞'}</div>
+      <div class="channel-log-main"><strong>${r.customer_name || 'Unknown customer'}</strong><span>${r.customer_mobile || 'No mobile'}${r.customer_mobile2 ? ' · ' + r.customer_mobile2 : ''}</span></div>
+      <div class="channel-log-meta"><b>${r.call_reason || 'Log'}</b><span>${r.logged_at ? new Date(r.logged_at).toLocaleDateString('en-GB', {day:'2-digit', month:'short'}) : ''}</span></div>
+    </div>`).join('');
+}
+
+async function loadChannelWorkspaces() {
+  const agent = document.getElementById('user-name')?.innerText?.trim();
+  if (!agent) return;
+  const headers = _channelWorkspaceHeaders();
+  const agentFilter = `agent_name=eq.${encodeURIComponent(agent)}`;
+  const today = getLocalDateStr();
+  try {
+    const [calls, wasps] = await Promise.all([
+      fetch(`${SB_URL_SCH}/rest/v1/call_logs?${agentFilter}&select=id,customer_name,customer_mobile,customer_mobile2,call_reason,logged_at&order=logged_at.desc&limit=1000`, { headers }).then(r => r.json()),
+      fetch(`${SB_URL_SCH}/rest/v1/whatsapp_logs?${agentFilter}&select=id,customer_name,customer_mobile,customer_mobile2,call_reason,logged_at&order=logged_at.desc&limit=1000`, { headers }).then(r => r.json())
+    ]);
+    const callRows = Array.isArray(calls) ? calls : [];
+    const waRows = Array.isArray(wasps) ? wasps : [];
+    const set = (id, value) => { const el = document.getElementById(id); if (el) el.textContent = value; };
+    set('channel-call-total', callRows.length); set('channel-whatsapp-total', waRows.length);
+    set('channel-call-today', `${callRows.filter(r => (r.logged_at || '').slice(0, 10) === today).length} today`);
+    set('channel-whatsapp-today', `${waRows.filter(r => (r.logged_at || '').slice(0, 10) === today).length} today`);
+    _renderChannelWorkspaceList('call', callRows, 'No call logs yet');
+    _renderChannelWorkspaceList('whatsapp', waRows, 'No WhatsApp logs yet');
+  } catch(e) {
+    _renderChannelWorkspaceList('call', [], 'Unable to load calls');
+    _renderChannelWorkspaceList('whatsapp', [], 'Unable to load WhatsApp logs');
+  }
+}
+
+async function searchChannelWorkspace(channel) {
+  const input = document.getElementById(`channel-${channel}-search`);
+  const list = document.getElementById(`channel-${channel}-list`);
+  const query = input?.value?.trim() || '';
+  if (!query) { loadChannelWorkspaces(); return; }
+  if (list) list.innerHTML = '<div class="channel-pane-empty"><i class="fas fa-spinner fa-spin"></i> Searching...</div>';
+  const table = channel === 'whatsapp' ? 'whatsapp_logs' : 'call_logs';
+  const normalized = query.replace(/^0+/, '');
+  const filter = `or=(customer_name.ilike.%25${encodeURIComponent(query)}%25,customer_mobile.ilike.%25${encodeURIComponent(query)}%25,customer_mobile2.ilike.%25${encodeURIComponent(query)}%25,customer_mobile.ilike.%25${encodeURIComponent(normalized)}%25,customer_mobile2.ilike.%25${encodeURIComponent(normalized)}%25)&order=logged_at.desc&limit=20`;
+  try {
+    const rows = await fetch(`${SB_URL_SCH}/rest/v1/${table}?${filter}`, { headers: _channelWorkspaceHeaders() }).then(r => r.json());
+    _renderChannelWorkspaceList(channel, Array.isArray(rows) ? rows : [], 'No matching logs');
+  } catch(e) { _renderChannelWorkspaceList(channel, [], 'Search failed'); }
+}
 
 /* ═══ AGENT DASHBOARD — Month-to-Date KPIs ═══ */
 async function loadAgentDashboard() {
@@ -237,6 +294,7 @@ async function loadAgentDashboard() {
     el('dash-rem').textContent   = remCount;
 
     if (remCount > 0) el('dash-rem').style.animation = 'pulse 2s infinite';
+    loadChannelWorkspaces();
   } catch(e) { /* silent */ }
 }
 
