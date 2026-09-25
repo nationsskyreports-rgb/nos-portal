@@ -514,29 +514,33 @@ window.__recoveryMode = false;
     <div class="tab-content" id="tab-form">
 
       <!-- Channel Selector -->
-      <div id="channel-selector" style="padding:24px 16px;">
-        <div style="font-family:'Syne',sans-serif;font-size:18px;font-weight:800;color:var(--text);margin-bottom:6px;">Log a Contact</div>
-        <div style="font-size:13px;color:var(--muted);margin-bottom:20px;">Choose the communication channel</div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
-
-          <div id="btn-channel-call" onclick="selectChannel('call')" style="
-            background:var(--surface);border:2px solid var(--border);border-radius:18px;
-            padding:28px 16px;text-align:center;cursor:pointer;transition:all 0.3s;
-          ">
-            <div style="font-size:36px;margin-bottom:12px;">📞</div>
-            <div style="font-family:'Syne',sans-serif;font-size:16px;font-weight:800;color:var(--text);">Call</div>
-            <div style="font-size:12px;color:var(--muted);margin-top:4px;">Phone call log</div>
+      <div id="channel-selector" class="channel-selector-shell">
+        <div class="channel-selector-intro">
+          <div>
+            <div class="channel-selector-kicker">New conversation</div>
+            <div class="channel-selector-title">Choose your log workspace</div>
           </div>
-
-          <div id="btn-channel-whatsapp" onclick="selectChannel('whatsapp')" style="
-            background:var(--surface);border:2px solid var(--border);border-radius:18px;
-            padding:28px 16px;text-align:center;cursor:pointer;transition:all 0.3s;
-          ">
-            <i class="fab fa-whatsapp" style="font-size:40px;color:#25d366;margin-bottom:12px;display:block;"></i>
-            <div style="font-family:'Syne',sans-serif;font-size:16px;font-weight:800;color:var(--text);">WhatsApp</div>
-            <div style="font-size:12px;color:var(--muted);margin-top:4px;">WhatsApp message log</div>
+          <div class="channel-selector-subtitle">Select the channel to start logging</div>
+        </div>
+        <div class="channel-split-grid">
+          <div id="btn-channel-call" class="channel-pane channel-pane-call" onclick="selectChannel('call')" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' ')selectChannel('call')">
+            <div class="channel-pane-bar"><span class="channel-pane-status"></span><span>CALL LOG</span><span class="channel-pane-bar-icon">↗</span></div>
+            <div class="channel-pane-body">
+              <div class="channel-pane-icon">📞</div>
+              <div class="channel-pane-name">Call</div>
+              <div class="channel-pane-description">Phone conversation log</div>
+              <div class="channel-pane-cta">Start call log <i class="fas fa-arrow-right"></i></div>
+            </div>
           </div>
-
+          <div id="btn-channel-whatsapp" class="channel-pane channel-pane-whatsapp" onclick="selectChannel('whatsapp')" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' ')selectChannel('whatsapp')">
+            <div class="channel-pane-bar"><span class="channel-pane-status"></span><span>WHATSAPP LOG</span><span class="channel-pane-bar-icon">↗</span></div>
+            <div class="channel-pane-body">
+              <div class="channel-pane-icon"><i class="fab fa-whatsapp"></i></div>
+              <div class="channel-pane-name">WhatsApp</div>
+              <div class="channel-pane-description">WhatsApp message log</div>
+              <div class="channel-pane-cta">Start WhatsApp log <i class="fas fa-arrow-right"></i></div>
+            </div>
+          </div>
         </div>
       </div>
 
