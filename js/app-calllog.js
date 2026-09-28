@@ -25,7 +25,40 @@ function getStatusBadge(status) {
     border:1px solid rgba(16,185,129,0.3);border-radius:6px;padding:2px 8px;font-size:10px;font-weight:700;">✅ Closed</span>`;
 }
 
-async function toggleLogStatus(id, table, newStatus) {
+function getCallLogMissingFields(data) {
+  const isQ = data.call_reason === 'Wrong Number' || data.call_reason === 'Call Dropped';
+  if (isQ) return [];
+  const missing = [];
+  const required = [['project', 'Project', 'edit-project']];
+  const isProject = _chooseOptions.some(o => o.name === data.project && o.option_type === 'project');
+  if (isProject) required.push(
+    ['category_1', 'Category 1', 'edit-cat1'], ['call_reason', 'Category 2', 'edit-reason']
+  );
+  required.push(
+    ['customer_name', 'Customer Name', 'edit-cname'], ['customer_mobile', 'Customer Mobile', 'edit-mobile'],
+    ['sales_call_requested', 'Sales Call Requested', 'edit-salescall'],
+    ['communication_channel', 'Communication Channel', 'edit-channel'],
+    ['media_source', 'Media Source', 'edit-media'], ['extra_notes', 'Comment', 'edit-extra']
+  );
+  required.forEach(([key, label, id]) => {
+    if (data[key] === null || data[key] === undefined || String(data[key]).trim() === '') missing.push({ label, id });
+  });
+  return missing;
+}
+
+async function toggleLogStatus(id, table, newStatus, encodedData) {
+  if (newStatus === 'closed' && encodedData) {
+    let data = {};
+    try { data = JSON.parse(decodeURIComponent(encodedData)); } catch(e) { /* PATCH fallback */ }
+    const missing = getCallLogMissingFields(data);
+    if (missing.length) {
+      data._sourceTable = table;
+      openEditCallModal(data);
+      setTimeout(() => focusEditField(missing[0].id), 250);
+      showToast('⚠️', 'Complete required fields', `Please fill: ${missing[0].label}`, 'warn', 4500);
+      return;
+    }
+  }
   try {
     const headers = { 'apikey': SB_KEY_SCH, 'Authorization': `Bearer ${window._authToken || SB_KEY_SCH}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' };
     const body = { status: newStatus, closed_at: newStatus === 'closed' ? new Date().toISOString() : null };
@@ -37,6 +70,15 @@ async function toggleLogStatus(id, table, newStatus) {
   } catch(e) {
     showToast('⚠️', 'Update Failed', 'Could not update status. Try again.', 'danger', 3500);
   }
+}
+
+function focusEditField(fieldId) {
+  const field = fieldId && document.getElementById(fieldId);
+  if (!field || field.offsetParent === null) return;
+  field.classList.add('is-error');
+  field.focus({ preventScroll: true });
+  field.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  setTimeout(() => field.classList.remove('is-error'), 3500);
 }
 
 /* ─── 16. CALL LOG FORM ─── */
@@ -1497,7 +1539,7 @@ function renderMyCallLogList() {
                 ⏰ Remind
               </button>` : ''}
               ${!isQ ? (c.status === 'open'
-                ? `<button onclick="toggleLogStatus('${c.id}','${c._source === 'whatsapp' ? 'whatsapp_logs' : 'call_logs'}','closed')"
+                  ? `<button onclick="toggleLogStatus('${c.id}','${c._source === 'whatsapp' ? 'whatsapp_logs' : 'call_logs'}','closed','${encodeURIComponent(JSON.stringify(c)).replace(/'/g, '%27')}')"
                     style="background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.25);border-radius:10px;padding:7px 13px;font-size:12px;font-weight:700;color:#059669;cursor:pointer;white-space:nowrap;">
                     ✅ Mark Closed
                   </button>`
@@ -1900,6 +1942,7 @@ async function saveEditCallLog() {
   const sourceTable = document.getElementById('edit-call-table').value || 'call_logs';
   const reason      = document.getElementById('edit-reason').value;
   const isQ         = reason === 'Wrong Number' || reason === 'Call Dropped';
+  const isProject   = _chooseOptions.some(o => o.name === document.getElementById('edit-project')?.value && o.option_type === 'project');
   const errEl       = document.getElementById('edit-error-msg');
   const saveBtn     = document.getElementById('edit-save-btn');
 
@@ -1923,10 +1966,18 @@ async function saveEditCallLog() {
   const fuTime    = document.getElementById('edit-followup-time')?.value || '';
   const fuNote    = document.getElementById('edit-followup-note')?.value.trim() || '';
 
-  if (!isQ && !project) { showEditError('Please select Project'); return; }
-  if (!isQ && !cat1)    { showEditError('Please select Category 1'); return; }
-  if (!isQ && !cname)   { showEditError('Please enter Customer Name'); return; }
-  if (!isQ && !mobile)  { showEditError('Please enter Customer Mobile'); return; }
+  if (!isQ && !project) { showEditError('Please select Project', 'edit-project'); return; }
+  if (!isQ && isProject && !cat1) { showEditError('Please select Category 1', 'edit-cat1'); return; }
+  if (!isQ && isProject && !reason) { showEditError('Please select Category 2', 'edit-reason'); return; }
+  if (!isQ && isProject && document.getElementById('edit-cat3-field')?.style.display !== 'none' && !cat3) {
+    showEditError('Please select Category 3', 'edit-cat3'); return;
+  }
+  if (!isQ && !cname)   { showEditError('Please enter Customer Name', 'edit-cname'); return; }
+  if (!isQ && !mobile)  { showEditError('Please enter Customer Mobile', 'edit-mobile'); return; }
+  if (!isQ && !salescall) { showEditError('Please select Sales Call Requested', 'edit-salescall'); return; }
+  if (!isQ && !channel) { showEditError('Please select Communication Channel', 'edit-channel'); return; }
+  if (!isQ && !media)   { showEditError('Please select Media Source', 'edit-media'); return; }
+  if (!isQ && !extra)   { showEditError('Please add a comment before closing the log', 'edit-extra'); return; }
 
   errEl.style.display = 'none';
   setButtonLoading(saveBtn, true, 'Saving...');
@@ -1985,9 +2036,10 @@ async function saveEditCallLog() {
   }
 }
 
-function showEditError(msg) {
+function showEditError(msg, fieldId) {
   const el = document.getElementById('edit-error-msg');
   if (el) { el.textContent = msg; el.style.display = 'block'; }
+  focusEditField(fieldId);
 }
 
 /* ═══════════════════════════════════════════════════
