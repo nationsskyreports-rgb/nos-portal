@@ -624,17 +624,6 @@ window.__recoveryMode = false;
 
     <div style="height:1px;background:var(--border);margin-bottom:20px;"></div>
 
-    <!-- ═══ QUICK LOG — one-click submit (skips classification & details) ═══ -->
-    <div class="section-label"><i class="fas fa-bolt"></i> Quick Log</div>
-    <div class="quick-log-grid" style="margin-bottom:16px;">
-      <button type="button" class="quick-log-btn" onclick="quickLogCall('Wrong Number')">
-        <i class="fas fa-exchange-alt"></i> Wrong Number
-      </button>
-      <button type="button" class="quick-log-btn" onclick="quickLogCall('Call Dropped')">
-        <i class="fas fa-phone-slash"></i> Call Dropped
-      </button>
-    </div>
-
     <!-- ═══ AGENT & DIRECTION ═══ -->
     <div class="section-label cl-heading"><i class="fas fa-user-circle"></i> Agent</div>
     <div class="cl-row" style="grid-template-columns:1fr 1fr;">
@@ -683,7 +672,7 @@ window.__recoveryMode = false;
       </div>
     </div>
 
-    <!-- ═══ FULL DETAILS SECTION — hidden for Wrong Number / Call Dropped ═══ -->
+    <!-- ═══ FULL DETAILS SECTION ═══ -->
     <div id="full-details-section">
 
       <!-- ═══ CUSTOMER ═══ -->
@@ -1173,4 +1162,3 @@ window.__recoveryMode = false;
 
 </body>
 </html>
-
