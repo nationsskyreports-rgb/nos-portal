@@ -789,7 +789,7 @@ function submitQuickLog(reason, agent, note) {
       project: '', category_1: '', category_3: '',
       call_reason: reason, communication_channel: '', media_source: '',
       business_relativity: '', sales_call_requested: '',
-      budget: '', unit_type: '', unit_code: '', extra_notes: note,
+      unit_code: '', extra_notes: note,
       status: 'closed', closed_at: new Date().toISOString(),
       logged_at: new Date().toISOString(),
     })
@@ -808,7 +808,7 @@ function submitQuickLog(reason, agent, note) {
     if (submissionId !== _activeSubmission) return;
     if (typeof addOfflineCall === 'function') {
       addOfflineCall({ agent, reason, project:'', category1:'', category3:'', cname:'', mobile:'', bizrel:'', salescall:'',
-        channel:'', media:'', budget:'', unit:'', unitCode:'', extra: note, status:'closed', _channel: window._activeChannel || 'call' });
+        channel:'', media:'', unitCode:'', extra: note, status:'closed', _channel: window._activeChannel || 'call' });
       if (window.showToast) showToast('📥','Saved Offline!', reason + ' — Will sync when back online.', 'warn', 6000);
       if (typeof setStatusBar === 'function') setStatusBar('offline', `You're offline — ${getOfflineCalls().length} call(s) pending sync`);
     } else {
@@ -886,8 +886,6 @@ function submitCallLogForm() {
     salescall: isQ ? '' : (document.getElementById('f-salescall').value || ''),
     channel:   isQ ? '' : (document.getElementById('f-channel').value   || ''),
     media:     isQ ? '' : (document.getElementById('f-media').value     || ''),
-    budget:    '',
-    unit:      '',
     unitCode:  isQ ? '' : (document.getElementById('f-unit-code').value.trim() || ''),
     status,
     extra: document.getElementById('f-extra').value.trim()
@@ -915,8 +913,6 @@ function submitCallLogForm() {
       media_source:          data.media,
       business_relativity:   data.bizrel,
       sales_call_requested:  data.salescall,
-      budget:                data.budget,
-      unit_type:             data.unit,
       unit_code:             data.unitCode,
       extra_notes:           data.extra,
       status:                data.status,
@@ -1099,7 +1095,6 @@ function searchCustomer() {
           <div><span style="color:var(--muted);">Agent: </span><span style="font-weight:600;color:var(--text);">${r.agent_name||'-'}</span></div>
           <div><span style="color:var(--muted);">Channel: </span><span style="font-weight:600;color:var(--text);">${r.communication_channel||'-'}</span></div>
           <div><span style="color:var(--muted);">Media: </span><span style="font-weight:600;color:var(--text);">${r.media_source||'-'}</span></div>
-          <div><span style="color:var(--muted);">Budget: </span><span style="font-weight:600;color:var(--text);">${r.budget||'-'}</span></div>
         </div>
         ${r.extra_notes&&r.extra_notes.trim()&&r.extra_notes!=='-'?`<div style="margin-top:10px;padding:10px;background:var(--surface);border-radius:10px;border:1px solid var(--border);font-size:12px;color:var(--muted);"><i class="fas fa-sticky-note" style="margin-right:6px;color:var(--warn);"></i>${r.extra_notes}</div>`:''}
       </div>`;
@@ -1149,7 +1144,6 @@ async function loadLastTwoCalls(agentName) {
           <div><span style="color:var(--muted);">Category: </span><span style="font-weight:700;color:var(--primary);">${c.category_1 ? c.category_1 + ' → ' : ''}${c.call_reason||'—'}</span></div>
           <div><span style="color:var(--muted);">Channel: </span><span style="font-weight:700;color:var(--text);">${c.communication_channel||'—'}</span></div>
           <div><span style="color:var(--muted);">Media: </span><span style="font-weight:700;color:var(--text);">${c.media_source||'—'}</span></div>
-          <div><span style="color:var(--muted);">Budget: </span><span style="font-weight:700;color:var(--text);">${c.budget||'—'}</span></div>
           <div><span style="color:var(--muted);">Sales: </span><span style="font-weight:700;color:var(--text);">${c.sales_call_requested||'—'}</span></div>
         </div>
         ${c.extra_notes&&c.extra_notes.trim()&&c.extra_notes!=='-'?`<div style="margin-top:8px;padding:8px;background:var(--surface);border-radius:8px;border:1px solid var(--border);font-size:11px;color:var(--muted);"><i class="fas fa-sticky-note" style="margin-right:5px;color:var(--warn);"></i>${c.extra_notes}</div>`:''}`
@@ -1432,7 +1426,7 @@ function getFilteredMyLogData() {
     if (_mylogSource !== 'all'    && c._source !== _mylogSource) return false;
     if (_mylogCategory !== 'all' && c.category_1 !== _mylogCategory) return false;
     if (term) {
-      const hay = `${c.customer_name||''} ${c.customer_mobile||''} ${c.customer_mobile2||''} ${c.unit_code||''} ${c.project||''} ${c.category_1||''} ${c.call_reason||''} ${c.communication_channel||''} ${c.media_source||''} ${c.budget||''} ${c.extra_notes||''}`.toLowerCase();
+      const hay = `${c.customer_name||''} ${c.customer_mobile||''} ${c.customer_mobile2||''} ${c.unit_code||''} ${c.project||''} ${c.category_1||''} ${c.call_reason||''} ${c.communication_channel||''} ${c.media_source||''} ${c.extra_notes||''}`.toLowerCase();
       const terms = term.split(/\s+/).filter(Boolean);
       if (!terms.every(token => hay.includes(token))) return false;
     }
@@ -1555,7 +1549,6 @@ function renderMyCallLogList() {
           <div><span style="color:var(--muted);">Category: </span><span style="font-weight:700;color:${reasonColor};">${c.category_1 ? c.category_1 + ' → ' : ''}${c.call_reason||'—'}</span></div>
           <div><span style="color:var(--muted);">Channel: </span><span style="font-weight:600;color:var(--text);">${c.communication_channel||'—'}</span></div>
           <div><span style="color:var(--muted);">Media: </span><span style="font-weight:600;color:var(--text);">${c.media_source||'—'}</span></div>
-          <div><span style="color:var(--muted);">Budget: </span><span style="font-weight:600;color:var(--text);">${c.budget||'—'}</span></div>
           <div><span style="color:var(--muted);">Sales: </span><span style="font-weight:600;color:var(--text);">${c.sales_call_requested||'—'}</span></div>
           ${c.unit_code ? `<div><span style="color:var(--muted);">Unit Code: </span><span style="font-weight:600;color:var(--text);">${c.unit_code}</span></div>` : ''}
         </div>
@@ -1696,8 +1689,6 @@ function openEditCallModal(callData) {
 
   const channelOptions  = ['Whatsapp','Mobile','Email','Alternative Mobile','SMS','N/A'];
   const mediaOptions    = ['Billboards','Saw site','Facebook','Instagram','Linkedin','Word of mouth','TV ad.','Youtube','N/A'];
-  const budgetOptions   = ['0 - 10','10 - 20','20 +','N/A'];
-  const unitOptions     = ['Apartment','Villa','Commercial','Admin','Twin House','Stand Alone House','Town House','N/A'];
   const bizrelOptions   = ['Business Related','Non-Business Related'];
   const salesOptions    = ['Yes','No','N/A'];
 
@@ -1802,14 +1793,6 @@ function openEditCallModal(callData) {
             <div>
               <label style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;display:block;margin-bottom:6px;">Media Source</label>
               <select id="edit-media" class="form-input">${opts(mediaOptions, callData.media_source)}</select>
-            </div>
-            <div>
-              <label style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;display:block;margin-bottom:6px;">Budget</label>
-              <select id="edit-budget" class="form-input">${opts(budgetOptions, callData.budget)}</select>
-            </div>
-            <div>
-              <label style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;display:block;margin-bottom:6px;">Unit Type</label>
-              <select id="edit-unit" class="form-input">${opts(unitOptions, callData.unit_type)}</select>
             </div>
             <div>
               <label style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;display:block;margin-bottom:6px;">Unit Code</label>
@@ -1954,8 +1937,6 @@ async function saveEditCallLog() {
   const mobile2   = document.getElementById('edit-mobile2')?.value.trim() || '';
   const channel   = isQ ? '' : document.getElementById('edit-channel').value;
   const media     = isQ ? '' : document.getElementById('edit-media').value;
-  const budget    = isQ ? '' : document.getElementById('edit-budget').value;
-  const unit      = isQ ? '' : document.getElementById('edit-unit').value;
   const unitCode  = isQ ? '' : document.getElementById('edit-unit-code').value.trim();
   const bizrel    = isQ ? '' : document.getElementById('edit-bizrel').value;
   const salescall = isQ ? '' : document.getElementById('edit-salescall').value;
@@ -2003,8 +1984,6 @@ async function saveEditCallLog() {
           call_reason:           reason,
           communication_channel: channel,
           media_source:          media,
-          budget,
-          unit_type:             unit,
           unit_code:             unitCode,
           business_relativity:   bizrel,
           sales_call_requested:  salescall,
