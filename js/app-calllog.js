@@ -146,6 +146,7 @@ async function onCategory1Change() {
     cat2.innerHTML = '<option value="">Choose...</option>';
     cat2.value = '';
     if (cat2Group) cat2Group.style.display = 'none';
+    if (typeof _clUpdateField === 'function') _clUpdateField(cat2);
     return;
   }
 
@@ -155,6 +156,7 @@ async function onCategory1Change() {
   // data-id carries the row id so we can cascade into Category 3.
   cat2.innerHTML = '<option value="">Choose...</option>' +
     items.map(o => `<option value="${o.name}" data-id="${o.id}">${o.name}</option>`).join('');
+  if (typeof _clUpdateField === 'function') _clUpdateField(cat2);
 }
 
 function resetCategory3Field() {
@@ -200,7 +202,10 @@ function toggleFormSections() { /* no-op — Wrong Number/Call Dropped are Quick
 function filterCategory2ByCat1() { onCategory1Change(); }
 
 window.addEventListener('load', () => {
-  loadCallLogOptions().then(() => toggleProjectCategoryFields());
+  loadCallLogOptions().then(() => {
+    toggleProjectCategoryFields();
+    initCallLogValidation();
+  });
   setTimeout(loadAgentDashboard, 1500);
   setTimeout(loadChannelWorkspaces, 2500);
 });
@@ -973,65 +978,38 @@ function showFormErr(msg, fieldId) {
   showResultPopup('error', 'Check Your Data', msg, 'Got it');
 }
 
-/* ─── DUAL CHANNEL FORMS ─── */
-let _callLogFormPairs = [];
-let _callLogScopeReady = false;
+/* ─── REQUIRED FIELD VALIDATION ─── */
+const CL_REQUIRED_IDS = [
+  'f-agent', 'f-direction', 'f-project', 'f-category1', 'f-category2',
+  'f-cname', 'f-mobile', 'f-salescall', 'f-channel', 'f-media',
+  'f-status', 'f-extra'
+];
 
-function _callLogBanner(channel) {
-  const wa = channel === 'whatsapp';
-  return `<div class="calllog-column-banner ${wa ? 'wa-banner' : 'call-banner'}">
-    <div class="banner-icon">${wa ? '<i class="fab fa-whatsapp"></i>' : '📞'}</div>
-    <div><strong>${wa ? 'WhatsApp Log' : 'Call Log'}</strong><span>${wa ? 'Log every WhatsApp conversation' : 'Log every phone conversation'}</span></div>
-  </div>`;
+function _clUpdateField(el) {
+  if (!el) return;
+  if (el.disabled) {
+    el.classList.remove('req-empty', 'req-filled');
+    return;
+  }
+  const filled = el.value !== null && el.value.trim() !== '' && el.value !== '';
+  el.classList.toggle('req-empty',  !filled);
+  el.classList.toggle('req-filled', !!filled);
 }
 
-function activateCallLogFormScope(channel) {
-  if (!_callLogScopeReady) return;
-  const active = channel === 'whatsapp' ? 'whatsapp' : 'call';
-  _callLogFormPairs.forEach(pair => {
-    pair.call.id = active === 'call' ? pair.base : `${pair.base}--call`;
-    pair.whatsapp.id = active === 'whatsapp' ? pair.base : `${pair.base}--wa`;
+function refreshCallLogValidation() {
+  CL_REQUIRED_IDS.forEach(id => _clUpdateField(document.getElementById(id)));
+}
+window.refreshCallLogValidation = refreshCallLogValidation;
+
+function initCallLogValidation() {
+  CL_REQUIRED_IDS.forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.addEventListener('change', () => _clUpdateField(el));
+    el.addEventListener('input',  () => _clUpdateField(el));
+    _clUpdateField(el);
   });
-  document.querySelectorAll('.calllog-channel-column').forEach(el => el.classList.toggle('is-active', el.classList.contains(active === 'whatsapp' ? 'wa-column' : 'call-column')));
 }
-window.activateCallLogFormScope = activateCallLogFormScope;
-
-function initDualCallLogForms() {
-  if (_callLogScopeReady) return;
-  const area = document.getElementById('calllog-form-area');
-  const original = area?.querySelector(':scope > .form-card');
-  if (!area || !original) return;
-
-  const clone = original.cloneNode(true);
-  const originalIds = [...original.querySelectorAll('[id]')];
-  const cloneIds = [...clone.querySelectorAll('[id]')];
-  const cloneByBase = new Map();
-  cloneIds.forEach(el => { const base = el.id; el.id = `${base}--wa`; cloneByBase.set(base, el); });
-  originalIds.forEach(el => { const other = cloneByBase.get(el.id); if (other) _callLogFormPairs.push({ base: el.id, call: el, whatsapp: other }); });
-
-  const layout = document.createElement('div');
-  layout.className = 'calllog-dual-forms';
-  const callColumn = document.createElement('section');
-  callColumn.className = 'calllog-channel-column call-column';
-  callColumn.innerHTML = _callLogBanner('call') + '<div class="channel-scope-hint"><i class="fas fa-info-circle"></i> Complete all required call classifications below.</div>';
-  callColumn.appendChild(original);
-  const waColumn = document.createElement('section');
-  waColumn.className = 'calllog-channel-column wa-column';
-  waColumn.innerHTML = _callLogBanner('whatsapp') + '<div class="channel-scope-hint"><i class="fas fa-info-circle"></i> Complete all required WhatsApp classifications below.</div>';
-  waColumn.appendChild(clone);
-  layout.append(callColumn, waColumn);
-  area.replaceChildren(layout);
-  _callLogScopeReady = true;
-  activateCallLogFormScope('call');
-
-  layout.addEventListener('focusin', e => {
-    activateCallLogFormScope(e.target.closest('.wa-column') ? 'whatsapp' : 'call');
-  }, true);
-  layout.addEventListener('click', e => {
-    activateCallLogFormScope(e.target.closest('.wa-column') ? 'whatsapp' : 'call');
-  }, true);
-}
-window.addEventListener('load', initDualCallLogForms);
 
 /* ─── 17. CUSTOMER SEARCH — يبحث في الجدولين ─── */
 function searchCustomer() {
