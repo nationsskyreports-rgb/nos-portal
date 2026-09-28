@@ -76,7 +76,7 @@ async function loadCallLogOptions() {
 
     // Populate Choose dropdown
     const projSel = document.getElementById('f-project');
-    projSel.innerHTML = '<option value="">Choose...</option>';
+    projSel.innerHTML = '';
     const projects = _chooseOptions.filter(o => o.option_type === 'project');
     const others   = _chooseOptions.filter(o => o.option_type !== 'project');
     if (projects.length) {
