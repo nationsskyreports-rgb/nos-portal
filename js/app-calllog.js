@@ -27,7 +27,13 @@ function getStatusBadge(status) {
 
 function getCallLogMissingFields(data) {
   const isQ = data.call_reason === 'Wrong Number' || data.call_reason === 'Call Dropped';
-  if (isQ) return [];
+  // Quick outcomes skip the other customer/classification fields, but never
+  // skip the comment requirement.
+  if (isQ) {
+    return (data.extra_notes === null || data.extra_notes === undefined || String(data.extra_notes).trim() === '')
+      ? [{ label: 'Comment', id: 'edit-extra' }]
+      : [];
+  }
   const missing = [];
   const required = [['project', 'Project', 'edit-project']];
   const isProject = _chooseOptions.some(o => o.name === data.project && o.option_type === 'project');
@@ -794,8 +800,9 @@ function submitQuickLog(reason, agent, note) {
       logged_at: new Date().toISOString(),
     })
   })
-  .then(() => {
+  .then(res => {
     if (submissionId !== _activeSubmission) return;
+    if (!res.ok) throw new Error('Call Log was rejected by the server.');
     const bar = document.getElementById('call-summary-bar');
     document.getElementById('cs-name').innerText   = '—';
     document.getElementById('cs-mobile').innerText = '—';
@@ -855,9 +862,9 @@ function submitCallLogForm() {
   if (!isQ && !document.getElementById('f-media').value)     { showFormErr('Select Media Source!', 'f-media'); return; }
   if (status === 'open' && !fuDate)        { showFormErr('Please select a Follow-up Date!', 'f-followup-date'); return; }
 
-  // Require a comment before submitting (except Quick Log)
+  // Require a comment before submitting for every log type.
   const commentVal = document.getElementById('f-extra').value.trim();
-  if (!isQ && !commentVal)                 { showFormErr('Please add a comment before submitting!', 'f-extra'); return; }
+  if (!commentVal)                         { showFormErr('Please add a comment before submitting!', 'f-extra'); return; }
 
   const table = getActiveTable();
   const label = (window._activeChannel === 'whatsapp') ? 'WhatsApp' : 'Call';
@@ -1801,8 +1808,8 @@ function openEditCallModal(callData) {
           </div>
         </div>
         <div>
-          <label style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;display:block;margin-bottom:6px;">Extra Notes</label>
-          <textarea id="edit-extra" class="form-input" rows="3" placeholder="Extra Notes..." style="resize:vertical;">${callData.extra_notes || ''}</textarea>
+          <label style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;display:block;margin-bottom:6px;">Comment <span style="color:var(--danger);">*</span></label>
+          <textarea id="edit-extra" class="form-input" rows="3" placeholder="Comment..." style="resize:vertical;">${callData.extra_notes || ''}</textarea>
         </div>
         <div id="edit-error-msg" style="display:none;background:#fee2e2;border-radius:10px;padding:10px;font-size:13px;font-weight:600;color:#dc2626;"></div>
         <button id="edit-save-btn" onclick="saveEditCallLog()"
@@ -1958,7 +1965,7 @@ async function saveEditCallLog() {
   if (!isQ && !salescall) { showEditError('Please select Sales Call Requested', 'edit-salescall'); return; }
   if (!isQ && !channel) { showEditError('Please select Communication Channel', 'edit-channel'); return; }
   if (!isQ && !media)   { showEditError('Please select Media Source', 'edit-media'); return; }
-  if (!isQ && !extra)   { showEditError('Please add a comment before closing the log', 'edit-extra'); return; }
+  if (!extra)           { showEditError('Please add a comment before saving the log', 'edit-extra'); return; }
 
   errEl.style.display = 'none';
   setButtonLoading(saveBtn, true, 'Saving...');
