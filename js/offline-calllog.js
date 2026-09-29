@@ -166,6 +166,11 @@ function sbInsertCallLog(data, savedAt) {
   const SB_KEY = window.SB_KEY_SCH;
   if (!SB_URL || !SB_KEY) return Promise.resolve();
 
+  // Keep the online validation rule during offline sync as well.
+  if (!String(data.extra || '').trim()) {
+    return Promise.reject(new Error('A comment is required before syncing a call log.'));
+  }
+
   const isQ     = (data.reason === 'Wrong Number' || data.reason === 'Call Dropped');
   const table   = (data._channel === 'whatsapp') ? 'whatsapp_logs' : 'call_logs';
   const status  = data.status || 'closed';
@@ -203,6 +208,7 @@ function sbInsertCallLog(data, savedAt) {
     })
   })
   .then(async res => {
+    if (!res.ok) throw new Error(await res.text());
     if (wantsRep && res.ok) {
       try {
         const rows = await res.json();
