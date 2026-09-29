@@ -387,6 +387,19 @@ function logout() {
     logo.style.animation = '';
   }
 
+  // Re-create the password field if it was removed after the previous login
+  // (see showDashboard) so signing in again without a page refresh still works.
+  if (!document.getElementById('pass')) {
+    const pwWrap = document.querySelector('#login-form-area .pw-wrap');
+    if (pwWrap) {
+      const input = document.createElement('input');
+      input.type = 'password'; input.id = 'pass'; input.className = 'form-input';
+      input.placeholder = '••••••••'; input.autocomplete = 'current-password';
+      input.name = 'password'; input.required = true;
+      pwWrap.insertBefore(input, pwWrap.firstChild);
+    }
+  }
+
   document.getElementById('pass').value         = '';
   document.getElementById('login-msg').innerHTML = '';
   document.getElementById('empList').selectedIndex = 0;
@@ -454,6 +467,13 @@ async function showDashboard(res) {
 
   document.getElementById('screen-login').style.display     = 'none';
   document.getElementById('screen-dashboard').style.display = 'block';
+
+  // Chrome's "Save password?" prompt can trigger on unrelated later form
+  // submissions (e.g. the call log) as long as a <input type="password">
+  // still exists anywhere in the DOM — even hidden with display:none. Once
+  // logged in we never need this field again this session, so remove it
+  // outright instead of just hiding it.
+  document.getElementById('pass')?.remove();
   
   
   pushHistoryState();
